@@ -51,6 +51,41 @@ body{padding:18px; min-height:100vh;}
 .case-card .tag{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;display:block;}
 .case-card .cc{font-size:14px;font-weight:700;margin:0 0 4px;}
 .case-card .sub{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:0;}
+.menu-back{display:flex;justify-content:flex-start;}
+
+/* ---------- front (landing) screen ---------- */
+.front{max-width:760px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;gap:22px;padding:40px 0;}
+.front-icons{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.front-icons svg{width:44px;height:44px;}
+.front .eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);}
+.front h1{font-size:clamp(28px,6vw,42px);margin:4px 0 0;font-weight:800;letter-spacing:-.01em;text-wrap:balance;}
+.front p.tagline{font-size:15px;color:var(--text-dim);max-width:56ch;line-height:1.6;margin:0;}
+.front .front-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+.btn.large{padding:14px 26px;font-size:15px;border-radius:8px;}
+.front-note{font-size:12px;color:var(--text-faint);max-width:48ch;line-height:1.6;}
+
+/* ---------- specialty screen ---------- */
+.specialty{max-width:900px;margin:40px auto;display:flex;flex-direction:column;gap:18px;}
+.specialty-hdr{display:flex;flex-direction:column;gap:6px;text-align:center;}
+.specialty-hdr .top-row{display:flex;justify-content:flex-start;margin-bottom:4px;}
+.specialty-hdr .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);}
+.specialty-hdr h1{font-size:22px;margin:0;font-weight:700;}
+.specialty-hdr p{font-size:13.5px;color:var(--text-dim);margin:0;max-width:60ch;margin:0 auto;}
+.specialty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media (max-width:760px){.specialty-grid{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:480px){.specialty-grid{grid-template-columns:1fr;}}
+.specialty-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:left;
+  cursor:pointer;transition:border-color .12s,transform .12s;font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;gap:10px;}
+.specialty-card:hover{border-color:var(--spec-color, var(--accent));}
+.specialty-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.specialty-card svg{width:34px;height:34px;}
+.specialty-card .sc-name{font-size:15px;font-weight:700;margin:0;}
+.specialty-card .sc-count{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--spec-color, var(--accent));}
+.specialty-card .sc-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:0;}
+.specialty-card.empty{cursor:not-allowed;opacity:.55;}
+.specialty-card.empty:hover{border-color:var(--border);}
+.specialty-card.empty .sc-count{color:var(--text-faint);}
 
 /* ---------- header ---------- */
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
@@ -166,10 +201,32 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 @media (prefers-reduced-motion: reduce){ * { scroll-behavior:auto !important; } }
 </style>
 
-<div class="menu" id="menuScreen">
+<div class="front" id="frontScreen">
+  <div class="front-icons" id="frontIcons"></div>
+  <span class="eyebrow">Advanced Practice &middot; Offline &middot; Hidden-Diagnosis Training</span>
+  <h1>ICU Case Simulator</h1>
+  <p class="tagline">Practical, scenario-based critical care training. Work up real patients from presentation to disposition — no diagnosis handed to you, no internet required once loaded.</p>
+  <div class="front-actions">
+    <button class="btn primary large" id="enterBtn">Enter simulator</button>
+  </div>
+  <p class="front-note">Diagnoses are hidden by design — build your differential from history, exam, and investigations, the same as a real handover.</p>
+</div>
+
+<div class="specialty" id="specialtyScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" id="backToFrontBtn">&larr; Back</button></div>
+    <span class="eyebrow">ICU / ER Simulation &middot; Advanced</span>
+    <h1>Choose a specialty</h1>
+    <p>Pick the area you want to train in. Each case still hides its diagnosis — you work it up the same way regardless of specialty.</p>
+  </div>
+  <div class="specialty-grid" id="specialtyGrid"></div>
+</div>
+
+<div class="menu" id="menuScreen" style="display:none;">
   <div class="menu-hdr">
-    <span class="eyebrow">ICU / ER Simulation &middot; Advanced &middot; Offline Case Bank</span>
-    <h1>Pick a patient</h1>
+    <div class="top-row" style="display:flex;justify-content:flex-start;margin-bottom:4px;"><button class="btn ghost small" id="backToSpecialtyBtn">&larr; Specialties</button></div>
+    <span class="eyebrow" id="menuEyebrow">ICU / ER Simulation &middot; Advanced &middot; Offline Case Bank</span>
+    <h1 id="menuTitle">Pick a patient</h1>
     <p>Diagnoses are hidden — work from presentation, history, exam, and investigations, same as a real handover. Each case has its own physiology engine and can be replayed.</p>
   </div>
   <div class="randomize-row">
@@ -308,7 +365,7 @@ const CASES = {};
 
 // ---------------- CASE: Pulmonary Embolism ----------------
 CASES.pe = {
-  id:'pe',
+  id:'pe', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Post-op Dyspnea',
   title:'Patient A — 58M, acute dyspnea, post-op day 14',
   cardTag:'Case A',
@@ -466,7 +523,7 @@ CASES.pe = {
 
 // ---------------- CASE: Septic Shock ----------------
 CASES.sepsis = {
-  id:'sepsis',
+  id:'sepsis', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Confusion + Fever',
   title:'Patient B — 74F, fever and new confusion',
   cardTag:'Case B',
@@ -588,7 +645,7 @@ CASES.sepsis = {
 
 // ---------------- CASE: DKA ----------------
 CASES.dka = {
-  id:'dka',
+  id:'dka', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Vomiting + Confusion',
   title:'Patient C — 22M, vomiting and rapid breathing',
   cardTag:'Case C',
@@ -728,7 +785,7 @@ CASES.dka = {
 
 // ---------------- CASE: STEMI ----------------
 CASES.stemi = {
-  id:'stemi',
+  id:'stemi', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Chest Pain',
   title:'Patient D — 61M, crushing central chest pain',
   cardTag:'Case D',
@@ -857,7 +914,7 @@ CASES.stemi = {
 
 // ---------------- CASE: Paracetamol (Acetaminophen) Overdose ----------------
 CASES.paracetamol = {
-  id:'paracetamol',
+  id:'paracetamol', specialty:'tox',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Overdose',
   title:'Patient E — 19F, paracetamol overdose, 6 hours post-ingestion',
   cardTag:'Case E',
@@ -982,7 +1039,7 @@ CASES.paracetamol = {
 
 // ---------------- CASE: Opioid Overdose ----------------
 CASES.opioid = {
-  id:'opioid',
+  id:'opioid', specialty:'tox',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Overdose',
   title:'Patient F — 34M, found unresponsive, suspected opioid overdose',
   cardTag:'Case F',
@@ -1105,7 +1162,7 @@ CASES.opioid = {
 
 // ---------------- CASE: Salicylate (Aspirin) Overdose ----------------
 CASES.salicylate = {
-  id:'salicylate',
+  id:'salicylate', specialty:'tox',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Overdose',
   title:'Patient G — 45F, aspirin overdose with tinnitus and rapid breathing',
   cardTag:'Case G',
@@ -1229,7 +1286,7 @@ CASES.salicylate = {
 
 // ---------------- CASE: Cardiac Arrest (hyperkalemia) ----------------
 CASES.arrest_hyperk = {
-  id:'arrest_hyperk',
+  id:'arrest_hyperk', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Cardiac Arrest',
   title:'Patient H — 67M, cardiac arrest, ongoing CPR on arrival',
   cardTag:'Case H',
@@ -1355,7 +1412,7 @@ CASES.arrest_hyperk = {
 
 // ---------------- CASE: Cardiogenic Shock ----------------
 CASES.cardiogenic = {
-  id:'cardiogenic',
+  id:'cardiogenic', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Breathless & Cold',
   title:'Patient I — 70M, decompensated heart failure, cold and hypotensive',
   cardTag:'Case I',
@@ -1462,7 +1519,7 @@ CASES.cardiogenic = {
 
 // ---------------- CASE: NSTEMI ----------------
 CASES.nstemi = {
-  id:'nstemi',
+  id:'nstemi', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Chest Discomfort',
   title:'Patient J — 66F, intermittent chest tightness over 2 days',
   cardTag:'Case J',
@@ -1569,7 +1626,7 @@ CASES.nstemi = {
 
 // ---------------- CASE: ARDS ----------------
 CASES.ards = {
-  id:'ards',
+  id:'ards', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Ward Deterioration',
   title:'Patient K — 45M, worsening hypoxia on the ward, day 2 of severe CAP',
   cardTag:'Case K',
@@ -1675,7 +1732,7 @@ CASES.ards = {
 
 // ---------------- CASE: Status Epilepticus ----------------
 CASES.status_epilepticus = {
-  id:'status_epilepticus',
+  id:'status_epilepticus', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Ongoing Seizure',
   title:'Patient L — 29F, ongoing seizure activity for 20+ minutes',
   cardTag:'Case L',
@@ -1774,7 +1831,7 @@ CASES.status_epilepticus = {
 
 // ---------------- CASE: HHS (Hyperosmolar Hyperglycemic State) ----------------
 CASES.hhs = {
-  id:'hhs',
+  id:'hhs', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Confusion + Dehydration',
   title:'Patient M — 74M, 5 days of confusion and reduced oral intake',
   cardTag:'Case M',
@@ -1870,7 +1927,7 @@ CASES.hhs = {
 
 // ---------------- CASE: Acute (Flash) Pulmonary Edema ----------------
 CASES.flash_ope = {
-  id:'flash_ope',
+  id:'flash_ope', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Sudden Breathlessness',
   title:'Patient N — 68F, sudden severe breathlessness, extremely hypertensive',
   cardTag:'Case N',
@@ -1964,7 +2021,7 @@ CASES.flash_ope = {
 
 // ---------------- CASE: GI Bleed (Variceal) ----------------
 CASES.gi_bleed = {
-  id:'gi_bleed',
+  id:'gi_bleed', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Haematemesis',
   title:'Patient O — 52M, large-volume haematemesis, known cirrhosis',
   cardTag:'Case O',
@@ -2070,7 +2127,7 @@ CASES.gi_bleed = {
 
 // ---------------- CASE: Acute Ischemic Stroke ----------------
 CASES.stroke = {
-  id:'stroke',
+  id:'stroke', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Acute Focal Weakness',
   title:'Patient P — 71F, sudden right-sided weakness and slurred speech',
   cardTag:'Case P',
@@ -2186,7 +2243,7 @@ CASES.stroke = {
 
 // ---------------- CASE: Thyroid Storm ----------------
 CASES.thyroid_storm = {
-  id:'thyroid_storm',
+  id:'thyroid_storm', specialty:'em',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Fever + Agitation',
   title:'Patient Q — 34F, high fever, severe tachycardia, agitation',
   cardTag:'Case Q',
@@ -2280,7 +2337,7 @@ CASES.thyroid_storm = {
 
 // ---------------- CASE: COPD Exacerbation ----------------
 CASES.copd = {
-  id:'copd',
+  id:'copd', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Worsening Breathlessness',
   title:'Patient R — 68M, worsening COPD exacerbation, drowsy on arrival',
   cardTag:'Case R',
@@ -2378,7 +2435,7 @@ CASES.copd = {
 
 // ---------------- CASE: Severe Asthma ----------------
 CASES.severe_asthma = {
-  id:'severe_asthma',
+  id:'severe_asthma', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Acute Severe Asthma',
   title:'Patient S — 24F, severe asthma exacerbation, unable to speak full sentences',
   cardTag:'Case S',
@@ -2480,7 +2537,7 @@ CASES.severe_asthma = {
 
 // ---------------- CASE: Acute Kidney Injury ----------------
 CASES.aki = {
-  id:'aki',
+  id:'aki', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Ward Deterioration',
   title:'Patient T — 79F, declining urine output and rising creatinine, day 3 post-op',
   cardTag:'Case T',
@@ -2593,7 +2650,7 @@ CASES.aki = {
 
 // ---------------- CASE: Symptomatic Hyperkalemia (pre-arrest) ----------------
 CASES.hyperkalemia_symptomatic = {
-  id:'hyperkalemia_symptomatic',
+  id:'hyperkalemia_symptomatic', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Generalised Weakness',
   title:'Patient U — 61M, generalised weakness, bradycardic on arrival',
   cardTag:'Case U',
@@ -2690,7 +2747,7 @@ CASES.hyperkalemia_symptomatic = {
 
 // ---------------- CASE: Severe Hyponatremia ----------------
 CASES.hyponatremia = {
-  id:'hyponatremia',
+  id:'hyponatremia', specialty:'med',
   eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Ictal, Confused',
   title:'Patient V — 45F, witnessed seizure at home, post-ictal and confused',
   cardTag:'Case V',
@@ -3287,15 +3344,91 @@ function loadCase(key){
   }
 }
 
+// ---------- specialties ----------
+const ICONS = {
+  em: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-7 3 14 3-10 2 3h6"/></svg>',
+  med: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="6" rx="3"/><line x1="12" y1="9" x2="12" y2="15"/></svg>',
+  tox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg>',
+  surg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 14 10"/><path d="M14 10 20 4l-3 1-3 3z"/></svg>',
+  trauma: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>',
+  peds: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="6" r="2"/><circle cx="17" cy="6" r="2"/><circle cx="12" cy="13" r="7"/><path d="M10 16q2 1.5 4 0"/></svg>'
+};
+const SPECIALTIES = {
+  em: {label:'Emergency Medicine', desc:'Undifferentiated emergencies, resuscitation, shock, stroke, arrest.', color:'var(--cyan)'},
+  med: {label:'Medicine', desc:'Medical ICU decompensations — metabolic, respiratory, renal, electrolyte.', color:'var(--lime)'},
+  tox: {label:'Toxicology', desc:'Poisoning and overdose — antidotes, decontamination, safe disposition.', color:'var(--violet)'},
+  surg: {label:'Surgical', desc:'Post-operative complications and surgical emergencies.', color:'var(--text-faint)'},
+  trauma: {label:'Trauma', desc:'Blunt and penetrating trauma, polytrauma resuscitation.', color:'var(--text-faint)'},
+  peds: {label:'Pediatrics', desc:'Paediatric critical illness.', color:'var(--text-faint)'}
+};
+let currentSpecialty = null;
+
+function casesFor(specialtyKey){
+  return Object.keys(CASES).filter(k=>CASES[k].specialty===specialtyKey);
+}
+
+function buildFrontIcons(){
+  const box = document.getElementById('frontIcons');
+  box.innerHTML = Object.keys(SPECIALTIES).map(k=>
+    `<span style="color:${SPECIALTIES[k].color}">${ICONS[k]}</span>`
+  ).join('');
+}
+
+function buildSpecialtyGrid(){
+  const grid = document.getElementById('specialtyGrid');
+  grid.innerHTML = '';
+  Object.keys(SPECIALTIES).forEach(key=>{
+    const spec = SPECIALTIES[key];
+    const keys = casesFor(key);
+    const card = document.createElement('button');
+    card.className = 'specialty-card' + (keys.length===0 ? ' empty' : '');
+    card.style.setProperty('--spec-color', spec.color);
+    card.innerHTML = `<span style="color:${spec.color}">${ICONS[key]}</span>
+      <p class="sc-name">${spec.label}</p>
+      <span class="sc-count">${keys.length>0 ? keys.length+' case'+(keys.length>1?'s':'') : 'Coming soon'}</span>
+      <p class="sc-desc">${spec.desc}</p>`;
+    if (keys.length>0){
+      card.addEventListener('click', ()=>{ currentSpecialty = key; showMenuFor(key); });
+    }
+    grid.appendChild(card);
+  });
+}
+
+function showFront(){
+  document.getElementById('frontScreen').style.display='';
+  document.getElementById('specialtyScreen').style.display='none';
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('appScreen').style.display='none';
+}
+
+function showSpecialtyScreen(){
+  document.getElementById('frontScreen').style.display='none';
+  document.getElementById('specialtyScreen').style.display='';
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('appScreen').style.display='none';
+}
+
+function showMenuFor(specialtyKey){
+  currentSpecialty = specialtyKey;
+  const spec = SPECIALTIES[specialtyKey];
+  document.getElementById('menuEyebrow').textContent = `ICU / ER Simulation · Advanced · ${spec.label}`;
+  document.getElementById('menuTitle').textContent = `Pick a patient — ${spec.label}`;
+  buildMenu(specialtyKey);
+  document.getElementById('frontScreen').style.display='none';
+  document.getElementById('specialtyScreen').style.display='none';
+  document.getElementById('menuScreen').style.display='';
+  document.getElementById('appScreen').style.display='none';
+}
+
 function showMenu(){
   document.getElementById('appScreen').style.display='none';
   document.getElementById('menuScreen').style.display='';
 }
 
-function buildMenu(){
+function buildMenu(specialtyKey){
   const grid = document.getElementById('caseGrid');
   grid.innerHTML='';
-  Object.keys(CASES).forEach(key=>{
+  casesFor(specialtyKey).forEach(key=>{
     const c = CASES[key];
     const card = document.createElement('button');
     card.className='case-card';
@@ -3305,8 +3438,12 @@ function buildMenu(){
   });
 }
 
+document.getElementById('enterBtn').addEventListener('click', showSpecialtyScreen);
+document.getElementById('backToFrontBtn').addEventListener('click', showFront);
+document.getElementById('backToSpecialtyBtn').addEventListener('click', showSpecialtyScreen);
+
 document.getElementById('randomizeBtn').addEventListener('click', ()=>{
-  const keys = Object.keys(CASES);
+  const keys = casesFor(currentSpecialty);
   const pick = keys[Math.floor(Math.random()*keys.length)];
   loadCase(pick);
 });
@@ -3357,7 +3494,8 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   a.click();
 });
 
-buildMenu();
+buildFrontIcons();
+buildSpecialtyGrid();
 requestAnimationFrame(animate);
 })();
 </script>
