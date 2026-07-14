@@ -87,6 +87,24 @@ body{padding:18px; min-height:100vh;}
 .specialty-card.empty:hover{border-color:var(--border);}
 .specialty-card.empty .sc-count{color:var(--text-faint);}
 
+/* ---------- debrief screen ---------- */
+.debrief{max-width:760px;margin:30px auto;padding:0 4px;}
+.debrief-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:26px;}
+.debrief-card h1{font-size:20px;margin:12px 0 4px;font-weight:700;}
+.debrief-card h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);
+  margin:22px 0 8px;display:flex;align-items:center;gap:8px;}
+.debrief-stats{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--text-dim);margin:0;}
+.debrief-grade{font-size:14px;color:var(--text);margin:10px 0 0;line-height:1.5;}
+.debrief-section{display:flex;flex-direction:column;gap:8px;}
+.debrief-entry{padding:10px 12px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.55;background:var(--panel-2);
+  border-left:3px solid var(--border);display:flex;gap:10px;}
+.debrief-section.crit .debrief-entry{border-left-color:var(--crit);}
+.debrief-section.warn .debrief-entry{border-left-color:var(--warn);}
+.debrief-entry .debrief-t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--text-faint);flex-shrink:0;font-size:11.5px;padding-top:1px;}
+.debrief-entry p{margin:0;color:var(--text-dim);}
+.debrief-empty{font-size:13px;color:var(--text-faint);margin:0;font-style:italic;}
+.debrief-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;}
+
 /* ---------- header ---------- */
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;}
@@ -238,12 +256,14 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 <div class="app" id="appScreen" style="display:none;">
   <div class="hdr">
     <div class="hdr-title">
+      <div class="top-row" style="margin-bottom:4px;"><button class="btn ghost small" id="backDuringCaseBtn">&larr; Back</button></div>
       <span class="eyebrow" id="hdrEyebrow">ICU / ER Simulation &middot; Advanced</span>
       <h1 id="hdrTitle">Patient</h1>
     </div>
     <div class="hdr-right">
       <span class="clock" id="clock">00:00 &nbsp;·&nbsp; T+0:00</span>
       <span class="status-pill crit" id="statusPill">UNSTABLE</span>
+      <button class="btn ghost small" id="reviewBtn" title="See a debrief of your decisions so far, without ending the case">Review progress</button>
       <button class="btn ghost small" id="menuBtn" title="Back to case picker">Change case</button>
       <button class="btn ghost small" id="restartBtn" title="Restart this case from the beginning">Restart</button>
       <button class="btn small" id="exportBtn" title="Download the full decision/event log as text">Export Log</button>
@@ -312,10 +332,27 @@ details.brief[open] summary::before{transform:rotate(90deg);}
       <div class="logfeed" id="logfeed"></div>
       <div class="logfoot">
         <span style="font-size:11.5px;color:var(--text-faint);">
-          When you're done, export the log and bring it back to Claude in chat for your structured debrief and score.
+          Use "Review progress" any time for an in-app debrief, or export the log for your own records.
         </span>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="debrief" id="debriefScreen" style="display:none;">
+  <div class="debrief-card">
+    <span class="status-pill" id="debriefOutcome">OUTCOME</span>
+    <h1 id="debriefTitle">Case</h1>
+    <p class="debrief-stats" id="debriefStats"></p>
+    <p class="debrief-grade" id="debriefGrade"></p>
+
+    <h3>Critical errors <span id="debriefCritCount"></span></h3>
+    <div class="debrief-section crit" id="debriefCrit"></div>
+
+    <h3>Cautions <span id="debriefWarnCount"></span></h3>
+    <div class="debrief-section warn" id="debriefWarn"></div>
+
+    <div class="debrief-actions" id="debriefActions"></div>
   </div>
 </div>
 
@@ -2857,7 +2894,7 @@ function freshState(caseDef){
     simTime:0, fluidBoost:0, fluidCount:0, pressorLevel:0, inotropeLevel:0,
     device:caseDef.initDevice, hb:caseDef.initHb, lactate:caseDef.initLactate, gcs:caseDef.initGcs,
     arrested:false, arrestCycles:0, dead:false, rosc:false, shockable:false, rhythmChecked:false, justShocked:false,
-    stableStreak:0, ended:false, endReason:null,
+    stableStreak:0, ended:false, endReason:null, debriefShown:false,
     pending:[], done:{}, doneCount:{}, log:[], histTaken:false,
     examDone:{A:false,B:false,C:false,D:false,E:false}
   };
@@ -3009,6 +3046,10 @@ function codeAction(kind){
     if (S.justShocked) chance += 0.35;
     chance = Math.min(0.85, chance);
     log(`CPR cycle ${S.arrestCycles} completed (2 min).`,'action');
+    if (CURRENT.arrestSpecials && CURRENT.arrestSpecials.length && (!CURRENT.roscBonus || CURRENT.roscBonus(S)===0) && !S._reversibleCauseWarned){
+      S._reversibleCauseWarned = true;
+      log('CPR and epinephrine alone are unlikely to achieve ROSC if there is an untreated reversible cause — check the additional treatment options available during this arrest before continuing compressions alone.','warn');
+    }
     S.justShocked = false;
     if (Math.random()<chance){
       S.arrested = false; S.rosc = true;
@@ -3022,7 +3063,9 @@ function codeAction(kind){
     S._epiThisCycle = false;
     if (S.arrestCycles>=4){
       S.dead = true; S.ended = true; S.endReason='death';
-      log('Resuscitation efforts unsuccessful after 4 cycles. Time of death called.','crit');
+      const untreated = CURRENT.arrestSpecials && CURRENT.arrestSpecials.length && (!CURRENT.roscBonus || CURRENT.roscBonus(S)===0);
+      const suffix = untreated ? ' No reversible cause was treated during this arrest — review the additional treatment options that were available and consider what should have been given.' : '';
+      log(`Resuscitation efforts unsuccessful after 4 cycles. Time of death called.${suffix}`,'crit');
       document.getElementById('codeOverlay').classList.remove('show');
       renderAll();
     }
@@ -3215,6 +3258,86 @@ function renderInterventionLocks(){
 
 function renderAll(){
   renderMonitor(); renderO2(); renderInvest(); renderPressor(); renderLog(); renderInterventionLocks();
+  if (S.ended && !S.debriefShown){
+    S.debriefShown = true;
+    showDebrief(true);
+  }
+}
+
+// ---------- debrief ----------
+function showDebrief(final){
+  const crits = S.log.filter(e=>e.type==='crit');
+  const warns = S.log.filter(e=>e.type==='warn');
+  const orderedCount = S.log.filter(e=>e.msg.startsWith('Ordered:')).length;
+  const actionCount = S.log.filter((e,i)=>
+    i>0 && !e.msg.startsWith('Advancing time') && !e.msg.startsWith('Ordered:') && !e.msg.includes(' result: ')
+  ).length;
+  const eh = Math.floor(S.simTime/60), em = S.simTime%60;
+
+  let outcomeLabel, outcomeClass;
+  if (S.dead){ outcomeLabel='Patient died'; outcomeClass='crit'; }
+  else if (S.endReason==='unsafe_discharge'){ outcomeLabel='Unsafe discharge'; outcomeClass='crit'; }
+  else if (S.endReason==='stable'){ outcomeLabel='Patient stabilised'; outcomeClass='ok'; }
+  else { outcomeLabel = final ? 'Case ended' : 'In progress'; outcomeClass = final ? 'warn' : 'ok'; }
+
+  let grade;
+  if (S.dead || S.endReason==='unsafe_discharge'){
+    grade = 'This outcome reflects a management error. Read the critical errors below carefully, then try the case again.';
+  } else if (crits.length===0 && warns.length===0){
+    grade = final ? 'Clean run — no critical errors or cautions were flagged during this case.' : 'No issues flagged so far — keep going.';
+  } else if (crits.length===0){
+    grade = `No critical errors, but ${warns.length} caution${warns.length>1?'s':''} worth reviewing below.`;
+  } else {
+    grade = `${crits.length} critical error${crits.length>1?'s':''} identified — each one below explains what went wrong and what the correct action was.`;
+  }
+
+  function renderEntries(entries, emptyMsg){
+    if (!entries.length) return `<p class="debrief-empty">${emptyMsg}</p>`;
+    return entries.map(e=>{
+      const t = Math.floor(e.t/60)+':'+(e.t%60).toString().padStart(2,'0');
+      return `<div class="debrief-entry"><span class="debrief-t">T+${t}</span><p>${e.msg}</p></div>`;
+    }).join('');
+  }
+
+  document.getElementById('debriefOutcome').textContent = outcomeLabel.toUpperCase();
+  document.getElementById('debriefOutcome').className = 'status-pill ' + outcomeClass;
+  document.getElementById('debriefTitle').textContent = CURRENT.title;
+  document.getElementById('debriefStats').textContent =
+    `Duration T+${eh}:${em.toString().padStart(2,'0')} · ${actionCount} intervention${actionCount===1?'':'s'} given · ${orderedCount} investigation${orderedCount===1?'':'s'} ordered`;
+  document.getElementById('debriefGrade').textContent = grade;
+  document.getElementById('debriefCritCount').textContent = `(${crits.length})`;
+  document.getElementById('debriefWarnCount').textContent = `(${warns.length})`;
+  document.getElementById('debriefCrit').innerHTML = renderEntries(crits, 'None — no critical errors identified.');
+  document.getElementById('debriefWarn').innerHTML = renderEntries(warns, 'None.');
+
+  const actions = document.getElementById('debriefActions');
+  actions.innerHTML = final
+    ? `<button class="btn primary" id="debriefRestartBtn">Try this case again</button>
+       <button class="btn" id="debriefMenuBtn">Back to case list</button>
+       <button class="btn ghost" id="debriefExportBtn">Export full log</button>`
+    : `<button class="btn primary" id="debriefContinueBtn">Continue the case</button>
+       <button class="btn ghost" id="debriefExportBtn">Export full log</button>`;
+
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('codeOverlay').classList.remove('show');
+  document.getElementById('debriefScreen').style.display='';
+
+  document.getElementById('debriefExportBtn').addEventListener('click', ()=>document.getElementById('exportBtn').click());
+  if (final){
+    document.getElementById('debriefRestartBtn').addEventListener('click', ()=>{
+      document.getElementById('debriefScreen').style.display='none';
+      loadCase(CURRENT.id);
+    });
+    document.getElementById('debriefMenuBtn').addEventListener('click', ()=>{
+      document.getElementById('debriefScreen').style.display='none';
+      showMenuFor(currentSpecialty);
+    });
+  } else {
+    document.getElementById('debriefContinueBtn').addEventListener('click', ()=>{
+      document.getElementById('debriefScreen').style.display='none';
+      document.getElementById('appScreen').style.display='';
+    });
+  }
 }
 
 // ---------- dynamic tab builders ----------
@@ -3317,6 +3440,7 @@ function loadCase(key){
   S = freshState(CURRENT);
   document.getElementById('menuScreen').style.display='none';
   document.getElementById('appScreen').style.display='';
+  document.getElementById('debriefScreen').style.display='none';
   document.getElementById('hdrEyebrow').textContent = CURRENT.eyebrow;
   document.getElementById('hdrTitle').textContent = CURRENT.title;
   document.getElementById('briefBody').innerHTML = CURRENT.briefHtml;
@@ -3451,6 +3575,11 @@ document.getElementById('menuBtn').addEventListener('click', async ()=>{
   const ok = await confirmModal('Change case?', 'This leaves the current case (progress is lost unless exported). Return to the case picker?');
   if (ok) showMenu();
 });
+document.getElementById('backDuringCaseBtn').addEventListener('click', async ()=>{
+  const ok = await confirmModal('Leave this case?', 'This leaves the current case (progress is lost unless exported). Return to the case picker?');
+  if (ok) showMenu();
+});
+document.getElementById('reviewBtn').addEventListener('click', ()=>showDebrief(false));
 
 // ---------- global wiring (tabs, tests, o2, time, exam, restart, export) ----------
 document.querySelectorAll('.tab').forEach(t=>{
