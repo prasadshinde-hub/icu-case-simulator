@@ -451,6 +451,7 @@ CASES.pe = {
     return {msg:`Fluid bolus #${S.fluidCount} (250–500 mL crystalloid) given.`};
   },
   onIntubate(S){ return 'Peri-intubation hypotension — positive-pressure ventilation drops preload in a preload-dependent, obstructed RV. Have fluids/pressor ready before pushing induction agents.'; },
+  ecgPattern(S){ return S.obstruction>45 ? 'afib' : 'normal'; },
   arrestSpecials:[{
     label:'Give tPA now (suspected massive PE arrest)',
     handler(S){
@@ -865,6 +866,7 @@ CASES.stemi = {
   },
   onBolus(S){ return {msg:`Fluid bolus given. Use cautiously — avoid over-resuscitating a potentially failing left ventricle; watch for pulmonary oedema.`}; },
   onIntubate(S){ return 'Sedation/induction can worsen hypotension in a patient with evolving pump failure — have pressor support ready.'; },
+  ecgPattern(S){ return S.reperfused ? 'normal' : 'st_elevation'; },
   history:`<b>PMHx:</b> Hypertension, hyperlipidaemia (on atorvastatin, poor compliance). No prior cardiac history.<br>
     <b>Surgical Hx:</b> None.<br>
     <b>Medications:</b> Amlodipine, atorvastatin (inconsistent adherence).<br>
@@ -1371,6 +1373,7 @@ CASES.arrest_hyperk = {
   },
   onBolus(S){ return {msg:'IV crystalloid given.'}; },
   onIntubate(S){ return 'Formal endotracheal intubation performed post-ROSC for definitive airway protection.'; },
+  ecgPattern(S){ return S.potassium>7.5 ? 'sine' : S.potassium>6 ? 'peaked_t' : 'normal'; },
   arrestSpecials:[
     {label:'Give IV calcium gluconate 10mL 10%', handler(S){
       if (S.calciumGiven) { log('Calcium already given.','action'); return; }
@@ -1502,6 +1505,7 @@ CASES.cardiogenic = {
     return {msg:'Fluid bolus given. Cardiogenic shock is typically fluid-averse — this patient is already congested/"wet", and further volume worsens pulmonary congestion rather than helping cardiac output. Consider diuretics and/or inotropes instead.', warn:true};
   },
   onIntubate(S){ return 'Positive-pressure ventilation can reduce venous return and preload — often actually helpful in cardiogenic pulmonary oedema, but watch for a drop in cardiac output if preload-dependent.'; },
+  ecgPattern(){ return 'afib'; },
   history:`<b>PMHx:</b> Ischemic cardiomyopathy (EF 25%), prior anterior MI 3 years ago, hypertension, type 2 diabetes.<br>
     <b>Surgical Hx:</b> Coronary angiogram with stent 3 years ago.<br>
     <b>Medications:</b> Furosemide 40mg OD (ran out ~1 week ago), ramipril, bisoprolol, spironolactone.<br>
@@ -1599,6 +1603,7 @@ CASES.nstemi = {
   },
   onBolus(S){ return {msg:'IV crystalloid given.'}; },
   onIntubate(S){ return 'Reserve intubation for airway/ventilatory failure — not routinely needed in uncomplicated NSTEMI.'; },
+  ecgPattern(S){ return S.ischemiaBurden>30 ? 'st_depression' : 'normal'; },
   history:`<b>PMHx:</b> Type 2 diabetes, hypertension, hyperlipidaemia. Father had a myocardial infarction at 60.<br>
     <b>Surgical Hx:</b> None.<br>
     <b>Medications:</b> Metformin, amlodipine, atorvastatin.<br>
@@ -2317,6 +2322,7 @@ CASES.thyroid_storm = {
   },
   onBolus(S){ return {msg:'IV crystalloid given for hydration and cooling support.'}; },
   onIntubate(S){ return 'Consider airway protection if GCS falls critically (thyroid storm can progress to coma).'; },
+  ecgPattern(S){ return S.thyrotoxicosis>60 ? 'afib' : 'normal'; },
   history:`<b>PMHx:</b> Graves' disease, diagnosed 1 year ago.<br>
     <b>Surgical Hx:</b> None.<br>
     <b>Medications:</b> Methimazole 20mg OD — ran out 2 weeks ago, has not been able to get a refill.<br>
@@ -2627,6 +2633,7 @@ CASES.aki = {
     return {msg:'IV crystalloid given — treating the pre-renal component from recent hypotension/reduced intake.'};
   },
   onIntubate(S){ return 'Reserve intubation for airway protection if GCS falls critically (uraemic encephalopathy or severe hyperkalemia-related arrhythmia).'; },
+  ecgPattern(S){ return S.potassium>6.5 ? 'peaked_t' : 'normal'; },
   history:`<b>PMHx:</b> Hypertension (on ramipril), osteoarthritis, recent hip fracture with surgical fixation 3 days ago.<br>
     <b>Surgical Hx:</b> Hip fracture fixation, 3 days ago.<br>
     <b>Medications:</b> Ramipril, diclofenac (started 2 days ago for post-op pain), IV gentamicin (started 2 days ago for a wound infection).<br>
@@ -2729,6 +2736,7 @@ CASES.hyperkalemia_symptomatic = {
   },
   onBolus(S){ return {msg:'IV crystalloid given — treats the pre-renal component from GI losses and reduced intake.'}; },
   onIntubate(S){ return 'Reserve intubation for airway protection if GCS deteriorates significantly.'; },
+  ecgPattern(S){ return S.potassium>7.5 ? 'sine' : S.potassium>6 ? 'peaked_t' : 'normal'; },
   history:`<b>PMHx:</b> Heart failure with reduced ejection fraction (EF 35%), hypertension.<br>
     <b>Surgical Hx:</b> None.<br>
     <b>Medications:</b> Ramipril, spironolactone, bisoprolol, and recently self-started ibuprofen — an ACE inhibitor + potassium-sparing diuretic + NSAID combination ("triple whammy") that significantly raises AKI and hyperkalemia risk, especially with volume depletion.<br>
@@ -3134,7 +3142,7 @@ function renderMonitor(){
     <div class="tile"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
       <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
   `;
-  drawWave('wf-hr','ecg', v.hr);
+  drawWave('wf-hr','ecg', v.hr, ecgPatternFor());
   drawWave('wf-bp','art', v.sbp);
   drawWave('wf-rr','bar', v.rr);
   drawWave('wf-spo2','pleth', v.spo2);
@@ -3151,7 +3159,51 @@ function renderMonitor(){
   document.getElementById('clock').textContent = fmtClock(S.simTime).toUpperCase();
 }
 
-function drawWave(id, kind, val){
+function ecgPatternFor(){
+  if (S.arrested) return S.shockable ? 'vf' : 'flatline';
+  if (CURRENT.ecgPattern) return CURRENT.ecgPattern(S);
+  return 'normal';
+}
+
+function ecgY(frac, h, pattern, x){
+  // frac: 0..1 position within one beat cycle. Returns vertical deflection (positive = upward).
+  if (pattern==='vf'){
+    return (Math.sin(x*0.9+waveT*0.5) + Math.sin(x*0.37+waveT*1.3) + Math.sin(x*1.6+waveT*0.21)) * h*0.22;
+  }
+  if (pattern==='flatline'){
+    return Math.sin(x*0.15+waveT*0.05) * h*0.02;
+  }
+  if (pattern==='sine'){
+    return Math.sin(frac*Math.PI*2) * h*0.62;
+  }
+  let y = 0;
+  const isAfib = pattern==='afib';
+  if (!isAfib && frac>0.04 && frac<0.14){
+    y += Math.sin((frac-0.04)/0.10*Math.PI) * (h*0.09);
+  }
+  if (isAfib){
+    y += Math.sin(x*1.7+waveT*0.4) * h*0.025; // fibrillatory baseline, no P wave
+  }
+  if (frac>0.16 && frac<0.22){
+    const qrsAmp = pattern==='peaked_t' ? h*0.95 : h*0.85;
+    y += Math.sin((frac-0.16)/0.06*Math.PI) * qrsAmp;
+  }
+  if (frac>=0.22 && frac<0.34){
+    if (pattern==='st_elevation') y += h*0.22;
+    else if (pattern==='st_depression') y -= h*0.14;
+  }
+  if (frac>=0.34 && frac<0.56){
+    const tphase = (frac-0.34)/0.22*Math.PI;
+    let tamp = h*0.20;
+    let tsign = 1;
+    if (pattern==='peaked_t') tamp = h*0.5;
+    if (pattern==='st_depression'){ tamp = h*0.16; tsign = -1; }
+    y += Math.sin(tphase) * tamp * tsign;
+  }
+  return y;
+}
+
+function drawWave(id, kind, val, pattern){
   const c = document.getElementById(id);
   if(!c) return;
   const ctx = c.getContext('2d');
@@ -3168,12 +3220,14 @@ function drawWave(id, kind, val){
       ctx.fillRect(x,h-bh,3,bh);
     }
   } else {
+    const beatLen = Math.PI*6;
     for(let x=0;x<w;x++){
-      const ph = (x*0.12 + waveT*speed);
+      let ph = (x*0.12 + waveT*speed);
+      if (kind==='ecg' && pattern==='afib') ph += Math.sin(x*0.05+waveT*0.02)*1.6 + Math.sin(x*0.13+waveT*0.05)*0.9;
       let y;
       if (kind==='ecg'){
-        const cyc = ph % (Math.PI*6);
-        y = h/2 - (cyc>2.6&&cyc<3.4 ? Math.sin((cyc-2.6)/0.8*Math.PI)*(h*0.9) : Math.sin(ph)*1.5);
+        const frac = (ph % beatLen) / beatLen;
+        y = h/2 - ecgY(frac, h, pattern||'normal', x);
       } else if (kind==='pleth'){
         y = h/2 - Math.sin(ph)*Math.pow(Math.abs(Math.sin(ph*0.5)),0.5)*(h*0.38);
       } else {
@@ -3190,7 +3244,7 @@ function animate(){
   waveT += reduceMotion? 0 : 1.4;
   if (S){
     const v = vitals();
-    drawWave('wf-hr','ecg', v.hr);
+    drawWave('wf-hr','ecg', v.hr, ecgPatternFor());
     drawWave('wf-bp','art', v.sbp);
     drawWave('wf-rr','bar', v.rr);
     drawWave('wf-spo2','pleth', v.spo2);
