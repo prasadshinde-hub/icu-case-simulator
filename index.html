@@ -3142,10 +3142,15 @@ function renderMonitor(){
     <div class="tile"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
       <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
   `;
-  drawWave('wf-hr','ecg', v.hr, ecgPatternFor());
-  drawWave('wf-bp','art', v.sbp);
-  drawWave('wf-rr','bar', v.rr);
-  drawWave('wf-spo2','pleth', v.spo2);
+  {
+    const pattern = ecgPatternFor();
+    const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
+    const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
+    drawWave('wf-hr','ecg', v.hr, pattern);
+    drawWave('wf-bp','art', v.sbp, pattern, artAmp);
+    drawWave('wf-rr','bar', v.rr);
+    drawWave('wf-spo2','pleth', v.spo2, pattern, perfAmp);
+  }
 
   const pill = document.getElementById('statusPill');
   if (S.dead){ pill.textContent='DECEASED'; pill.className='status-pill crit'; }
@@ -3203,9 +3208,38 @@ function ecgY(frac, h, pattern, x){
   return y;
 }
 
-function drawWave(id, kind, val, pattern){
+function arterialY(frac, h, pattern, x, amp){
+  if (pattern==='vf'){
+    return (Math.sin(x*1.1+waveT*0.4)+Math.sin(x*0.4+waveT*0.9)) * h*0.05;
+  }
+  if (pattern==='flatline'){
+    // CPR-generated compression pulses on an arterial line — brief sharp spikes, no true beat
+    const compCyc = (x*0.9 + waveT*1.1) % (Math.PI*2);
+    return compCyc<0.3 ? Math.sin(compCyc/0.3*Math.PI)*h*0.24 : 0;
+  }
+  let y;
+  if (frac<0.13) y = Math.sin(frac/0.13*Math.PI*0.5)*h*0.46; // sharp systolic upstroke
+  else if (frac<0.20) y = Math.cos((frac-0.13)/0.07*Math.PI*0.5)*h*0.46; // decline from peak
+  else if (frac<0.24) y = h*0.10 - (frac-0.20)/0.04*h*0.08; // dicrotic notch
+  else if (frac<0.34) y = h*0.02 + Math.sin((frac-0.24)/0.10*Math.PI)*h*0.10; // dicrotic bump
+  else y = Math.max(0, h*0.02*(1-(frac-0.34)/0.66)); // diastolic runoff
+  return y*amp;
+}
+
+function plethY(ph, h, pattern, x, amp){
+  if (pattern==='vf'){
+    return (Math.sin(x*1.0+waveT*0.45)+Math.sin(x*0.3+waveT*0.8)) * h*0.04;
+  }
+  if (pattern==='flatline'){
+    return 0; // pulse oximeter typically loses signal during CPR — flat is realistic here
+  }
+  return Math.sin(ph)*Math.pow(Math.abs(Math.sin(ph*0.5)),0.5)*(h*0.38)*amp;
+}
+
+function drawWave(id, kind, val, pattern, amp){
   const c = document.getElementById(id);
   if(!c) return;
+  amp = amp==null ? 1 : amp;
   const ctx = c.getContext('2d');
   const w=c.width, h=c.height;
   ctx.clearRect(0,0,w,h);
@@ -3223,13 +3257,16 @@ function drawWave(id, kind, val, pattern){
     const beatLen = Math.PI*6;
     for(let x=0;x<w;x++){
       let ph = (x*0.12 + waveT*speed);
-      if (kind==='ecg' && pattern==='afib') ph += Math.sin(x*0.05+waveT*0.02)*1.6 + Math.sin(x*0.13+waveT*0.05)*0.9;
+      if ((kind==='ecg'||kind==='art'||kind==='pleth') && pattern==='afib') ph += Math.sin(x*0.05+waveT*0.02)*1.6 + Math.sin(x*0.13+waveT*0.05)*0.9;
       let y;
       if (kind==='ecg'){
         const frac = (ph % beatLen) / beatLen;
         y = h/2 - ecgY(frac, h, pattern||'normal', x);
       } else if (kind==='pleth'){
-        y = h/2 - Math.sin(ph)*Math.pow(Math.abs(Math.sin(ph*0.5)),0.5)*(h*0.38);
+        y = h/2 - plethY(ph, h, pattern||'normal', x, amp);
+      } else if (kind==='art'){
+        const frac = (ph % beatLen) / beatLen;
+        y = h/2 - arterialY(frac, h, pattern||'normal', x, amp);
       } else {
         const cyc = ph % (Math.PI*2);
         y = h/2 - (cyc<1.2? Math.sin(cyc/1.2*Math.PI)*(h*0.42) : Math.sin(cyc*0.4)*2);
@@ -3244,10 +3281,13 @@ function animate(){
   waveT += reduceMotion? 0 : 1.4;
   if (S){
     const v = vitals();
-    drawWave('wf-hr','ecg', v.hr, ecgPatternFor());
-    drawWave('wf-bp','art', v.sbp);
+    const pattern = ecgPatternFor();
+    const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
+    const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
+    drawWave('wf-hr','ecg', v.hr, pattern);
+    drawWave('wf-bp','art', v.sbp, pattern, artAmp);
     drawWave('wf-rr','bar', v.rr);
-    drawWave('wf-spo2','pleth', v.spo2);
+    drawWave('wf-spo2','pleth', v.spo2, pattern, perfAmp);
   }
   requestAnimationFrame(animate);
 }
