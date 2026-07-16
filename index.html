@@ -3147,9 +3147,9 @@ function renderMonitor(){
     const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
     const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
     drawWave('wf-hr','ecg', v.hr, pattern);
-    drawWave('wf-bp','art', v.sbp, pattern, artAmp);
+    drawWave('wf-bp','art', v.hr, pattern, artAmp);
     drawWave('wf-rr','bar', v.rr);
-    drawWave('wf-spo2','pleth', v.spo2, pattern, perfAmp);
+    drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
   }
 
   const pill = document.getElementById('statusPill');
@@ -3217,23 +3217,31 @@ function arterialY(frac, h, pattern, x, amp){
     const compCyc = (x*0.9 + waveT*1.1) % (Math.PI*2);
     return compCyc<0.3 ? Math.sin(compCyc/0.3*Math.PI)*h*0.24 : 0;
   }
+  // Deflection starts after frac 0.22 (end of the QRS) — the mechanical pulse follows electrical depolarization.
   let y;
-  if (frac<0.13) y = Math.sin(frac/0.13*Math.PI*0.5)*h*0.46; // sharp systolic upstroke
-  else if (frac<0.20) y = Math.cos((frac-0.13)/0.07*Math.PI*0.5)*h*0.46; // decline from peak
-  else if (frac<0.24) y = h*0.10 - (frac-0.20)/0.04*h*0.08; // dicrotic notch
-  else if (frac<0.34) y = h*0.02 + Math.sin((frac-0.24)/0.10*Math.PI)*h*0.10; // dicrotic bump
-  else y = Math.max(0, h*0.02*(1-(frac-0.34)/0.66)); // diastolic runoff
+  if (frac<0.22) y = 0; // isovolumic period — flat, no pulse yet
+  else if (frac<0.30) y = Math.sin((frac-0.22)/0.08*Math.PI*0.5)*h*0.46; // sharp systolic upstroke
+  else if (frac<0.36) y = h*0.10 + Math.cos((frac-0.30)/0.06*Math.PI*0.5)*h*0.36; // decline from peak
+  else if (frac<0.46) y = h*0.08 + Math.sin((frac-0.36)/0.10*Math.PI)*h*0.08; // dicrotic notch + bump
+  else y = Math.max(0, h*0.08*(1-(frac-0.46)/0.54)); // diastolic runoff back to 0 by next beat
   return y*amp;
 }
 
-function plethY(ph, h, pattern, x, amp){
+function plethY(frac, h, pattern, x, amp){
+  // frac: 0..1 position within one beat cycle — same beatLen as the ECG/arterial traces, so all three stay rate-synchronized.
   if (pattern==='vf'){
     return (Math.sin(x*1.0+waveT*0.45)+Math.sin(x*0.3+waveT*0.8)) * h*0.04;
   }
   if (pattern==='flatline'){
     return 0; // pulse oximeter typically loses signal during CPR — flat is realistic here
   }
-  return Math.sin(ph)*Math.pow(Math.abs(Math.sin(ph*0.5)),0.5)*(h*0.38)*amp;
+  // Deflection starts after frac 0.24 — the peripheral pulse arrives shortly after the QRS/systolic upstroke.
+  let y;
+  if (frac<0.24) y = 0; // flat baseline
+  else if (frac<0.42) y = Math.sin((frac-0.24)/0.18*Math.PI*0.5) * h*0.38; // rise to peak
+  else if (frac<0.60) y = Math.cos((frac-0.42)/0.18*Math.PI*0.5) * h*0.38; // smooth fall back to baseline
+  else y = 0; // diastolic rest
+  return y*amp;
 }
 
 function drawWave(id, kind, val, pattern, amp){
@@ -3246,7 +3254,7 @@ function drawWave(id, kind, val, pattern, amp){
   const col = getComputedStyle(document.documentElement).getPropertyValue(
     kind==='ecg'?'--cyan':kind==='pleth'?'--lime':kind==='art'?'--violet':'--amber');
   ctx.strokeStyle = col.trim(); ctx.lineWidth = 1.4; ctx.beginPath();
-  const speed = kind==='ecg'? val/70 : kind==='pleth'? val/90 : 1;
+  const speed = (kind==='ecg'||kind==='art'||kind==='pleth') ? val/70 : 1;
   if (kind==='bar'){
     ctx.fillStyle = col.trim();
     for(let x=0;x<w;x+=6){
@@ -3263,7 +3271,8 @@ function drawWave(id, kind, val, pattern, amp){
         const frac = (ph % beatLen) / beatLen;
         y = h/2 - ecgY(frac, h, pattern||'normal', x);
       } else if (kind==='pleth'){
-        y = h/2 - plethY(ph, h, pattern||'normal', x, amp);
+        const frac = (ph % beatLen) / beatLen;
+        y = h/2 - plethY(frac, h, pattern||'normal', x, amp);
       } else if (kind==='art'){
         const frac = (ph % beatLen) / beatLen;
         y = h/2 - arterialY(frac, h, pattern||'normal', x, amp);
@@ -3285,9 +3294,9 @@ function animate(){
     const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
     const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
     drawWave('wf-hr','ecg', v.hr, pattern);
-    drawWave('wf-bp','art', v.sbp, pattern, artAmp);
+    drawWave('wf-bp','art', v.hr, pattern, artAmp);
     drawWave('wf-rr','bar', v.rr);
-    drawWave('wf-spo2','pleth', v.spo2, pattern, perfAmp);
+    drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
   }
   requestAnimationFrame(animate);
 }
