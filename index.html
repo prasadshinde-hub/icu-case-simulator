@@ -153,7 +153,7 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .tile .label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);}
 .tile .value{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;line-height:1.1;}
 .tile .unit{font-size:10.5px;color:var(--text-faint);font-weight:500;}
-.tile canvas{width:100%;height:28px;display:block;margin-top:2px;}
+.tile canvas{width:100%;height:40px;display:block;margin-top:2px;}
 .tile.hr .value{color:var(--cyan);} .tile.spo2 .value{color:var(--lime);}
 .tile.bp .value{color:var(--violet);} .tile.rr .value{color:var(--amber);}
 .tile .flag{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--good);}
@@ -217,6 +217,22 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
 
 @media (prefers-reduced-motion: reduce){ * { scroll-behavior:auto !important; } }
+
+/* ---------- screen transitions ---------- */
+@keyframes screenIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+.screen-enter{ animation:screenIn .22s ease both; }
+@media (prefers-reduced-motion: reduce){ .screen-enter{ animation:none; } }
+
+/* ---------- touch/tap feedback ---------- */
+.btn:active{ background:var(--panel-2); border-color:var(--accent); transform:scale(.97); }
+.btn.primary:active{ transform:scale(.97); filter:brightness(.94); }
+.case-card:active, .specialty-card:not(.empty):active{ border-color:var(--accent); transform:scale(.985); }
+
+/* ---------- scrollbars ---------- */
+.logfeed, .tabs{ scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.logfeed::-webkit-scrollbar, .tabs::-webkit-scrollbar{ height:6px; width:6px; }
+.logfeed::-webkit-scrollbar-thumb, .tabs::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+.logfeed::-webkit-scrollbar-track, .tabs::-webkit-scrollbar-track{ background:transparent; }
 </style>
 
 <div class="front" id="frontScreen">
@@ -3130,13 +3146,13 @@ function renderMonitor(){
   const m = document.getElementById('monitor');
   m.innerHTML = `
     <div class="tile hr"><span class="flag ${statusOf(v.hr,'hr')}"></span><span class="label">Heart rate</span>
-      <span class="value">${v.hr}<span class="unit"> bpm</span></span><canvas id="wf-hr" width="200" height="28"></canvas></div>
+      <span class="value">${v.hr}<span class="unit"> bpm</span></span><canvas id="wf-hr" width="200" height="40"></canvas></div>
     <div class="tile bp"><span class="flag ${statusOf(v.sbp,'sbp')}"></span><span class="label">Arterial BP</span>
-      <span class="value">${v.sbp}/${v.dbp}<span class="unit"> mmHg</span></span><canvas id="wf-bp" width="200" height="28"></canvas></div>
+      <span class="value">${v.sbp}/${v.dbp}<span class="unit"> mmHg</span></span><canvas id="wf-bp" width="200" height="40"></canvas></div>
     <div class="tile"><span class="flag ${statusOf(v.rr,'rr')}"></span><span class="label">Resp. rate</span>
-      <span class="value">${v.rr}<span class="unit"> /min</span></span><canvas id="wf-rr" width="200" height="28"></canvas></div>
+      <span class="value">${v.rr}<span class="unit"> /min</span></span><canvas id="wf-rr" width="200" height="40"></canvas></div>
     <div class="tile spo2"><span class="flag ${statusOf(v.spo2,'spo2')}"></span><span class="label">SpO2</span>
-      <span class="value">${v.spo2}<span class="unit"> %</span></span><canvas id="wf-spo2" width="200" height="28"></canvas></div>
+      <span class="value">${v.spo2}<span class="unit"> %</span></span><canvas id="wf-spo2" width="200" height="40"></canvas></div>
     <div class="tile"><span class="flag ${statusOf(parseFloat(v.temp),'temp')}"></span><span class="label">Temp</span>
       <span class="value">${v.temp}<span class="unit"> °C</span></span></div>
     <div class="tile"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
@@ -3423,7 +3439,7 @@ function showDebrief(final){
 
   document.getElementById('appScreen').style.display='none';
   document.getElementById('codeOverlay').classList.remove('show');
-  document.getElementById('debriefScreen').style.display='';
+  revealScreen('debriefScreen');
 
   document.getElementById('debriefExportBtn').addEventListener('click', ()=>document.getElementById('exportBtn').click());
   if (final){
@@ -3438,7 +3454,7 @@ function showDebrief(final){
   } else {
     document.getElementById('debriefContinueBtn').addEventListener('click', ()=>{
       document.getElementById('debriefScreen').style.display='none';
-      document.getElementById('appScreen').style.display='';
+      revealScreen('appScreen');
     });
   }
 }
@@ -3542,7 +3558,7 @@ function loadCase(key){
   CURRENT = CASES[key];
   S = freshState(CURRENT);
   document.getElementById('menuScreen').style.display='none';
-  document.getElementById('appScreen').style.display='';
+  revealScreen('appScreen');
   document.getElementById('debriefScreen').style.display='none';
   document.getElementById('hdrEyebrow').textContent = CURRENT.eyebrow;
   document.getElementById('hdrTitle').textContent = CURRENT.title;
@@ -3621,8 +3637,16 @@ function buildSpecialtyGrid(){
   });
 }
 
+function revealScreen(id){
+  const el = document.getElementById(id);
+  el.style.display='';
+  el.classList.remove('screen-enter');
+  void el.offsetWidth;
+  el.classList.add('screen-enter');
+}
+
 function showFront(){
-  document.getElementById('frontScreen').style.display='';
+  revealScreen('frontScreen');
   document.getElementById('specialtyScreen').style.display='none';
   document.getElementById('menuScreen').style.display='none';
   document.getElementById('appScreen').style.display='none';
@@ -3630,7 +3654,7 @@ function showFront(){
 
 function showSpecialtyScreen(){
   document.getElementById('frontScreen').style.display='none';
-  document.getElementById('specialtyScreen').style.display='';
+  revealScreen('specialtyScreen');
   document.getElementById('menuScreen').style.display='none';
   document.getElementById('appScreen').style.display='none';
 }
@@ -3643,13 +3667,13 @@ function showMenuFor(specialtyKey){
   buildMenu(specialtyKey);
   document.getElementById('frontScreen').style.display='none';
   document.getElementById('specialtyScreen').style.display='none';
-  document.getElementById('menuScreen').style.display='';
+  revealScreen('menuScreen');
   document.getElementById('appScreen').style.display='none';
 }
 
 function showMenu(){
   document.getElementById('appScreen').style.display='none';
-  document.getElementById('menuScreen').style.display='';
+  revealScreen('menuScreen');
 }
 
 function buildMenu(specialtyKey){
