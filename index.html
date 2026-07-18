@@ -41,12 +41,18 @@ body{padding:18px; min-height:100vh;}
 .menu-hdr .eyebrow{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);}
 .menu-hdr h1{font-size:22px;margin:0;font-weight:700;}
 .menu-hdr p{font-size:13.5px;color:var(--text-dim);margin:0;max-width:60ch;margin:0 auto;}
-.randomize-row{display:flex;justify-content:center;}
+.randomize-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+#caseSearch{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;
+  padding:7px 12px;font-size:12.5px;font-family:var(--sans);min-width:220px;}
+#caseSearch::placeholder{color:var(--text-faint);}
+#caseSearch:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.case-grid-empty{grid-column:1/-1;font-size:13px;color:var(--text-faint);font-style:italic;text-align:center;padding:20px;}
 .case-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
 @media (max-width:640px){.case-grid{grid-template-columns:1fr;}}
 .case-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;
-  cursor:pointer;transition:border-color .12s;font-family:var(--sans);color:var(--text);}
-.case-card:hover{border-color:var(--accent);}
+  cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;font-family:var(--sans);color:var(--text);}
+.case-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.35);}
+@media (prefers-reduced-motion: reduce){ .case-card:hover{transform:none;} }
 .case-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .case-card .tag{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;display:block;}
 .case-card .cc{font-size:14px;font-weight:700;margin:0 0 4px;}
@@ -65,6 +71,13 @@ body{padding:18px; min-height:100vh;}
 .btn.large{padding:14px 26px;font-size:15px;border-radius:8px;}
 .front-note{font-size:12px;color:var(--text-faint);max-width:48ch;line-height:1.6;}
 
+/* ---------- settings panel (front screen) ---------- */
+.settings-btn{position:fixed;top:16px;right:16px;z-index:40;}
+.settings-popover{position:fixed;top:52px;right:16px;z-index:41;width:230px;background:var(--panel);
+  border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:flex;flex-direction:column;gap:10px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-dim);}
+
 /* ---------- specialty screen ---------- */
 .specialty{max-width:900px;margin:40px auto;display:flex;flex-direction:column;gap:18px;}
 .specialty-hdr{display:flex;flex-direction:column;gap:6px;text-align:center;}
@@ -76,8 +89,9 @@ body{padding:18px; min-height:100vh;}
 @media (max-width:760px){.specialty-grid{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:480px){.specialty-grid{grid-template-columns:1fr;}}
 .specialty-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:left;
-  cursor:pointer;transition:border-color .12s,transform .12s;font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;gap:10px;}
-.specialty-card:hover{border-color:var(--spec-color, var(--accent));}
+  cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;gap:10px;}
+.specialty-card:not(.empty):hover{border-color:var(--spec-color, var(--accent));transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.35);}
+@media (prefers-reduced-motion: reduce){ .specialty-card:hover{transform:none;} }
 .specialty-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .specialty-card svg{width:34px;height:34px;}
 .specialty-card .sc-name{font-size:15px;font-weight:700;margin:0;}
@@ -157,7 +171,12 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .tile.hr .value{color:var(--cyan);} .tile.spo2 .value{color:var(--lime);}
 .tile.bp .value{color:var(--violet);} .tile.rr .value{color:var(--amber);}
 .tile .flag{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--good);}
-.tile .flag.warn{background:var(--warn);} .tile .flag.crit{background:var(--crit);box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent);}
+.tile .flag.warn{background:var(--warn);} .tile .flag.crit{background:var(--crit);animation:flagPulse 1.6s ease-in-out infinite;}
+@keyframes flagPulse{
+  0%,100%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent); }
+  50%{ box-shadow:0 0 0 6px color-mix(in srgb, var(--crit) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce){ .tile .flag.crit{animation:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent);} }
 
 /* ---------- console ---------- */
 .console{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start;}
@@ -199,14 +218,35 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .logrow.crit .msg{color:var(--crit);font-weight:600;}
 .logfoot{border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;}
 
-/* ---------- code blue overlay ---------- */
-.overlay{position:fixed;inset:0;background:color-mix(in srgb, var(--crit) 14%, var(--bg) 86%);
-  display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
-.overlay.show{display:flex;}
-.overlay-card{background:var(--panel);border:2px solid var(--crit);border-radius:12px;padding:28px;max-width:520px;width:100%;}
-.overlay-card h2{color:var(--crit);margin:0 0 6px;font-size:22px;letter-spacing:.03em;}
-.overlay-card p{color:var(--text-dim);font-size:13.5px;line-height:1.6;}
-.overlay-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+/* ---------- code blue / arrest screen ---------- */
+@keyframes critPulse{
+  0%,100%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--crit) 45%, transparent); }
+  50%{ box-shadow:0 0 0 6px color-mix(in srgb, var(--crit) 0%, transparent); }
+}
+.arrest-hdr{border-color:var(--crit);animation:critPulse 1.6s ease-in-out infinite;}
+.arrest-hdr .eyebrow{color:var(--crit);}
+.status-pill.crit{animation:critPulse 1.6s ease-in-out infinite;}
+@media (prefers-reduced-motion: reduce){ .arrest-hdr, .status-pill.crit{ animation:none; } }
+.arrest-console{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start;}
+@media (max-width:840px){.arrest-console{grid-template-columns:1fr;}}
+.arrest-left{display:flex;flex-direction:column;gap:14px;}
+.arrest-panel{padding:16px 18px;}
+.arrest-panel h3{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);margin:0 0 10px;}
+.cpr-reminder{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:0 0 10px;}
+#logSlotArrest .panel.logpanel{height:100%;min-height:420px;}
+.ht-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+@media (max-width:480px){.ht-grid{grid-template-columns:1fr;}}
+.ht-chip{background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;
+  font-size:12px;text-align:left;color:var(--text-dim);display:flex;align-items:center;gap:6px;font-family:var(--sans);}
+.ht-chip .mark{width:14px;height:14px;border-radius:50%;border:1px solid var(--text-faint);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:10px;}
+.ht-chip.checked{border-color:var(--good);color:var(--text);cursor:default;}
+.ht-chip.checked .mark{border-color:var(--good);background:var(--good);color:var(--on-accent,var(--bg));}
+
+/* ---------- instructor tools ---------- */
+.instr-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px dashed var(--violet);
+  border-radius:8px;padding:8px 12px;background:color-mix(in srgb, var(--violet) 7%, transparent);}
+.instr-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--violet);}
 
 /* ---------- modal ---------- */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:20px;}
@@ -236,6 +276,18 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 </style>
 
 <div class="front" id="frontScreen">
+  <button class="btn ghost small settings-btn" id="settingsBtn">Settings</button>
+  <div class="settings-popover" id="settingsPopover" style="display:none;">
+    <div class="settings-row">
+      <span>Appearance</span>
+      <button class="btn small" id="themeToggleBtn">Dark</button>
+    </div>
+    <div class="settings-row">
+      <span>Sound</span>
+      <button class="btn small" id="soundToggleBtn">On</button>
+    </div>
+    <button class="btn small" id="testSoundBtn" style="width:100%;margin-top:8px;">Test sound</button>
+  </div>
   <div class="front-icons" id="frontIcons"></div>
   <span class="eyebrow">Advanced Practice &middot; Offline &middot; Hidden-Diagnosis Training</span>
   <h1>ICU Case Simulator</h1>
@@ -265,6 +317,7 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   </div>
   <div class="randomize-row">
     <button class="btn primary" id="randomizeBtn">Randomize — pick a case for me</button>
+    <input type="search" id="caseSearch" placeholder="Search by complaint or keyword…">
   </div>
   <div class="case-grid" id="caseGrid"></div>
 </div>
@@ -282,6 +335,7 @@ details.brief[open] summary::before{transform:rotate(90deg);}
       <button class="btn ghost small" id="reviewBtn" title="See a debrief of your decisions so far, without ending the case">Review progress</button>
       <button class="btn ghost small" id="menuBtn" title="Back to case picker">Change case</button>
       <button class="btn ghost small" id="restartBtn" title="Restart this case from the beginning">Restart</button>
+      <button class="btn ghost small" id="instructorToggleBtn" title="Toggle instructor tools (pause, force arrest/ROSC)">Instructor: Off</button>
       <button class="btn small" id="exportBtn" title="Download the full decision/event log as text">Export Log</button>
     </div>
   </div>
@@ -291,7 +345,14 @@ details.brief[open] summary::before{transform:rotate(90deg);}
     <div class="brief-body" id="briefBody"></div>
   </details>
 
-  <div class="monitor" id="monitor"></div>
+  <div id="monitorSlotApp"><div class="monitor" id="monitor"></div></div>
+
+  <div class="instr-bar" id="instrBarApp" style="display:none;">
+    <span class="instr-label">Instructor tools</span>
+    <button class="btn small" data-instr="pause">Pause</button>
+    <button class="btn small" data-instr="arrest">Force arrest</button>
+    <button class="btn small" data-instr="rosc">Force ROSC</button>
+  </div>
 
   <div class="console">
     <div class="panel">
@@ -343,13 +404,15 @@ details.brief[open] summary::before{transform:rotate(90deg);}
       </div>
     </div>
 
-    <div class="panel logpanel">
-      <h3>Nursing / event log</h3>
-      <div class="logfeed" id="logfeed"></div>
-      <div class="logfoot">
-        <span style="font-size:11.5px;color:var(--text-faint);">
-          Use "Review progress" any time for an in-app debrief, or export the log for your own records.
-        </span>
+    <div id="logSlotApp">
+      <div class="panel logpanel">
+        <h3>Nursing / event log</h3>
+        <div class="logfeed" id="logfeed"></div>
+        <div class="logfoot">
+          <span style="font-size:11.5px;color:var(--text-faint);">
+            Use "Review progress" any time for an in-app debrief, or export the log for your own records.
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -372,17 +435,64 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   </div>
 </div>
 
-<div class="overlay" id="codeOverlay">
-  <div class="overlay-card">
-    <h2>CODE BLUE</h2>
-    <p id="codeText">Patient is unresponsive, no pulse palpable.</p>
-    <div class="overlay-actions" id="codeActions">
-      <button class="btn primary" data-code="cpr">Continue CPR (2-min cycle)</button>
-      <button class="btn" data-code="epi">Give epinephrine 1mg IV</button>
-      <button class="btn" data-code="rhythm">Check rhythm</button>
-      <button class="btn danger" data-code="defib">Defibrillate 200J</button>
+<div class="app" id="arrestScreen" style="display:none;">
+  <div class="hdr arrest-hdr">
+    <div class="hdr-title">
+      <div class="top-row" style="margin-bottom:4px;"><button class="btn ghost small" id="backDuringArrestBtn">&larr; Back</button></div>
+      <span class="eyebrow">CODE BLUE &middot; ACLS IN PROGRESS</span>
+      <h1 id="arrestCaseTitle">Patient</h1>
     </div>
-    <div class="overlay-actions" id="codeSpecialButtons"></div>
+    <div class="hdr-right">
+      <span class="clock" id="arrestStats">Cycle 0 &middot; 00:00 &middot; Shocks 0 &middot; Epi 0</span>
+    </div>
+  </div>
+
+  <div id="monitorSlotArrest"></div>
+
+  <div class="instr-bar" id="instrBarArrest" style="display:none;">
+    <span class="instr-label">Instructor tools</span>
+    <button class="btn small" data-instr="pause">Pause</button>
+    <button class="btn small" data-instr="arrest">Force arrest</button>
+    <button class="btn small" data-instr="rosc">Force ROSC</button>
+  </div>
+
+  <div class="arrest-console">
+    <div class="arrest-left">
+      <div class="panel arrest-panel">
+        <h3>Rhythm &amp; CPR</h3>
+        <p class="cpr-reminder">Push hard and fast (100–120/min), allow full recoil, minimize interruptions.</p>
+        <div class="rowbtns">
+          <button class="btn primary" data-code="cpr">Continue CPR (2-min cycle)</button>
+          <button class="btn" data-code="rhythm">Check rhythm</button>
+          <button class="btn danger" id="defibBtn" data-code="defib">Defibrillate 200J</button>
+        </div>
+      </div>
+      <div class="panel arrest-panel">
+        <h3>Medications</h3>
+        <div class="rowbtns">
+          <button class="btn" id="epiBtn" data-code="epi">Give epinephrine 1mg IV</button>
+          <button class="btn" id="amio1Btn" data-code="amio1" style="display:none;">Amiodarone 300mg IV</button>
+          <button class="btn" id="amio2Btn" data-code="amio2" style="display:none;">Amiodarone 150mg IV (2nd dose)</button>
+        </div>
+      </div>
+      <div class="panel arrest-panel">
+        <h3>Additional crash-cart drugs</h3>
+        <div class="rowbtns">
+          <button class="btn small" data-code="calcium">Calcium chloride</button>
+          <button class="btn small" data-code="bicarb">Sodium bicarbonate</button>
+          <button class="btn small" data-code="magnesium">Magnesium sulfate</button>
+        </div>
+      </div>
+      <div class="panel arrest-panel" id="arrestSpecialPanel" style="display:none;">
+        <h3>Case-specific reversible cause</h3>
+        <div class="rowbtns" id="codeSpecialButtons"></div>
+      </div>
+      <div class="panel arrest-panel">
+        <h3>H's &amp; T's — reversible causes</h3>
+        <div class="ht-grid" id="htGrid"></div>
+      </div>
+    </div>
+    <div id="logSlotArrest"></div>
   </div>
 </div>
 
@@ -2910,6 +3020,40 @@ CASES.hyponatremia = {
 let CURRENT = null;
 let S = null;
 let waveT = 0;
+let instructorMode = false;
+let instructorPaused = false;
+let muted = false;
+
+// ================= sound =================
+let audioCtx = null;
+let alarmTimer = null;
+function ensureAudio(){
+  if (!audioCtx){
+    try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ return null; }
+  }
+  if (audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq, dur, vol){
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.type = 'square'; osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol==null?0.12:vol, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime+dur);
+}
+function playCriticalBeep(){ if (!muted) beep(880, 0.15); }
+function playTestTones(){ ensureAudio(); beep(660,0.15); setTimeout(()=>beep(880,0.15), 180); }
+function startArrestAlarm(){
+  if (alarmTimer || muted) return;
+  ensureAudio();
+  const tick = ()=>{ if (muted) return; beep(1000,0.12,0.1); setTimeout(()=>beep(760,0.12,0.1), 140); };
+  tick();
+  alarmTimer = setInterval(tick, 1100);
+}
+function stopArrestAlarm(){ if (alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } }
 
 function pressorBoost(){ return S.pressorLevel*7; }
 
@@ -2920,7 +3064,11 @@ function freshState(caseDef){
     arrested:false, arrestCycles:0, dead:false, rosc:false, shockable:false, rhythmChecked:false, justShocked:false,
     stableStreak:0, ended:false, endReason:null, debriefShown:false,
     pending:[], done:{}, doneCount:{}, log:[], histTaken:false,
-    examDone:{A:false,B:false,C:false,D:false,E:false}
+    examDone:{A:false,B:false,C:false,D:false,E:false},
+    shockCount:0, epiCount:0, lastEpiCycleGiven:-99, amioGiven:false, amioDose2:false,
+    causesChecked:{hypovolemia:false,hypoxia:false,acidosis:false,hyperkalemia:false,hypothermia:false,
+      tension_pneumo:false,tamponade:false,toxins:false,thrombosis_pulm:false,thrombosis_cor:false},
+    arrestStart:0
   };
   return Object.assign(base, caseDef.initState());
 }
@@ -2936,7 +3084,9 @@ function fmtClock(mins){
 
 function log(msg,type){
   S.log.push({t:S.simTime, msg, type:type||'action'});
+  if (type==='crit' && !S.arrested) playCriticalBeep();
   renderLog();
+  saveSession();
 }
 
 function vitals(){ return CURRENT.vitals(S); }
@@ -2981,6 +3131,7 @@ function stepOnce(){
 
 function advance(mins){
   if (S.ended || S.arrested) return;
+  if (instructorPaused){ log('Time advance blocked — simulation is paused by instructor.','warn'); renderAll(); return; }
   const steps = Math.round(mins/5);
   log(`Advancing time by ${mins} minutes.`,'action');
   for(let i=0;i<steps && !S.arrested && !S.ended;i++) stepOnce();
@@ -2991,15 +3142,18 @@ function triggerArrest(){
   S.arrested = true;
   S.shockable = Math.random() < CURRENT.shockableChance;
   S.rhythmChecked = false;
+  S.arrestStart = S.simTime;
   log('CARDIAC ARREST — patient unresponsive, no pulse.','crit');
-  document.getElementById('codeOverlay').classList.add('show');
   renderCodeSpecials();
+  renderAll();
 }
 
 function renderCodeSpecials(){
   const box = document.getElementById('codeSpecialButtons');
   box.innerHTML = '';
-  (CURRENT.arrestSpecials||[]).forEach((sp,idx)=>{
+  const specials = CURRENT.arrestSpecials||[];
+  document.getElementById('arrestSpecialPanel').style.display = specials.length ? '' : 'none';
+  specials.forEach((sp,idx)=>{
     const b = document.createElement('button');
     b.className = 'btn danger';
     b.textContent = sp.label;
@@ -3061,13 +3215,17 @@ function inotropeUp(){ if(S.inotropeLevel>0){S.inotropeLevel=Math.min(5,S.inotro
 function inotropeDown(){ if(S.inotropeLevel>0){S.inotropeLevel=Math.max(1,S.inotropeLevel-1); log('Dobutamine titrated down.','action'); renderAll();} }
 function inotropeStop(){ if(S.inotropeLevel>0){S.inotropeLevel=0; log('Dobutamine stopped.','action'); renderAll();} }
 
+function nextJoules(){ return S.shockCount===0?200:S.shockCount===1?300:360; }
+
 function codeAction(kind){
   if (kind==='cpr'){
     S.arrestCycles++;
+    S.rhythmChecked = false;
     let chance = 0.2;
     if (CURRENT.roscBonus) chance += CURRENT.roscBonus(S);
     if (S._epiThisCycle) chance += 0.1;
     if (S.justShocked) chance += 0.35;
+    if (S.shockable && S.amioGiven) chance += 0.08;
     chance = Math.min(0.85, chance);
     log(`CPR cycle ${S.arrestCycles} completed (2 min).`,'action');
     if (CURRENT.arrestSpecials && CURRENT.arrestSpecials.length && (!CURRENT.roscBonus || CURRENT.roscBonus(S)===0) && !S._reversibleCauseWarned){
@@ -3080,7 +3238,6 @@ function codeAction(kind){
       if (CURRENT.onRosc) CURRENT.onRosc(S);
       S._epiThisCycle = false;
       log('ROSC achieved. Post-arrest vitals are fragile — reassess immediately and consider post-ROSC bundle.','result');
-      document.getElementById('codeOverlay').classList.remove('show');
       renderAll();
       return;
     }
@@ -3090,12 +3247,14 @@ function codeAction(kind){
       const untreated = CURRENT.arrestSpecials && CURRENT.arrestSpecials.length && (!CURRENT.roscBonus || CURRENT.roscBonus(S)===0);
       const suffix = untreated ? ' No reversible cause was treated during this arrest — review the additional treatment options that were available and consider what should have been given.' : '';
       log(`Resuscitation efforts unsuccessful after 4 cycles. Time of death called.${suffix}`,'crit');
-      document.getElementById('codeOverlay').classList.remove('show');
       renderAll();
+      return;
     }
   } else if (kind==='epi'){
     S._epiThisCycle = true;
-    log('Epinephrine 1mg IV push given.','action');
+    S.epiCount++;
+    S.lastEpiCycleGiven = S.arrestCycles;
+    log(`Epinephrine 1mg IV push given (dose ${S.epiCount}).`,'action');
   } else if (kind==='rhythm'){
     S.rhythmChecked = true;
     log(S.shockable
@@ -3103,9 +3262,41 @@ function codeAction(kind){
       : 'Rhythm check: organized rhythm without a pulse — PEA/asystole. Non-shockable; continue CPR, do not defibrillate, treat reversible causes.', 'result');
   } else if (kind==='defib'){
     if (!S.rhythmChecked){ log('Check rhythm before defibrillating.','warn'); return; }
-    if (S.shockable){ S.justShocked = true; log('Defibrillation delivered (200J biphasic). Resume CPR immediately.','action'); }
-    else { log('Rhythm is non-shockable — defibrillation not indicated. Continue CPR and treat reversible causes.','warn'); }
+    if (S.shockable){
+      const j = nextJoules();
+      S.shockCount++;
+      S.justShocked = true;
+      log(`Defibrillation delivered (${j}J biphasic). Resume CPR immediately.`,'action');
+    } else { log('Rhythm is non-shockable — defibrillation not indicated. Continue CPR and treat reversible causes.','warn'); }
+  } else if (kind==='amio1'){
+    if (!S.shockable || S.shockCount<3 || S.amioGiven) return;
+    S.amioGiven = true;
+    log('Amiodarone 300mg IV given for refractory shockable rhythm.','action');
+  } else if (kind==='amio2'){
+    if (!S.amioGiven || S.shockCount<4 || S.amioDose2) return;
+    S.amioDose2 = true;
+    log('Amiodarone 150mg IV given (second dose) — still refractory.','action');
+  } else if (kind==='calcium'){
+    log('Calcium chloride given from the crash cart.','action');
+  } else if (kind==='bicarb'){
+    log('Sodium bicarbonate given from the crash cart.','action');
+  } else if (kind==='magnesium'){
+    log('Magnesium sulfate given from the crash cart.','action');
   }
+  renderAll();
+}
+
+const CAUSE_LABELS = {
+  hypovolemia:'Hypovolemia', hypoxia:'Hypoxia', acidosis:'Acidosis (H+)',
+  hyperkalemia:'Hypo/Hyperkalemia', hypothermia:'Hypothermia',
+  tension_pneumo:'Tension pneumothorax', tamponade:'Cardiac tamponade',
+  toxins:'Toxins', thrombosis_pulm:'Thrombosis — pulmonary', thrombosis_cor:'Thrombosis — coronary'
+};
+function toggleCause(key){
+  if (S.causesChecked[key]) return;
+  S.causesChecked[key] = true;
+  log(`Reversible cause addressed: ${CAUSE_LABELS[key]}.`,'action');
+  renderAll();
 }
 
 // ---------- history / exam ----------
@@ -3377,10 +3568,89 @@ function renderInterventionLocks(){
 
 function renderAll(){
   renderMonitor(); renderO2(); renderInvest(); renderPressor(); renderLog(); renderInterventionLocks();
+  syncArrestScreen();
+  renderInstructorBar();
+  saveSession();
   if (S.ended && !S.debriefShown){
     S.debriefShown = true;
     showDebrief(true);
   }
+}
+
+function syncArrestScreen(){
+  const appEl = document.getElementById('appScreen');
+  const arrestEl = document.getElementById('arrestScreen');
+  const active = S.arrested && !S.ended;
+  if (active){
+    document.getElementById('monitorSlotArrest').appendChild(document.getElementById('monitor'));
+    document.getElementById('logSlotArrest').appendChild(document.getElementById('logfeed').closest('.panel'));
+    document.getElementById('arrestCaseTitle').textContent = CURRENT.title;
+    if (arrestEl.style.display==='none'){ appEl.style.display='none'; revealScreen('arrestScreen'); }
+    renderArrestPanel();
+    startArrestAlarm();
+  } else {
+    document.getElementById('monitorSlotApp').appendChild(document.getElementById('monitor'));
+    document.getElementById('logSlotApp').appendChild(document.getElementById('logfeed').closest('.panel'));
+    if (arrestEl.style.display!=='none'){ arrestEl.style.display='none'; if(!S.ended) revealScreen('appScreen'); }
+    stopArrestAlarm();
+  }
+}
+
+function renderArrestPanel(){
+  const eh = Math.floor((S.simTime-S.arrestStart)/60), em = (S.simTime-S.arrestStart)%60;
+  document.getElementById('arrestStats').textContent =
+    `Cycle ${S.arrestCycles} · ${eh}:${em.toString().padStart(2,'0')} · Shocks ${S.shockCount} · Epi ${S.epiCount}`;
+  document.getElementById('defibBtn').textContent = `Defibrillate ${nextJoules()}J`;
+  document.getElementById('defibBtn').disabled = !S.rhythmChecked || S.ended;
+  const epiBtn = document.getElementById('epiBtn');
+  const epiDue = S.epiCount===0 || (S.arrestCycles - S.lastEpiCycleGiven) >= 2;
+  epiBtn.textContent = `Give epinephrine 1mg IV${S.epiCount>0? ` (dose ${S.epiCount+1})`:''}`;
+  epiBtn.style.borderColor = epiDue ? 'var(--warn)' : '';
+  epiBtn.style.color = epiDue ? 'var(--warn)' : '';
+  const amio1 = document.getElementById('amio1Btn'), amio2 = document.getElementById('amio2Btn');
+  amio1.style.display = (S.shockable && S.shockCount>=3 && !S.amioGiven) ? '' : 'none';
+  amio2.style.display = (S.amioGiven && S.shockCount>=4 && !S.amioDose2) ? '' : 'none';
+  const grid = document.getElementById('htGrid');
+  grid.innerHTML = Object.keys(CAUSE_LABELS).map(key=>{
+    const checked = S.causesChecked[key];
+    return `<button class="ht-chip${checked?' checked':''}" data-cause="${key}" ${checked?'disabled':''}>
+      <span class="mark">${checked?'✓':''}</span>${CAUSE_LABELS[key]}</button>`;
+  }).join('');
+  grid.querySelectorAll('[data-cause]').forEach(b=>{
+    b.addEventListener('click', ()=>toggleCause(b.dataset.cause));
+  });
+}
+
+// ---------- instructor mode ----------
+function renderInstructorBar(){
+  const toggleBtn = document.getElementById('instructorToggleBtn');
+  if (toggleBtn) toggleBtn.textContent = `Instructor: ${instructorMode?'On':'Off'}`;
+  document.querySelectorAll('.instr-bar').forEach(bar=>{
+    bar.style.display = instructorMode ? 'flex' : 'none';
+    const pauseBtn = bar.querySelector('[data-instr="pause"]');
+    const arrestBtn = bar.querySelector('[data-instr="arrest"]');
+    const roscBtn = bar.querySelector('[data-instr="rosc"]');
+    if (pauseBtn) pauseBtn.textContent = instructorPaused ? 'Resume' : 'Pause';
+    if (arrestBtn) arrestBtn.disabled = !S || S.arrested || S.ended;
+    if (roscBtn) roscBtn.disabled = !S || !S.arrested;
+  });
+}
+
+function instructorAction(kind){
+  if (!S) return;
+  if (kind==='pause'){
+    instructorPaused = !instructorPaused;
+    log(instructorPaused ? 'Simulation paused by instructor.' : 'Simulation resumed by instructor.', 'action');
+  } else if (kind==='arrest'){
+    if (!S.arrested && !S.ended) triggerArrest();
+  } else if (kind==='rosc'){
+    if (S.arrested){
+      S.arrested = false; S.rosc = true;
+      if (CURRENT.onRosc) CURRENT.onRosc(S);
+      log('ROSC forced by instructor for teaching purposes.','result');
+    }
+  }
+  renderAll();
 }
 
 // ---------- debrief ----------
@@ -3438,7 +3708,8 @@ function showDebrief(final){
        <button class="btn ghost" id="debriefExportBtn">Export full log</button>`;
 
   document.getElementById('appScreen').style.display='none';
-  document.getElementById('codeOverlay').classList.remove('show');
+  document.getElementById('arrestScreen').style.display='none';
+  stopArrestAlarm();
   revealScreen('debriefScreen');
 
   document.getElementById('debriefExportBtn').addEventListener('click', ()=>document.getElementById('exportBtn').click());
@@ -3565,7 +3836,8 @@ function loadCase(key){
   document.getElementById('briefBody').innerHTML = CURRENT.briefHtml;
   document.getElementById('hist-out').innerHTML = '';
   document.getElementById('exam-out').innerHTML = '';
-  document.getElementById('codeOverlay').classList.remove('show');
+  document.getElementById('arrestScreen').style.display='none';
+  stopArrestAlarm();
   document.getElementById('codeSpecialButtons').innerHTML = '';
   buildInvestTab();
   buildIntervTab();
@@ -3581,10 +3853,11 @@ function loadCase(key){
     S.arrestCycles = CURRENT.initialArrestCycles||0;
     S.shockable = Math.random() < CURRENT.shockableChance;
     S.rhythmChecked = false;
-    document.getElementById('codeOverlay').classList.add('show');
+    S.arrestStart = S.simTime;
     renderCodeSpecials();
     renderAll();
   }
+  renderInstructorBar();
 }
 
 // ---------- specialties ----------
@@ -3643,6 +3916,72 @@ function revealScreen(id){
   el.classList.remove('screen-enter');
   void el.offsetWidth;
   el.classList.add('screen-enter');
+  saveSession();
+}
+
+// ---------- session persistence ----------
+const STORAGE_KEY = 'icuSimSession_v1';
+function currentScreenName(){
+  if (document.getElementById('appScreen').style.display!=='none' || document.getElementById('arrestScreen').style.display!=='none') return 'app';
+  if (document.getElementById('menuScreen').style.display!=='none') return 'menu';
+  if (document.getElementById('specialtyScreen').style.display!=='none') return 'specialty';
+  return 'front';
+}
+function saveSession(){
+  try {
+    const data = {
+      screen: currentScreenName(), specialty: currentSpecialty,
+      caseId: CURRENT ? CURRENT.id : null, state: S,
+      theme: document.documentElement.dataset.theme || null, muted, instructorMode
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e){ /* localStorage unavailable or quota exceeded — session just won't persist */ }
+}
+function restoreSession(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data.theme) document.documentElement.dataset.theme = data.theme;
+    muted = !!data.muted; instructorMode = !!data.instructorMode;
+    applyThemeButton(); applySoundButton(); renderInstructorBar();
+    if (data.caseId && CASES[data.caseId] && data.state){
+      CURRENT = CASES[data.caseId];
+      S = data.state;
+      currentSpecialty = data.specialty || CURRENT.specialty;
+      document.getElementById('hdrEyebrow').textContent = CURRENT.eyebrow;
+      document.getElementById('hdrTitle').textContent = CURRENT.title;
+      document.getElementById('briefBody').innerHTML = CURRENT.briefHtml;
+      buildInvestTab(); buildIntervTab();
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tabpanel').forEach(x=>x.classList.remove('active'));
+      document.querySelector('.tab[data-tab="assess"]').classList.add('active');
+      document.getElementById('tab-assess').classList.add('active');
+      if (S.histTaken) document.getElementById('hist-out').innerHTML = `<div class="finding">${CURRENT.history}</div>`;
+      Object.keys(S.examDone||{}).forEach(k=>{
+        if (S.examDone[k]){
+          const out = document.getElementById('exam-out');
+          const div = document.createElement('div'); div.className='finding';
+          div.innerHTML = `<b>${EXAM_LABELS[k]}:</b> ${CURRENT.exam[k]}`;
+          out.appendChild(div);
+        }
+      });
+      renderCodeSpecials();
+      document.getElementById('frontScreen').style.display='none';
+      document.getElementById('specialtyScreen').style.display='none';
+      document.getElementById('menuScreen').style.display='none';
+      document.getElementById('appScreen').style.display='';
+      renderAll();
+      return true;
+    } else if (data.screen==='menu' && data.specialty && SPECIALTIES[data.specialty]){
+      showMenuFor(data.specialty);
+      return true;
+    } else if (data.screen==='specialty'){
+      showSpecialtyScreen();
+      return true;
+    }
+  } catch(e){ /* corrupt/legacy session data — fall through to default front screen */ }
+  return false;
 }
 
 function showFront(){
@@ -3664,6 +4003,8 @@ function showMenuFor(specialtyKey){
   const spec = SPECIALTIES[specialtyKey];
   document.getElementById('menuEyebrow').textContent = `ICU / ER Simulation · Advanced · ${spec.label}`;
   document.getElementById('menuTitle').textContent = `Pick a patient — ${spec.label}`;
+  searchQuery = '';
+  document.getElementById('caseSearch').value = '';
   buildMenu(specialtyKey);
   document.getElementById('frontScreen').style.display='none';
   document.getElementById('specialtyScreen').style.display='none';
@@ -3673,13 +4014,30 @@ function showMenuFor(specialtyKey){
 
 function showMenu(){
   document.getElementById('appScreen').style.display='none';
+  document.getElementById('arrestScreen').style.display='none';
+  stopArrestAlarm();
   revealScreen('menuScreen');
 }
 
+let searchQuery = '';
 function buildMenu(specialtyKey){
   const grid = document.getElementById('caseGrid');
   grid.innerHTML='';
-  casesFor(specialtyKey).forEach(key=>{
+  const q = searchQuery.trim().toLowerCase();
+  const keys = casesFor(specialtyKey).filter(key=>{
+    if (!q) return true;
+    const c = CASES[key];
+    return `${c.cardTag} ${c.cardCC} ${c.cardSub}`.toLowerCase().includes(q);
+  });
+  if (!keys.length){
+    grid.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'case-grid-empty';
+    p.textContent = `No cases match "${searchQuery}".`;
+    grid.appendChild(p);
+    return;
+  }
+  keys.forEach(key=>{
     const c = CASES[key];
     const card = document.createElement('button');
     card.className='case-card';
@@ -3698,6 +4056,10 @@ document.getElementById('randomizeBtn').addEventListener('click', ()=>{
   const pick = keys[Math.floor(Math.random()*keys.length)];
   loadCase(pick);
 });
+document.getElementById('caseSearch').addEventListener('input', (e)=>{
+  searchQuery = e.target.value;
+  buildMenu(currentSpecialty);
+});
 document.getElementById('menuBtn').addEventListener('click', async ()=>{
   const ok = await confirmModal('Change case?', 'This leaves the current case (progress is lost unless exported). Return to the case picker?');
   if (ok) showMenu();
@@ -3706,7 +4068,54 @@ document.getElementById('backDuringCaseBtn').addEventListener('click', async ()=
   const ok = await confirmModal('Leave this case?', 'This leaves the current case (progress is lost unless exported). Return to the case picker?');
   if (ok) showMenu();
 });
+document.getElementById('backDuringArrestBtn').addEventListener('click', async ()=>{
+  const ok = await confirmModal('Leave this case?', 'This leaves the current case mid-resuscitation (progress is lost unless exported). Return to the case picker?');
+  if (ok) showMenu();
+});
 document.getElementById('reviewBtn').addEventListener('click', ()=>showDebrief(false));
+document.getElementById('instructorToggleBtn').addEventListener('click', ()=>{
+  instructorMode = !instructorMode;
+  renderInstructorBar();
+  saveSession();
+});
+document.querySelectorAll('[data-instr]').forEach(b=>b.addEventListener('click', ()=>instructorAction(b.dataset.instr)));
+
+// ---------- settings panel ----------
+function currentTheme(){
+  return document.documentElement.dataset.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+function applyThemeButton(){
+  document.getElementById('themeToggleBtn').textContent = currentTheme()==='dark' ? 'Dark' : 'Light';
+}
+function applySoundButton(){
+  document.getElementById('soundToggleBtn').textContent = muted ? 'Off' : 'On';
+}
+applyThemeButton();
+applySoundButton();
+document.getElementById('settingsBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const pop = document.getElementById('settingsPopover');
+  pop.style.display = pop.style.display==='none' ? 'flex' : 'none';
+});
+document.addEventListener('click', (e)=>{
+  const pop = document.getElementById('settingsPopover');
+  if (pop.style.display!=='none' && !pop.contains(e.target) && e.target.id!=='settingsBtn'){
+    pop.style.display = 'none';
+  }
+});
+document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
+  document.documentElement.dataset.theme = currentTheme()==='dark' ? 'light' : 'dark';
+  applyThemeButton();
+  saveSession();
+});
+document.getElementById('soundToggleBtn').addEventListener('click', ()=>{
+  muted = !muted;
+  if (muted) stopArrestAlarm();
+  else if (S && S.arrested && !S.ended) startArrestAlarm();
+  applySoundButton();
+  saveSession();
+});
+document.getElementById('testSoundBtn').addEventListener('click', playTestTones);
 
 // ---------- global wiring (tabs, tests, o2, time, exam, restart, export) ----------
 document.querySelectorAll('.tab').forEach(t=>{
@@ -3733,7 +4142,6 @@ document.getElementById('restartBtn').addEventListener('click', async ()=>{
     const key = CURRENT.id;
     document.getElementById('hist-out').innerHTML='';
     document.getElementById('exam-out').innerHTML='';
-    document.getElementById('codeOverlay').classList.remove('show');
     loadCase(key);
   }
 });
@@ -3752,6 +4160,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
 
 buildFrontIcons();
 buildSpecialtyGrid();
+if (!restoreSession()) { applyThemeButton(); applySoundButton(); }
 requestAnimationFrame(animate);
 })();
 </script>
