@@ -3016,6 +3016,530 @@ CASES.hyponatremia = {
   stableWhen(v,S){ return S.sodium>=125 && v.gcs>=14; }
 };
 
+// ---------------- CASE: Tension Pneumothorax ----------------
+CASES.tension_pneumo = {
+  id:'tension_pneumo', specialty:'trauma',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Chest Trauma',
+  title:'Patient W — 34M, road traffic collision, sudden breathlessness and chest pain',
+  cardTag:'Case W',
+  cardCC:'34M — high-speed RTC, sudden severe breathlessness and right chest pain',
+  cardSub:'Restrained driver, dashboard impact to the chest; deteriorating rapidly since arrival.',
+  arrivalClock: 1*60+20,
+  briefHtml:`
+    <b>Chief complaint:</b> Sudden severe breathlessness and right-sided chest pain after a high-speed road traffic collision.<br>
+    <b>Brief history:</b> Restrained driver, frontal collision at speed with dashboard impact to the chest. Alert at the scene but breathlessness has been rapidly worsening in transit.<br>
+    <b>Arrival mode:</b> Emergency ambulance, trauma call activated.<br>
+    <b>Initial vitals (on arrival):</b> HR 122 · BP 96/68 · RR 30 · SpO2 89% on 15L non-rebreather · Temp 36.6&deg;C · GCS 14, distressed and agitated.`,
+  initialLog:'Trauma call: 34M restrained driver, high-speed RTC with dashboard chest impact. Increasingly breathless en route despite high-flow O2. HR 122, BP 96/68, RR 30, SpO2 89% on 15L NRB, GCS 14, distressed.',
+  initGcs:14, gcsCeiling:15, initDevice:'nrb15', initHb:13.8, initLactate:2.6,
+  shockableChance:0.15,
+  initState(){ return { tension:55, decompressed:false, chestTubeInserted:false, needleFailed:false }; },
+  vitals(S){
+    const sbp = clamp(128 - S.tension*0.5818 + pressorBoost() + S.fluidBoost, 55, 140);
+    const dbp = Math.round(sbp*0.7083);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(90 + S.tension*0.5818, 70, 168);
+    const rr = clamp(20 + S.tension*0.1818, 14, 42);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.tension*0.5091;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 55, 100);
+    const temp = 36.6;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.chestTubeInserted){
+      S.tension = Math.max(4, S.tension - 5);
+    } else if (S.decompressed){
+      S.tension = Math.max(15, S.tension - 2.5);
+    } else {
+      S.tension = Math.min(98, S.tension + 3.2);
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid bolus given — supportive only; this will not fix the underlying mechanical problem, needle/tube decompression is the definitive treatment.'}; },
+  onIntubate(S){
+    if (!S.decompressed && !S.chestTubeInserted){
+      S.tension = Math.min(98, S.tension + 15);
+      log('ACUTE DETERIORATION: positive-pressure ventilation was started in an undecompressed tension pneumothorax — this rapidly worsens intrathoracic pressure and venous return, precipitating hemodynamic collapse. Decompress the chest before or immediately after intubating.','crit');
+    }
+    return 'Positive-pressure ventilation can convert a simple pneumothorax into a tension pneumothorax, or acutely worsen an existing one — decompress first whenever possible.';
+  },
+  arrestSpecials:[{
+    label:'Needle decompression now (2nd ICS, mid-clavicular line)',
+    handler(S){
+      if (!S.decompressed){ S.decompressed = true; S.tension = Math.max(20, S.tension-30); log('Needle decompression performed during arrest — immediate improvement in venous return expected; a chest tube is still required for definitive management.','action'); }
+      else log('Needle decompression already performed — proceed to formal chest tube (tube thoracostomy).','action');
+    }
+  }],
+  roscBonus(S){ return (S.decompressed || S.chestTubeInserted) ? 0.3 : 0; },
+  onRosc(S){ S.tension = Math.max(25, S.tension-10); },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works as a delivery driver, wears seatbelt routinely (confirmed restrained at scene).`,
+  exam:{
+    A:'Airway patent, speaking in short fragmented sentences due to breathlessness.',
+    B:'Severe respiratory distress. Trachea deviated away from the right side. Absent breath sounds and hyper-resonant percussion over the right hemithorax. Visible seatbelt bruising across the chest.',
+    C:'Distended neck veins. Tachycardic, thready pulse, cap refill 3s.',
+    D:'GCS 14, agitated and distressed, appropriate for severe hypoxia/hypotension. No focal deficit.',
+    E:'Temp 36.6°C. Seatbelt sign across chest and abdomen. No other obvious external injury.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['efast_tp','abg_tp','ecg_tp']},
+    {title:'Labs', items:['cbc_tp','lactate_tp','group_tp']},
+    {title:'Imaging', items:['cxr_tp']}
+  ],
+  tests:{
+    efast_tp:{label:'eFAST scan', delay:6, result(S){ return S.tension>30 ? 'Absent lung sliding on the right with no pleural effusion — findings support pneumothorax. No free intra-abdominal fluid.' : 'Lung sliding present bilaterally, no free fluid.'; }},
+    abg_tp:{label:'ABG', delay:8, repeatable:true, result(S,v){ return `pH ${v.spo2<85?'7.29':'7.36'}, PaO2 ${Math.round(40+v.spo2*0.5)} mmHg, PaCO2 ${v.spo2<85?48:39} mmHg, lactate ${S.lactate.toFixed(1)}. ${v.spo2<85?'Significant hypoxemia and early respiratory acidosis.':'Improving gas exchange.'}`; }},
+    ecg_tp:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischemic changes.'; }},
+    cbc_tp:{label:'CBC', delay:30, result(){ return 'Hb 13.8 g/dL, WBC 12.1 x10⁹/L (stress response), Platelets 260 x10⁹/L.'; }},
+    lactate_tp:{label:'Lactate', delay:10, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    group_tp:{label:'Group & save', delay:20, result(){ return 'Blood group A positive, sample held pending crossmatch if needed.'; }},
+    cxr_tp:{label:'Chest X-ray (only once chest is being managed)', delay:10, result(S){ return S.chestTubeInserted ? 'Chest tube in situ, good re-expansion of the right lung, no residual large pneumothorax.' : (S.tension>30 ? 'Large right-sided pneumothorax with mediastinal shift to the left — do not delay decompression to obtain this in an unstable patient.' : 'Small residual right pneumothorax.'); }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Chest decompression', items:[
+      {label:'Needle decompression (2nd ICS, mid-clavicular line)', handler(S){
+        if (S.decompressed){ log('Needle decompression already performed.','action'); return; }
+        S.decompressed = true; S.tension = Math.max(20, S.tension-30);
+        log('Emergency needle decompression performed — rapid improvement in breathing and haemodynamics. A formal chest tube is still required.','result');
+      }},
+      {label:'Insert chest tube (tube thoracostomy)', handler(S){
+        if (S.chestTubeInserted){ log('Chest tube already in situ.','action'); return; }
+        S.chestTubeInserted = true; S.tension = Math.max(8, S.tension-25);
+        log('Chest tube (tube thoracostomy) inserted in the 5th intercostal space, anterior axillary line — definitive management of the pneumothorax.','result');
+      }}
+    ]},
+    {title:'Fluids', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Analgesia', items:[
+      {label:'Give IV fentanyl (titrated)', handler(){ log("IV fentanyl given, titrated carefully given the patient's respiratory distress — monitor RR/SpO2 closely.",'action'); }}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU/trauma ward', handler(){ log('Patient escalated / accepted for ICU/trauma ward transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.chestTubeInserted && S.tension<20 && v.sbp>=100 && v.spo2>=94; }
+};
+
+// ---------------- CASE: Blunt Abdominal Trauma / Haemorrhagic Shock ----------------
+CASES.blunt_abdo = {
+  id:'blunt_abdo', specialty:'trauma',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Abdominal Trauma',
+  title:'Patient X — 27F, high-speed motor vehicle collision, abdominal pain and distension',
+  cardTag:'Case X',
+  cardCC:'27F — high-speed MVC, worsening abdominal pain and distension',
+  cardSub:'Unrestrained passenger, direct steering-wheel-equivalent impact to the abdomen; hypotensive with a distended, tender abdomen.',
+  arrivalClock: 22*60+35,
+  briefHtml:`
+    <b>Chief complaint:</b> Severe abdominal pain and distension after a high-speed motor vehicle collision.<br>
+    <b>Brief history:</b> Unrestrained front-seat passenger, direct impact to the abdomen against the dashboard. Brief loss of consciousness at the scene, now alert but pale and in significant pain.<br>
+    <b>Arrival mode:</b> Emergency ambulance, trauma call activated.<br>
+    <b>Initial vitals (on arrival):</b> HR 126 · BP 88/58 · RR 26 · SpO2 96% on 15L non-rebreather · Temp 36.2&deg;C · GCS 14, pale and anxious.`,
+  initialLog:'Trauma call: 27F unrestrained passenger, high-speed MVC with direct abdominal impact. Pale, tachycardic, hypotensive, abdomen distended and diffusely tender. HR 126, BP 88/58, RR 26, SpO2 96% on 15L NRB, GCS 14.',
+  initGcs:14, gcsCeiling:15, initDevice:'nrb15', initHb:12.4, initLactate:3.8,
+  shockableChance:0.05,
+  initState(){ return { bloodLoss:48, unitsTransfused:false, mtpActivated:false, crystalloidGiven:0, coagulopathy:false, orResultTime:null, orDone:false, tenxaGiven:false }; },
+  vitals(S){
+    const sbp = clamp(118 - S.bloodLoss*0.625 + pressorBoost() + S.fluidBoost, 55, 130);
+    const dbp = Math.round(sbp*0.6591);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(88 + S.bloodLoss*0.7917, 65, 165);
+    const rr = clamp(16 + S.bloodLoss*0.2083, 12, 34);
+    const dev = DEV[S.device];
+    const spo2raw = 98 - S.bloodLoss*0.4583;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = 36.2 - (S.crystalloidGiven>3 ? 0.5 : 0);
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.orDone = true;
+      S.bloodLoss = Math.max(10, S.bloodLoss-35);
+      log('Emergency laparotomy completed — splenic injury identified and controlled (splenectomy). Bleeding source controlled.','result');
+    }
+    if (!S.orDone){
+      S.bloodLoss = Math.min(96, S.bloodLoss + (S.tenxaGiven ? 0.3 : 0.5));
+    }
+    S.hb = Math.max(4.5, S.hb - (S.bloodLoss>40 ? 0.06 : 0.02));
+    if (S.coagulopathy && !S._coagWarned){
+      S._coagWarned = true;
+      log('Labs now show a developing dilutional/hypothermic coagulopathy — part of the lethal triad (coagulopathy, acidosis, hypothermia). Prioritise blood products over further crystalloid.','warn');
+    }
+  },
+  onBolus(S){
+    S.crystalloidGiven = (S.crystalloidGiven||0) + 1;
+    if (S.crystalloidGiven>=3 && !S.coagulopathy){
+      S.coagulopathy = true; S.bloodLoss = Math.min(96, S.bloodLoss+8);
+      return {msg:`Crystalloid bolus #${S.crystalloidGiven} given. CAUTION: large-volume crystalloid resuscitation in haemorrhagic shock dilutes clotting factors and worsens the lethal triad (coagulopathy, hypothermia, acidosis) — prioritise blood products and haemorrhage control over further crystalloid.`, warn:true};
+    }
+    return {msg:`Crystalloid bolus #${S.crystalloidGiven} given — use sparingly in haemorrhagic shock; blood products are preferred once available.`};
+  },
+  onIntubate(S){ return 'Induction agents can worsen hypotension in an under-resuscitated haemorrhagic shock patient — have blood products and pressor support available before inducing.'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None.<br>
+    <b>Medications:</b> Oral contraceptive pill.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> University student, was not wearing a seatbelt at the time of the collision.`,
+  exam:{
+    A:'Airway patent, talking, no stridor.',
+    B:'Mildly tachypnoeic. Chest clear, no external chest wall injury.',
+    C:'Pale, cool peripheries, thready rapid pulse, cap refill 4s. Abdomen distended, diffusely tender with guarding, bruising across the lower abdomen (seatbelt sign absent — unrestrained).',
+    D:'GCS 14, anxious but appropriate. Brief LOC reported at scene, no ongoing focal deficit.',
+    E:'Temp 36.2°C. Abdominal wall bruising. No pelvic instability on gentle assessment. No long bone deformity.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['efast_ba','abg_ba','ecg_ba']},
+    {title:'Labs', items:['cbc_ba','coag_ba','group_ba','lactate_ba']},
+    {title:'Imaging', items:['ct_ba']}
+  ],
+  tests:{
+    efast_ba:{label:'eFAST scan', delay:6, result(S){ return S.bloodLoss>25 ? "Free fluid identified in the splenorenal recess (Morison's pouch equivalent) and pelvis — significant haemoperitoneum. No pericardial effusion." : 'Small volume of free fluid in the pelvis.'; }},
+    abg_ba:{label:'ABG', delay:8, repeatable:true, result(S){ return `pH ${S.bloodLoss>50?'7.24':'7.33'}, lactate ${S.lactate.toFixed(1)} mmol/L, base excess ${S.bloodLoss>50?'-9':'-4'} — ${S.bloodLoss>50?'significant hypoperfusion/shock':'improving perfusion'}.`; }},
+    ecg_ba:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischemic changes.'; }},
+    cbc_ba:{label:'CBC', delay:20, repeatable:true, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 13.5 x10⁹/L (stress response), Platelets ${S.coagulopathy?'92 (falling, dilutional)':'238'} x10⁹/L.`; }},
+    coag_ba:{label:'Coagulation profile', delay:25, repeatable:true, result(S){ return S.coagulopathy ? 'PT/INR 1.8, aPTT 48 sec, Fibrinogen 1.2 g/L — significant dilutional/consumptive coagulopathy, part of the lethal triad. Needs FFP/cryoprecipitate, not more crystalloid.' : 'PT/INR 1.1, aPTT 30 sec, Fibrinogen 3.2 g/L — acceptable so far.'; }},
+    group_ba:{label:'Group & crossmatch (urgent)', delay:15, result(){ return 'Blood group O negative given initially; type-specific blood being crossmatched, 4 units available within 10 minutes.'; }},
+    lactate_ba:{label:'Lactate', delay:8, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    ct_ba:{label:'CT abdomen/pelvis with contrast (only if haemodynamically stable enough to leave resus)', delay:30, result(S){ return S.bloodLoss>40 ? 'Grade IV splenic laceration with active contrast extravasation ("blush") — high-grade injury with ongoing bleeding, unsuitable for observation alone.' : 'Grade II splenic laceration, no active extravasation — potentially suitable for non-operative management with close observation.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Resuscitation', items:[
+      {label:'Give crystalloid bolus', action:'bolus'},
+      {label:'Activate massive transfusion protocol (PRBC:FFP:platelets 1:1:1)', handler(S){
+        if (S.mtpActivated){ log('Massive transfusion protocol already activated.','action'); return; }
+        S.mtpActivated = true; S.unitsTransfused = true;
+        S.hb = Math.min(11.5, S.hb+2.5); S.bloodLoss = Math.max(15, S.bloodLoss-15); S.coagulopathy = false;
+        log('Massive transfusion protocol activated — balanced PRBC:FFP:platelet resuscitation started, the evidence-based approach for major traumatic haemorrhage, superior to crystalloid-heavy resuscitation.','result');
+      }},
+      {label:'Give tranexamic acid (TXA) 1g IV', handler(S){
+        if (S.tenxaGiven){ log('TXA already given.','action'); return; }
+        S.tenxaGiven = true;
+        log('Tranexamic acid 1g IV given — reduces mortality from traumatic haemorrhage when given within 3 hours of injury.','action');
+      }}
+    ]},
+    {title:'Source control', items:[
+      {label:'Activate for emergency laparotomy', handler(S){
+        if (S.orResultTime || S.orDone) return;
+        S.orResultTime = S.simTime + 40;
+        log('Theatre activated for emergency laparotomy — allow time for transfer and the procedure itself (advance time to complete it).','action');
+      }}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU', handler(){ log('Patient escalated / accepted for ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.orDone && S.bloodLoss<20 && v.sbp>=100 && S.hb>=8; }
+};
+
+// ---------------- CASE: Traumatic Brain Injury (Epidural Haematoma) ----------------
+CASES.tbi_epidural = {
+  id:'tbi_epidural', specialty:'trauma',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Head Injury',
+  title:'Patient Y — 19M, fall from height, lucid interval then declining consciousness',
+  cardTag:'Case Y',
+  cardCC:'19M — fall from a roof, briefly alert then rapidly declining consciousness',
+  cardSub:'Classic "lucid interval" pattern of an extradural (epidural) haematoma; a rapidly evolving neurosurgical emergency.',
+  arrivalClock: 16*60+10,
+  briefHtml:`
+    <b>Chief complaint:</b> Fall from approximately 4 metres onto concrete, struck the right side of the head.<br>
+    <b>Brief history:</b> Was awake and talking to paramedics at the scene ("lucid interval") but has become progressively drowsier and less responsive over the last 20 minutes.<br>
+    <b>Arrival mode:</b> Emergency ambulance, cervical spine precautions in place.<br>
+    <b>Initial vitals (on arrival):</b> HR 78 · BP 148/88 · RR 16 · SpO2 97% on room air · Temp 36.8&deg;C · GCS 13 (E3V4M6) and falling.`,
+  initialLog:'Trauma call: 19M fall from ~4m onto concrete, right-sided head impact. Reportedly alert and talking at scene (lucid interval), now progressively drowsier. HR 78, BP 148/88, RR 16, SpO2 97% RA, GCS 13 and falling.',
+  initGcs:13, gcsCeiling:15, initDevice:'room_air', initHb:14.2, initLactate:1.3,
+  shockableChance:0.05,
+  initState(){ return { icp:35, pupilBlown:false, mannitolGiven:false, hypertonicGiven:false, burrHoleResultTime:null, evacuated:false, hyperventilated:false }; },
+  vitals(S){
+    const cushing = S.icp>65;
+    const sbp = clamp(130 + S.icp*0.5143 + pressorBoost() + S.fluidBoost, 90, 190);
+    const dbp = Math.round(sbp*0.5946);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(cushing ? (58 - (S.icp-65)*0.3) : (78 + (S.icp-35)*0.4), 38, 110);
+    const rr = clamp(cushing ? (10 + Math.random()*4) : 16, 6, 26);
+    const dev = DEV[S.device];
+    const spo2 = clamp(Math.min(97 + dev.boost, dev.ceiling), 85, 100);
+    const temp = 36.8;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.evacuated){
+      S.icp = Math.max(8, S.icp - 8);
+      S.gcs = Math.min(15, S.gcs + (Math.random()<0.4 ? 1 : 0));
+    } else {
+      const relief = (S.mannitolGiven||S.hypertonicGiven) ? 1.2 : 0;
+      S.icp = Math.min(98, S.icp + 2.6 - relief);
+      if (S.icp>45 && Math.random()<0.3) S.gcs = Math.max(4, S.gcs-1);
+      if (S.icp>60 && !S.pupilBlown){ S.pupilBlown = true; log('NEW FINDING: right pupil now fixed and dilated (blown pupil) — a sign of uncal herniation from the expanding extradural haematoma. This is a neurosurgical emergency requiring immediate evacuation.','crit'); }
+    }
+    if (S.hyperventilated>0){
+      S.hyperventilated--;
+      if (S.hyperventilated===0) S._hypervNote = true;
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given cautiously — avoid hypotension (a key driver of secondary brain injury), but avoid hypotonic/excessive fluids that could worsen cerebral oedema.'}; },
+  onIntubate(S){ return 'Intubation is reasonable for a declining GCS to protect the airway — avoid hypoxia and hypotension during induction, both worsen secondary brain injury. Avoid prolonged hyperventilation unless herniating.'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None.<br>
+    <b>Medications:</b> None regular. No anticoagulants.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works in construction, was not wearing fall-protection equipment at the time.`,
+  exam:{
+    A:'Airway patent currently, but at risk given declining GCS — reassess frequently.',
+    B:'Respiratory pattern becoming irregular as GCS falls. Chest clear, no thoracic injury.',
+    C:"Warm peripheries. Blood pressure rising with a reflex bradycardia developing (Cushing's triad) as ICP rises — a late and ominous sign.",
+    D:'GCS falling from an initial lucid interval. Boggy haematoma and laceration over the right temporoparietal scalp. Pupil findings evolve during the case.',
+    E:'Temp 36.8°C. Cervical spine immobilised. No other obvious injury on exposure.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['gcs_recheck_tb','abg_tb']},
+    {title:'Labs', items:['cbc_tb','coag_tb','glucose_tb']},
+    {title:'Imaging', items:['ct_tb']}
+  ],
+  tests:{
+    gcs_recheck_tb:{label:'Formal GCS/pupil recheck', delay:3, repeatable:true, result(S){ return `GCS ${Math.round(S.gcs)}. Right pupil ${S.pupilBlown?'fixed and dilated (6mm, non-reactive)':'equal and reactive (3mm)'}. Left pupil equal and reactive.`; }},
+    abg_tb:{label:'ABG', delay:6, repeatable:true, result(S){ return `pH 7.38, PaO2 96 mmHg, PaCO2 ${S.hyperventilated>0?'28 (deliberately lowered — use only briefly as a bridge to definitive treatment)':'38'} mmHg — avoid unintentional hyperventilation, it can worsen cerebral ischaemia.`; }},
+    cbc_tb:{label:'CBC', delay:25, result(){ return 'Hb 14.2 g/dL, WBC 11.8 x10⁹/L (stress response), Platelets 265 x10⁹/L.'; }},
+    coag_tb:{label:'Coagulation profile', delay:25, result(){ return 'PT/INR 1.0, aPTT 27 sec — normal, no coagulopathy contributing.'; }},
+    glucose_tb:{label:'Fingerstick glucose', delay:2, result(){ return 'Capillary glucose 6.1 mmol/L — normal, hypoglycaemia excluded as a cause of reduced GCS.'; }},
+    ct_tb:{label:'CT head (urgent)', delay:20, repeatable:true, result(S){ return S.icp>55 ? 'Large biconvex (lentiform) extradural haematoma with significant midline shift — urgent neurosurgical evacuation indicated without further delay.' : 'Biconvex extradural haematoma, skull fracture crossing the middle meningeal artery groove. Neurosurgical referral indicated.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'ICP management', items:[
+      {label:'Give IV mannitol 20% (0.5–1 g/kg)', handler(S){
+        if (S.mannitolGiven){ log('Mannitol already given this episode.','action'); return; }
+        S.mannitolGiven = true; S.icp = Math.max(15, S.icp-12);
+        log('IV mannitol given — osmotic agent temporarily reduces ICP as a bridge to definitive neurosurgical treatment.','action');
+      }},
+      {label:'Give 3% hypertonic saline bolus', handler(S){
+        if (S.hypertonicGiven){ log('Hypertonic saline already given this episode.','action'); return; }
+        S.hypertonicGiven = true; S.icp = Math.max(15, S.icp-12);
+        log('3% hypertonic saline bolus given — reduces ICP and, unlike mannitol, does not risk hypotension, often preferred if the patient is haemodynamically borderline.','action');
+      }},
+      {label:'Head-up positioning (30°) and midline neck alignment', handler(){ log('Head of bed elevated to 30° with neck kept midline — optimises cerebral venous drainage and helps control ICP.','action'); }},
+      {label:'Brief hyperventilation (bridge to theatre only)', danger:true, handler(S){
+        S.hyperventilated = 3; S.icp = Math.max(15, S.icp-10);
+        log('Brief therapeutic hyperventilation used as a temporising bridge for signs of herniation — effective short-term, but prolonged/prophylactic hyperventilation causes cerebral vasoconstriction and can worsen ischaemic secondary brain injury if continued beyond a brief window.','warn');
+      }, confirm:{title:'Hyperventilate?', body:'Hyperventilation lowers ICP quickly by causing cerebral vasoconstriction, but this reduces cerebral blood flow and should only be used briefly for signs of active herniation, not as routine or prolonged therapy. Proceed as a brief bridge only?'}}
+    ]},
+    {title:'Neurosurgical evacuation', items:[
+      {label:'Arrange emergency neurosurgical evacuation (burr hole/craniotomy)', handler(S){
+        if (S.burrHoleResultTime || S.evacuated) return;
+        S.burrHoleResultTime = S.simTime; S.evacuated = true; S.icp = Math.max(20, S.icp-20);
+        log('Emergency neurosurgical evacuation arranged and performed — the epidural haematoma is being evacuated, the definitive treatment for this rapidly expanding lesion.','result');
+      }}
+    ]},
+    {title:'Sedation/analgesia (use with caution)', items:[
+      {label:'Give high-dose systemic opioid sedation', danger:true, handler(S){
+        S.gcs = Math.max(4, S.gcs-2);
+        log('Heavy systemic sedation given in a patient with a deteriorating GCS from a surgical lesion — this masks the neurological exam that is being used to detect herniation, and can itself cause hypoventilation/hypoxia, worsening secondary brain injury. Use the lowest effective dose and reassess GCS frequently.','crit');
+      }, confirm:{title:'Give heavy sedation?', body:'Sedation will blunt the neurological exam you need to detect deterioration in this evolving surgical lesion, and risks hypoventilation. Proceed anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to neurosurgical ICU', handler(){ log('Patient escalated / accepted for neurosurgical ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.evacuated && S.icp<25 && v.gcs>=14; }
+};
+
+// ---------------- CASE: Cardiac Tamponade (Penetrating Chest Trauma) ----------------
+CASES.tamponade_trauma = {
+  id:'tamponade_trauma', specialty:'trauma',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Penetrating Chest Trauma',
+  title:'Patient Z — 24M, stab wound to the chest, hypotensive and breathless',
+  cardTag:'Case Z',
+  cardCC:'24M — single stab wound left parasternal chest, hypotensive and distressed',
+  cardSub:"Assault victim with a precordial stab wound; classic evolving Beck's triad from acute cardiac tamponade.",
+  arrivalClock: 23*60+50,
+  briefHtml:`
+    <b>Chief complaint:</b> Single stab wound to the left parasternal chest during an altercation, now breathless and increasingly unwell.<br>
+    <b>Brief history:</b> Assaulted with a knife approximately 25 minutes ago, one visible wound over the left 4th intercostal space, parasternal.<br>
+    <b>Arrival mode:</b> Emergency ambulance, trauma call activated.<br>
+    <b>Initial vitals (on arrival):</b> HR 128 · BP 84/62 (narrow pulse pressure) · RR 26 · SpO2 94% on 15L non-rebreather · Temp 36.7&deg;C · GCS 14, anxious and breathless.`,
+  initialLog:'Trauma call: 24M single stab wound to left parasternal chest ~25 min ago. Hypotensive with a narrow pulse pressure, distended neck veins, and muffled heart sounds noted by paramedics. HR 128, BP 84/62, RR 26, SpO2 94% on 15L NRB, GCS 14.',
+  initGcs:14, gcsCeiling:15, initDevice:'nrb15', initHb:13.9, initLactate:2.9,
+  shockableChance:0.1,
+  initState(){ return { tamponade:50, pericardiocentesisDone:false, thoracotomyDone:false, fluidGiven:0 }; },
+  vitals(S){
+    const sbp = clamp(122 - S.tamponade*0.76 + pressorBoost() + S.fluidBoost, 55, 130);
+    const dbp = Math.round(sbp*0.7381);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(92 + S.tamponade*0.72, 75, 168);
+    const rr = clamp(18 + S.tamponade*0.16, 14, 36);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.tamponade*0.46;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 65, 100);
+    const temp = 36.7;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.thoracotomyDone){
+      S.tamponade = Math.max(4, S.tamponade - 10);
+    } else if (S.pericardiocentesisDone){
+      S.tamponade = Math.max(12, S.tamponade - 5);
+    } else {
+      S.tamponade = Math.min(98, S.tamponade + 2.8);
+    }
+  },
+  onBolus(S){
+    S.fluidGiven = (S.fluidGiven||0)+1;
+    return {msg:`Crystalloid bolus #${S.fluidGiven} given — a reasonable temporising bridge to increase preload, but it will not fix the underlying tamponade; do not let fluids delay definitive pericardial drainage.`};
+  },
+  onIntubate(S){
+    if (S.tamponade>40){
+      S.tamponade = Math.min(98, S.tamponade+8);
+      log('CAUTION: positive-pressure ventilation reduces venous return, which is already critically impaired by tamponade — this can precipitate cardiovascular collapse. Consider decompressing the pericardium first if at all possible.','warn');
+    }
+    return 'Positive-pressure ventilation further reduces preload in tamponade physiology — avoid intubating before pericardial drainage if the patient can be temporised.';
+  },
+  arrestSpecials:[{
+    label:'Emergency Department thoracotomy (peri-arrest penetrating chest trauma)',
+    handler(S){
+      if (!S.thoracotomyDone){ S.thoracotomyDone = true; S.tamponade = Math.max(10, S.tamponade-40); log('Emergency Department thoracotomy performed for peri-arrest penetrating chest trauma with tamponade physiology — pericardium opened, tamponade released.','action'); }
+      else log('Thoracotomy already performed.','action');
+    }
+  }],
+  roscBonus(S){ return (S.thoracotomyDone || S.pericardiocentesisDone) ? 0.35 : 0; },
+  onRosc(S){ S.tamponade = Math.max(15, S.tamponade-10); },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Assault victim, police involved, mechanism confirmed as a single-edged blade.`,
+  exam:{
+    A:'Airway patent, speaking in short sentences, breathless.',
+    B:'Tachypnoeic. Breath sounds equal bilaterally, no evidence of an associated pneumothorax on this side.',
+    C:'Distended neck veins, muffled/distant heart sounds, narrow pulse pressure, pulsus paradoxus noted on repeat BP. Single 2cm stab wound left 4th intercostal space, parasternal, no active external bleeding.',
+    D:'GCS 14, anxious, appropriate for the clinical picture. No focal neurological deficit.',
+    E:'Temp 36.7°C. No other wounds identified on full exposure and log roll.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['efast_tt','ecg_tt','abg_tt']},
+    {title:'Labs', items:['cbc_tt','coag_tt','group_tt']}
+  ],
+  tests:{
+    efast_tt:{label:'eFAST / cardiac ultrasound', delay:5, repeatable:true, result(S){ return S.tamponade>25 ? 'Pericardial effusion with diastolic right ventricular collapse — findings diagnostic of cardiac tamponade. No significant free intra-abdominal or pleural fluid.' : 'Small residual pericardial fluid, no chamber collapse.'; }},
+    ecg_tt:{label:'12-lead ECG', delay:5, result(S){ return S.tamponade>40 ? 'Sinus tachycardia with low-voltage QRS complexes and electrical alternans — classic (though insensitive) findings of tamponade.' : 'Sinus tachycardia, improving voltages.'; }},
+    abg_tt:{label:'ABG', delay:8, repeatable:true, result(S){ return `pH ${S.tamponade>50?'7.27':'7.35'}, lactate ${S.lactate.toFixed(1)} mmol/L — ${S.tamponade>50?'significant obstructive shock physiology':'improving perfusion'}.`; }},
+    cbc_tt:{label:'CBC', delay:20, result(){ return 'Hb 13.9 g/dL, WBC 12.6 x10⁹/L (stress response), Platelets 255 x10⁹/L.'; }},
+    coag_tt:{label:'Coagulation profile', delay:25, result(){ return 'PT/INR 1.0, aPTT 29 sec — normal.'; }},
+    group_tt:{label:'Group & crossmatch (urgent)', delay:15, result(){ return 'Blood group B positive, 4 units crossmatched urgently given the penetrating mechanism.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Pericardial decompression', items:[
+      {label:'Perform pericardiocentesis', handler(S){
+        if (S.pericardiocentesisDone){ log('Pericardiocentesis already performed.','action'); return; }
+        S.pericardiocentesisDone = true; S.tamponade = Math.max(12, S.tamponade-30);
+        log('Pericardiocentesis performed under ultrasound guidance — blood aspirated from the pericardial sac, marked haemodynamic improvement. Definitive surgical repair is still needed for the underlying cardiac injury.','result');
+      }},
+      {label:'Prepare for emergency thoracotomy / cardiac surgery', handler(S){
+        if (S.thoracotomyDone){ log('Thoracotomy already performed.','action'); return; }
+        S.thoracotomyDone = true; S.tamponade = Math.max(8, S.tamponade-35);
+        log('Emergency thoracotomy performed — pericardium opened and the cardiac wound identified and controlled. Cardiothoracic surgery now taking over definitive repair.','result');
+      }}
+    ]},
+    {title:'Resuscitation', items:[
+      {label:'Give crystalloid bolus', action:'bolus'}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to cardiothoracic ICU', handler(){ log('Patient escalated / accepted for cardiothoracic ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return (S.thoracotomyDone||S.pericardiocentesisDone) && S.tamponade<20 && v.sbp>=100; }
+};
+
+// ---------------- CASE: Flail Chest / Pulmonary Contusion ----------------
+CASES.flail_chest = {
+  id:'flail_chest', specialty:'trauma',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Blunt Chest Trauma',
+  title:'Patient AA — 45M, fall from a ladder, severe chest wall pain and paradoxical movement',
+  cardTag:'Case AA',
+  cardCC:'45M — fall from a ladder onto his side, severe chest pain and worsening breathlessness',
+  cardSub:'Multiple rib fractures with a flail segment and underlying pulmonary contusion; pain control is the central challenge.',
+  arrivalClock: 13*60+40,
+  briefHtml:`
+    <b>Chief complaint:</b> Severe left-sided chest pain and worsening breathlessness after a fall from a ladder (~3 metres) onto his left side.<br>
+    <b>Brief history:</b> Landed directly on his left chest wall against a step. Severe pain on breathing, shallow breaths since the fall.<br>
+    <b>Arrival mode:</b> Emergency ambulance, trauma call activated.<br>
+    <b>Initial vitals (on arrival):</b> HR 116 · BP 138/84 · RR 28, shallow · SpO2 90% on 15L non-rebreather · Temp 36.5&deg;C · GCS 15, in severe pain.`,
+  initialLog:'Trauma call: 45M fall from ~3m onto left chest wall against a step. Visible paradoxical chest wall movement on the left, severe pain limiting breathing. HR 116, BP 138/84, RR 28 shallow, SpO2 90% on 15L NRB, GCS 15, pain 9/10.',
+  initGcs:15, gcsCeiling:15, initDevice:'nrb15', initHb:14.5, initLactate:1.9,
+  shockableChance:0.05,
+  initState(){ return { contusion:45, regionalBlock:false, systemicOpioidHighDose:false, ventilated:false, incentiveSpirometry:false, fluidGiven:0 }; },
+  vitals(S){
+    const painLimit = (!S.regionalBlock && !S.ventilated) ? 6 : 0;
+    const sbp = clamp(118 + S.contusion*0.4444 + pressorBoost() + S.fluidBoost, 85, 145);
+    const dbp = Math.round(sbp*0.6087);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(90 + S.contusion*0.4444 + painLimit, 65, 155);
+    const rr = clamp(20 + S.contusion*0.0444 + painLimit, 12, 40);
+    const dev = DEV[S.device];
+    const spo2raw = 96 - S.contusion*0.5778 + (S.ventilated?6:0);
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 65, 100);
+    const temp = 36.5;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.regionalBlock || S.incentiveSpirometry){
+      S.contusion = Math.max(10, S.contusion - 1.5);
+    } else {
+      S.contusion = Math.min(95, S.contusion + 1.4);
+    }
+  },
+  onBolus(S){
+    S.fluidGiven = (S.fluidGiven||0)+1;
+    if (S.fluidGiven>2){
+      S.contusion = Math.min(95, S.contusion+8);
+      return {msg:`Crystalloid bolus #${S.fluidGiven} given. CAUTION: pulmonary contusions are very sensitive to fluid overload — excess crystalloid worsens the contusion and gas exchange, similar to ARDS physiology. Keep fluids conservative once the patient is not hypovolaemic.`, warn:true};
+    }
+    return {msg:`Crystalloid bolus #${S.fluidGiven} given.`};
+  },
+  onIntubate(S){ S.ventilated = true; return 'Lung-protective ventilation (low tidal volume) is appropriate given the underlying pulmonary contusion — treat it similarly to ARDS physiology.'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works as a painter/decorator, this was a work-related fall.`,
+  exam:{
+    A:'Airway patent, speaking in short, pain-limited phrases.',
+    B:'Visible paradoxical (in-drawing) movement of a segment of the left lateral chest wall on inspiration. Reduced air entry on the left with crackles. Severe tenderness and crepitus over multiple left rib fractures.',
+    C:'Tachycardic from pain, normal volume pulse, cap refill <2s — not in haemorrhagic shock.',
+    D:'GCS 15, alert, in severe pain (9/10). No focal neurological deficit.',
+    E:'Temp 36.5°C. Extensive bruising over the left chest wall. No abdominal or pelvic injury on exposure.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['efast_fc','abg_fc','ecg_fc']},
+    {title:'Labs', items:['cbc_fc','lactate_fc']},
+    {title:'Imaging', items:['cxr_fc','ctchest_fc']}
+  ],
+  tests:{
+    efast_fc:{label:'eFAST scan', delay:6, result(){ return 'Lung sliding present bilaterally, no pneumothorax. No free intra-abdominal fluid.'; }},
+    abg_fc:{label:'ABG', delay:6, repeatable:true, result(S,v){ return `pH ${v.spo2<88?'7.31':'7.37'}, PaO2 ${Math.round(45+v.spo2*0.5)} mmHg, PaCO2 ${v.spo2<88?45:38} mmHg — ${v.spo2<88?'significant hypoxaemia from the underlying pulmonary contusion and splinting from pain':'improving gas exchange'}.`; }},
+    ecg_fc:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischemic changes; no evidence of myocardial contusion on this trace.'; }},
+    cbc_fc:{label:'CBC', delay:25, result(){ return 'Hb 14.5 g/dL, WBC 11.9 x10⁹/L (stress response), Platelets 250 x10⁹/L.'; }},
+    lactate_fc:{label:'Lactate', delay:8, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    cxr_fc:{label:'Chest X-ray', delay:10, result(S){ return `Multiple left-sided rib fractures (ribs 4–8) with a flail segment. ${S.contusion>55?'Progressive patchy opacification of the left lung consistent with a worsening pulmonary contusion.':'Patchy opacification of the left lower zone consistent with pulmonary contusion.'}`; }},
+    ctchest_fc:{label:'CT chest', delay:25, result(S){ return S.contusion>55 ? 'Extensive left pulmonary contusion with early consolidation, flail segment confirmed. No aortic injury.' : 'Left pulmonary contusion, flail segment confirmed, no aortic injury, no significant haemothorax.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Analgesia (this is the central priority)', items:[
+      {label:'Arrange regional analgesia (paravertebral / epidural block)', handler(S){
+        S.regionalBlock = true;
+        log('Paravertebral/epidural regional analgesia arranged — the preferred approach for flail chest, providing excellent pain control while preserving respiratory drive and avoiding systemic opioid sedation.','result');
+      }},
+      {label:'Give high-dose systemic IV opioid (patient-controlled analgesia)', danger:true, handler(S){
+        S.systemicOpioidHighDose = true;
+        S.gcs = Math.max(11, S.gcs-1);
+        log('High-dose systemic opioid given as the sole analgesic strategy — this patient already has reduced respiratory reserve from the flail segment and contusion; heavy systemic opioids risk hypoventilation and respiratory depression. A regional technique is preferred when available.','warn');
+      }, confirm:{title:'Give high-dose systemic opioids?', body:'This patient has significantly reduced respiratory reserve. Heavy systemic opioids risk hypoventilation. A regional block is generally preferred if it can be arranged. Proceed with systemic opioids anyway?'}},
+      {label:'Encourage incentive spirometry / chest physiotherapy', handler(S){
+        S.incentiveSpirometry = true;
+        log('Incentive spirometry and chest physiotherapy encouraged — supports lung expansion and secretion clearance once pain is adequately controlled.','action');
+      }}
+    ]},
+    {title:'Resuscitation', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU', handler(){ log('Patient escalated / accepted for ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return (S.regionalBlock||S.ventilated) && S.contusion<30 && v.spo2>=94 && v.rr<=24; }
+};
+
 // ================= engine state =================
 let CURRENT = null;
 let S = null;
@@ -3120,6 +3644,11 @@ function stepOnce(){
     if (CURRENT.id==='dka' && (S.hypoK_event || S.hypoglycemia)) risk += 0.15;
     if (CURRENT.id==='hyperkalemia_symptomatic' && S.potassium>7.5) risk += 0.12;
     if (CURRENT.id==='severe_asthma' && S.bronchospasm>85) risk += 0.1;
+    if (CURRENT.id==='tension_pneumo' && S.tension>80 && !S.decompressed && !S.chestTubeInserted) risk += 0.14;
+    if (CURRENT.id==='blunt_abdo' && S.bloodLoss>80) risk += 0.1;
+    if (CURRENT.id==='tbi_epidural' && S.icp>85) risk += 0.1;
+    if (CURRENT.id==='tamponade_trauma' && S.tamponade>80 && !S.pericardiocentesisDone && !S.thoracotomyDone) risk += 0.14;
+    if (CURRENT.id==='flail_chest' && S.contusion>85) risk += 0.08;
     if (risk>0 && Math.random()<risk) triggerArrest();
   }
 
@@ -3874,7 +4403,7 @@ const SPECIALTIES = {
   med: {label:'Medicine', desc:'Medical ICU decompensations — metabolic, respiratory, renal, electrolyte.', color:'var(--lime)'},
   tox: {label:'Toxicology', desc:'Poisoning and overdose — antidotes, decontamination, safe disposition.', color:'var(--violet)'},
   surg: {label:'Surgical', desc:'Post-operative complications and surgical emergencies.', color:'var(--text-faint)'},
-  trauma: {label:'Trauma', desc:'Blunt and penetrating trauma, polytrauma resuscitation.', color:'var(--text-faint)'},
+  trauma: {label:'Trauma', desc:'Blunt and penetrating trauma, polytrauma resuscitation.', color:'var(--crit)'},
   peds: {label:'Pediatrics', desc:'Paediatric critical illness.', color:'var(--text-faint)'}
 };
 let currentSpecialty = null;
