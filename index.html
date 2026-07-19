@@ -3540,6 +3540,914 @@ CASES.flail_chest = {
   stableWhen(v,S){ return (S.regionalBlock||S.ventilated) && S.contusion<30 && v.spo2>=94 && v.rr<=24; }
 };
 
+// ---------------- CASE: Post-Thyroidectomy Neck Haematoma ----------------
+CASES.thyroid_haematoma = {
+  id:'thyroid_haematoma', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Airway Emergency',
+  title:'Patient BB — 52F, post-thyroidectomy day 0, rapidly expanding neck swelling',
+  cardTag:'Case BB',
+  cardCC:'52F — 3 hours post total thyroidectomy, rapidly expanding neck swelling',
+  cardSub:'Bedside nurse call: increasing neck swelling, voice change, and now audible stridor on the surgical ward.',
+  arrivalClock: 15*60+20,
+  briefHtml:`
+    <b>Chief complaint:</b> Rapidly expanding neck swelling and increasing difficulty breathing, 3 hours after total thyroidectomy.<br>
+    <b>Brief history:</b> Uneventful total thyroidectomy for a multinodular goitre this morning. Nursing staff called after noticing the neck dressing tightening and the patient becoming increasingly breathless.<br>
+    <b>Location:</b> Surgical ward, recovery from thyroid surgery earlier today.<br>
+    <b>Initial vitals (on review):</b> HR 123 · BP 128/84 · RR 36 · SpO2 84% on room air · Temp 37.0&deg;C · GCS 15, distressed with audible inspiratory stridor.`,
+  initialLog:'Ward call: 52F, 3h post total thyroidectomy, rapidly expanding neck haematoma with tightening dressing, audible stridor, increasing breathlessness. HR 123, BP 128/84, RR 36, SpO2 84% RA, GCS 15.',
+  initGcs:15, gcsCeiling:15, initDevice:'room_air', initHb:12.8, initLactate:1.6,
+  shockableChance:0.05,
+  initState(){ return { airway:45, woundReopened:false, orResultTime:null, orDone:false, sedated:false }; },
+  vitals(S){
+    const sbp = clamp(132 - S.airway*0.1 + pressorBoost() + S.fluidBoost, 90, 150);
+    const dbp = Math.round(sbp*0.66);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(96 + S.airway*0.6, 70, 160);
+    const rr = clamp(22 + S.airway*0.3, 14, 40);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.airway*0.3;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 55, 100);
+    const temp = 37.0;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orDone){
+      S.airway = Math.max(5, S.airway - 8);
+    } else if (S.woundReopened){
+      S.airway = Math.max(15, S.airway - 4);
+    } else {
+      S.airway = Math.min(98, S.airway + 3.5 + (S.sedated ? 2 : 0));
+    }
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.orDone = true; S.airway = Math.max(10, S.airway-25);
+      log('Return to theatre completed — the bleeding vessel was identified and controlled, haematoma evacuated.','result');
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — supportive only; this does not relieve the airway compression, bedside wound decompression is the definitive immediate step.'}; },
+  onIntubate(S){
+    if (S.airway>60){
+      log("CAUTION: intubation in a rapidly expanding neck haematoma can be extremely difficult due to airway distortion — have a surgical airway plan ready and involve the most senior available anaesthetist/ENT surgeon. Bedside wound decompression before intubation, if possible, may make this dramatically safer.",'warn');
+    }
+    return 'Distorted airway anatomy from the expanding haematoma makes intubation high-risk — plan for a difficult airway.';
+  },
+  history:`<b>PMHx:</b> Multinodular goitre, otherwise fit and well.<br>
+    <b>Surgical Hx:</b> Total thyroidectomy this morning, reportedly uneventful with good haemostasis noted at closure.<br>
+    <b>Medications:</b> None regular pre-operatively.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Retired shop assistant, lives with husband, previously fit and independent.`,
+  exam:{
+    A:'Increasing inspiratory stridor, using accessory muscles. Voice progressively hoarse.',
+    B:'Tachypnoeic, working hard to breathe. Trachea difficult to palpate due to swelling.',
+    C:'Tense, rapidly expanding bruised swelling beneath the neck wound, dressing visibly tight. Tachycardic.',
+    D:'GCS 15, distressed and frightened, appropriate for severe respiratory distress. No focal deficit.',
+    E:'Temp 37.0°C. Surgical drain output minimal (blood accumulating in the tissues, not draining externally).'
+  },
+  testGroups:[
+    {title:'Bedside', items:['abg_th','ecg_th']},
+    {title:'Labs', items:['cbc_th','coag_th']}
+  ],
+  tests:{
+    abg_th:{label:'ABG', delay:4, repeatable:true, result(S,v){ return v.spo2<88 ? `pH 7.30, PaO2 54 mmHg, PaCO2 50 mmHg — significant upper airway obstruction with early respiratory failure. Lactate ${S.lactate.toFixed(1)}.` : `pH 7.38, PaO2 88 mmHg, PaCO2 40 mmHg — adequate gas exchange for now.`; }},
+    ecg_th:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischaemic changes.'; }},
+    cbc_th:{label:'CBC', delay:25, repeatable:true, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 9.4 x10⁹/L, Platelets 240 x10⁹/L.`; }},
+    coag_th:{label:'Coagulation profile', delay:25, result(){ return 'PT/INR 1.0, aPTT 27 sec — no coagulopathy contributing.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Immediate airway decompression (do not delay for imaging)', items:[
+      {label:'Open the wound at the bedside (remove clips/sutures, evacuate clot)', handler(S){
+        S.woundReopened = true; S.airway = Math.max(15, S.airway-25);
+        log('Bedside wound decompression performed — skin clips and deep sutures removed, clot evacuated. Immediate improvement in breathing expected. This is the life-saving step and should never be delayed for imaging or theatre transfer in a compromised airway.','result');
+      }},
+      {label:'Call anaesthetics/ENT for urgent senior airway support', handler(){ log('Urgent senior anaesthetic and ENT surgical support called to bedside.','action'); }}
+    ]},
+    {title:'Definitive management', items:[
+      {label:'Arrange emergency return to theatre for formal haemostasis', handler(S){
+        if (S.orResultTime || S.orDone) return;
+        S.orResultTime = S.simTime + 30;
+        log('Theatre notified for emergency re-exploration — advance time to complete transfer and the procedure.','action');
+      }}
+    ]},
+    {title:'Sedation (use with extreme caution)', items:[
+      {label:'Give anxiolytic sedation and reassess in 30 minutes', danger:true, handler(S){
+        S.sedated = true;
+        log('DANGEROUS DELAY: sedation was given instead of relieving the airway obstruction — sedatives blunt respiratory drive and the airway compromise is rapidly worsening. The wound needs to be opened now, not reassessed later.','crit');
+      }, confirm:{title:'Sedate and wait?', body:'This patient has a rapidly expanding neck haematoma causing airway compromise. Delaying definitive airway decompression to sedate and reassess risks complete airway obstruction. Proceed anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU/HDU post-decompression', handler(){ log('Patient escalated / accepted for ICU/HDU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return (S.woundReopened||S.orDone) && S.airway<25 && v.spo2>=94 && v.rr<=24; }
+};
+
+// ---------------- CASE: Anastomotic Leak / Intra-Abdominal Sepsis ----------------
+CASES.anastomotic_leak = {
+  id:'anastomotic_leak', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Sepsis',
+  title:'Patient CC — 68M, day 5 post right hemicolectomy, fever and worsening abdominal pain',
+  cardTag:'Case CC',
+  cardCC:'68M — post-op day 5 right hemicolectomy, fever, tachycardia, distended tender abdomen',
+  cardSub:'Recovering slower than expected since surgery; ward staff now concerned about evolving sepsis.',
+  arrivalClock: 6*60+40,
+  briefHtml:`
+    <b>Chief complaint:</b> Fever, worsening diffuse abdominal pain, and new confusion, 5 days after a right hemicolectomy for colon cancer.<br>
+    <b>Brief history:</b> Surgery was reportedly straightforward. Bowel function had not yet fully returned; pain and fever have been escalating over the last 12 hours.<br>
+    <b>Location:</b> Surgical ward, referred urgently by the covering surgical team.<br>
+    <b>Initial vitals (on review):</b> HR 115 · BP 90/56 · RR 25 · SpO2 93% on room air · Temp 39.7&deg;C · GCS 14, confused.`,
+  initialLog:'Ward referral: 68M, post-op day 5 right hemicolectomy, worsening fever and diffuse abdominal pain over 12h, now confused. HR 115, BP 90/56, RR 25, SpO2 93% RA, Temp 39.7°C, GCS 14.',
+  initGcs:14, gcsCeiling:15, initDevice:'room_air', initHb:10.6, initLactate:3.2,
+  shockableChance:0.05,
+  initState(){ return { infection:60, organDysfunction:25, abxGiven:false, sourceControl:false, orResultTime:null, orDone:false, fluidGiven:0 }; },
+  vitals(S){
+    const sbp = clamp(122 - S.infection*0.45 - S.organDysfunction*0.2 + pressorBoost() + S.fluidBoost, 55, 140);
+    const dbp = Math.round(sbp*0.62);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(80 + S.infection*0.5 + S.organDysfunction*0.2, 60, 170);
+    const rr = clamp(16 + S.infection*0.15, 12, 36);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.infection*0.05 - S.organDysfunction*0.05;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 65, 100);
+    const temp = clamp(37 + S.infection*0.045, 36, 40.5);
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.orDone = true; S.sourceControl = true;
+      S.infection = Math.max(15, S.infection-30);
+      log('Return to theatre completed — an anastomotic leak with faeculent peritoneal contamination was identified, washed out, and a defunctioning stoma formed.','result');
+    }
+    const treating = S.abxGiven && S.sourceControl;
+    if (treating){
+      S.infection = Math.max(8, S.infection - 0.6);
+      S.organDysfunction = Math.max(5, S.organDysfunction - 0.3);
+    } else if (S.abxGiven && !S.sourceControl){
+      S.infection = Math.min(98, S.infection + 0.15);
+      S.organDysfunction = Math.min(95, S.organDysfunction + 0.15);
+    } else {
+      S.infection = Math.min(98, S.infection + 0.45);
+      S.organDysfunction = Math.min(95, S.organDysfunction + 0.2);
+    }
+  },
+  onBolus(S){ S.fluidGiven=(S.fluidGiven||0)+1; return {msg:`Crystalloid bolus #${S.fluidGiven} given — appropriate initial resuscitation, but antibiotics and source control are what will actually turn this around.`}; },
+  onIntubate(S){ return 'Induction agents can worsen hypotension in an under-resuscitated septic patient — have pressor support available.'; },
+  history:`<b>PMHx:</b> Colon adenocarcinoma (surgical resection this admission), type 2 diabetes, hypertension.<br>
+    <b>Surgical Hx:</b> Laparoscopic-converted-to-open right hemicolectomy, 5 days ago.<br>
+    <b>Medications:</b> Metformin (withheld), amlodipine.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Retired accountant, lives with wife, previously independent.`,
+  exam:{
+    A:'Airway patent, drowsy but rousable, talking in short sentences.',
+    B:'Tachypnoeic, chest clear, no obvious respiratory source.',
+    C:'Warm peripheries, bounding pulses despite hypotension (vasoplegic/warm shock). Abdomen distended, diffusely tender with guarding, wound erythematous at the edges.',
+    D:'GCS 14, new confusion — likely septic encephalopathy. No focal neurological deficit.',
+    E:'Temp 39.7°C. Surgical wound looks unhealthy with surrounding erythema; no dehiscence yet.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['abg_al','ecg_al']},
+    {title:'Labs', items:['cbc_al','lactate_al','renal_al','bloodcx_al']},
+    {title:'Imaging', items:['ct_al']}
+  ],
+  tests:{
+    abg_al:{label:'ABG', delay:6, repeatable:true, result(S){ return `pH ${S.infection>50?'7.25':'7.34'}, lactate ${S.lactate.toFixed(1)} mmol/L, base excess ${S.infection>50?'-8':'-3'} — ${S.infection>50?'significant septic shock physiology':'improving perfusion'}.`; }},
+    ecg_al:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischaemic changes.'; }},
+    cbc_al:{label:'CBC', delay:20, repeatable:true, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 19.4 x10⁹/L with marked left shift, Platelets ${S.infection>60?'110 (falling)':'190'} x10⁹/L.`; }},
+    lactate_al:{label:'Lactate', delay:8, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    renal_al:{label:'Renal function', delay:20, result(S){ return `Urea 14 mmol/L, Creatinine ${S.organDysfunction>40?'188':'132'} µmol/L — evolving septic acute kidney injury.`; }},
+    bloodcx_al:{label:'Blood cultures x2', delay:45, result(){ return 'Gram stain: mixed Gram-negative rods and anaerobes — consistent with an enteric/intra-abdominal source.'; }},
+    ct_al:{label:'CT abdomen/pelvis with contrast', delay:30, result(S){ return S.infection>45 ? 'Extraluminal contrast and gas adjacent to the ileocolic anastomosis with a large collection and free fluid — findings diagnostic of an anastomotic leak with faeculent peritonitis.' : 'Small residual fluid collection near the anastomosis, no ongoing leak identified.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Resuscitation', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Antibiotics & source control', items:[
+      {label:'Start broad-spectrum IV antibiotics (piperacillin-tazobactam)', handler(S){ if(S.abxGiven) return; S.abxGiven=true; log('Broad-spectrum IV piperacillin-tazobactam started, covering Gram-negative and anaerobic organisms typical of an intra-abdominal/enteric source.','action'); }},
+      {label:'Arrange emergency return to theatre for source control', handler(S){
+        if (S.orResultTime || S.orDone) return;
+        S.orResultTime = S.simTime + 45;
+        log('Theatre notified for emergency re-look laparotomy — advance time to complete transfer and the procedure.','action');
+      }}
+    ]},
+    {title:'Management approach (use with caution)', items:[
+      {label:'Continue antibiotics and fluids alone, reassess in the morning', danger:true, handler(S){
+        log('MANAGEMENT ERROR: relying on antibiotics and fluids alone for an established anastomotic leak with faeculent contamination delays the source control this patient needs — mortality rises with every hour source control is delayed in intra-abdominal sepsis. This should prompt urgent surgical re-exploration, not a period of observation.','crit');
+      }, confirm:{title:'Manage without theatre for now?', body:'This patient has signs of an established intra-abdominal source of sepsis. Antibiotics alone, without source control, are unlikely to be sufficient. Proceed with observation only?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU', handler(){ log('Patient escalated / accepted for ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.orDone && S.infection<25 && v.sbp>=100 && v.gcs>=14; }
+};
+
+// ---------------- CASE: Necrotising Fasciitis ----------------
+CASES.necrotising_fasciitis = {
+  id:'necrotising_fasciitis', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Rapidly Progressive Soft Tissue Infection',
+  title:'Patient DD — 58M, day 2 post appendicectomy, agonising and rapidly spreading wound pain',
+  cardTag:'Case DD',
+  cardCC:'58M — post-op day 2 appendicectomy, pain out of proportion, spreading erythema and crepitus',
+  cardSub:'Wound pain has become excruciating and disproportionate to the visible findings, with rapidly advancing skin changes.',
+  arrivalClock: 4*60+15,
+  briefHtml:`
+    <b>Chief complaint:</b> Excruciating, rapidly worsening pain around the surgical wound, out of keeping with its appearance, 2 days after an emergency appendicectomy.<br>
+    <b>Brief history:</b> Appendicectomy for perforated appendicitis 2 days ago. Overnight, pain became severe and the skin around the wound has rapidly changed colour and developed a crackling sensation.<br>
+    <b>Location:</b> Surgical ward, urgent overnight review requested.<br>
+    <b>Initial vitals (on review):</b> HR 127 · BP 89/56 · RR 28 · SpO2 93% on room air · Temp 39.9&deg;C · GCS 14, drowsy and unwell-looking.`,
+  initialLog:'Urgent ward review: 58M, post-op day 2 perforated appendicitis, excruciating disproportionate wound pain overnight with rapidly spreading erythema, dusky skin changes, and palpable crepitus. HR 127, BP 89/56, RR 28, SpO2 93% RA, Temp 39.9°C, GCS 14.',
+  initGcs:14, gcsCeiling:15, initDevice:'room_air', initHb:11.4, initLactate:3.6,
+  shockableChance:0.05,
+  initState(){ return { infection:65, debridementDone:false, orResultTime:null, abxGiven:false, ivigGiven:false }; },
+  vitals(S){
+    const sbp = clamp(118 - S.infection*0.45 + pressorBoost() + S.fluidBoost, 55, 135);
+    const dbp = Math.round(sbp*0.63);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(85 + S.infection*0.65, 65, 175);
+    const rr = clamp(16 + S.infection*0.18, 12, 38);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.infection*0.06;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 65, 100);
+    const temp = clamp(37 + S.infection*0.045, 36, 40.5);
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.debridementDone = true;
+      S.infection = Math.max(15, S.infection-35);
+      log('Emergency surgical debridement completed — all necrotic tissue excised down to healthy, bleeding margins. Further debridement may still be required at a planned re-look.','result');
+    }
+    if (!S.debridementDone){
+      S.infection = Math.min(98, S.infection + (S.abxGiven?0.5:0.7));
+    } else {
+      S.infection = Math.max(10, S.infection - 1.2);
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — supportive resuscitation, but will not halt the rapidly progressive tissue destruction; surgical debridement is the definitive treatment.'}; },
+  onIntubate(S){ return 'Induction can worsen hypotension in septic shock — have pressor support ready.'; },
+  history:`<b>PMHx:</b> Type 2 diabetes (poorly controlled), obesity.<br>
+    <b>Surgical Hx:</b> Emergency appendicectomy for perforated appendicitis, 2 days ago.<br>
+    <b>Medications:</b> Metformin, gliclazide (withheld post-op).<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works as a taxi driver, lives with family.`,
+  exam:{
+    A:'Airway patent, drowsy but rousable, speaking in short sentences.',
+    B:'Tachypnoeic, chest clear, no respiratory source identified.',
+    C:'Warm peripheries initially (vasoplegic warm shock). Wound margin skin is dusky/purplish with rapidly advancing erythema well beyond the incision, palpable crepitus (subcutaneous gas), and pain grossly out of proportion to visible findings.',
+    D:'GCS 14, drowsy, unwell-looking. No focal neurological deficit.',
+    E:'Temp 39.9°C. Skin changes extending several centimetres beyond the wound margin over the observation period, advancing visibly on repeat examination.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['abg_nf','ecg_nf']},
+    {title:'Labs', items:['cbc_nf','lactate_nf','ck_nf','renal_nf']},
+    {title:'Imaging', items:['ctsoft_nf']}
+  ],
+  tests:{
+    abg_nf:{label:'ABG', delay:5, repeatable:true, result(S){ return `pH ${S.infection>55?'7.22':'7.32'}, lactate ${S.lactate.toFixed(1)} mmol/L — ${S.infection>55?'severe septic shock with significant metabolic acidosis':'improving perfusion'}.`; }},
+    ecg_nf:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischaemic changes.'; }},
+    cbc_nf:{label:'CBC', delay:15, repeatable:true, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 22.6 x10⁹/L with a marked left shift, Platelets ${S.infection>55?'95 (falling)':'165'} x10⁹/L — the LRINEC score here is high, supporting the clinical diagnosis.`; }},
+    lactate_nf:{label:'Lactate', delay:8, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    ck_nf:{label:'Creatine kinase', delay:25, result(S){ return `CK markedly elevated at ${S.infection>55?'8,400':'3,100'} U/L — consistent with deep soft tissue/muscle necrosis.`; }},
+    renal_nf:{label:'Renal function', delay:20, result(){ return 'Urea 13.5 mmol/L, Creatinine 175 µmol/L — evolving septic AKI.'; }},
+    ctsoft_nf:{label:'CT of the affected region', delay:25, result(S){ return 'Extensive fascial and subcutaneous gas tracking well beyond the visible skin changes, with fascial thickening and fat stranding — findings consistent with necrotising fasciitis. Imaging should never delay surgical debridement once the diagnosis is clinically suspected.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Resuscitation', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Antibiotics & surgical source control', items:[
+      {label:'Start broad-spectrum IV antibiotics + clindamycin', handler(S){ if(S.abxGiven) return; S.abxGiven=true; log('Broad-spectrum IV antibiotics started with clindamycin added — clindamycin reduces exotoxin production in necrotising soft tissue infection.','action'); }},
+      {label:'Give IV immunoglobulin (IVIG)', handler(S){ if(S.ivigGiven) return; S.ivigGiven=true; log('IV immunoglobulin given — may be considered as an adjunct in severe streptococcal/polymicrobial necrotising infection with toxic shock features.','action'); }},
+      {label:'Arrange emergency surgical debridement now', handler(S){
+        if (S.orResultTime || S.debridementDone) return;
+        S.orResultTime = S.simTime + 30;
+        log('Emergency theatre activated for urgent surgical debridement — the single most important intervention in necrotising fasciitis; advance time to complete transfer and the procedure.','action');
+      }}
+    ]},
+    {title:'Management approach (use with caution)', items:[
+      {label:'Treat with IV antibiotics alone and reassess in the morning', danger:true, handler(S){
+        S.infection = Math.min(98, S.infection+10);
+        log('MANAGEMENT ERROR: necrotising fasciitis progresses extremely rapidly and antibiotics alone cannot control it — every hour of delay to surgical debridement measurably increases mortality. This should go to theatre emergently, not be observed overnight.','crit');
+      }, confirm:{title:'Manage with antibiotics alone overnight?', body:'The clinical picture here (pain out of proportion, crepitus, rapidly advancing skin changes) is strongly suggestive of necrotising fasciitis. Antibiotics alone, without urgent debridement, are very unlikely to control this. Proceed with observation only?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU', handler(){ log('Patient escalated / accepted for ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.debridementDone && S.infection<25 && v.sbp>=100; }
+};
+
+// ---------------- CASE: Abdominal Compartment Syndrome ----------------
+CASES.abdo_compartment = {
+  id:'abdo_compartment', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Abdominal Compartment Syndrome',
+  title:'Patient EE — 46M, day 1 post damage-control laparotomy, tense distended abdomen and falling urine output',
+  cardTag:'Case EE',
+  cardCC:'46M — post-op day 1 major laparotomy and large-volume resuscitation, tense distended abdomen, oliguric',
+  cardSub:'Received large-volume crystalloid resuscitation overnight; now increasingly difficult to ventilate with rising peak pressures.',
+  arrivalClock: 5*60+30,
+  briefHtml:`
+    <b>Chief complaint:</b> Increasingly tense, distended abdomen with falling urine output and rising ventilator pressures, one day after a major damage-control laparotomy.<br>
+    <b>Brief history:</b> Emergency laparotomy for a bleeding mesenteric injury, received large-volume crystalloid resuscitation intra-operatively and overnight. Now mechanically ventilated in ICU with worsening peak airway pressures and minimal urine output over the last 4 hours.<br>
+    <b>Location:</b> Surgical ICU, day 1 post-laparotomy.<br>
+    <b>Initial vitals (on review):</b> HR 115 · BP 101/67 · RR 29 (ventilated) · SpO2 94% on 6L equivalent support · Temp 37.4&deg;C · GCS 6 (sedated, ventilated).`,
+  initialLog:'ICU review: 46M, day 1 post damage-control laparotomy and large-volume crystalloid resuscitation. Abdomen tense and distended, rising ventilator peak pressures, urine output <0.3 mL/kg/hr for the last 4 hours. HR 115, BP 101/67, RR 29 (ventilated), SpO2 94%, Temp 37.4°C, GCS 6 (sedated).',
+  initGcs:6, gcsCeiling:14, initDevice:'nc6', initHb:9.8, initLactate:3.0,
+  shockableChance:0.05,
+  initState(){ return { iap:45, decompressed:false, orResultTime:null, fluidGiven:0, bladderPressureChecked:false }; },
+  vitals(S){
+    const sbp = clamp(128 - S.iap*0.6 + pressorBoost() + S.fluidBoost, 60, 140);
+    const dbp = Math.round(sbp*0.66);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(92 + S.iap*0.5, 65, 160);
+    const rr = clamp(20 + S.iap*0.2, 12, 36);
+    const dev = DEV[S.device];
+    const spo2raw = 96 - S.iap*0.15;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = 37.4;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.decompressed = true;
+      S.iap = Math.max(8, S.iap-30);
+      log('Decompressive laparotomy performed — abdomen left open with a temporary abdominal closure device. Immediate improvement in ventilation and perfusion expected.','result');
+    }
+    if (!S.decompressed){
+      S.iap = Math.min(96, S.iap + (S.fluidGiven>2 ? 3.2 : 1.8));
+    } else {
+      S.iap = Math.max(8, S.iap - 3);
+    }
+  },
+  onBolus(S){
+    S.fluidGiven = (S.fluidGiven||0)+1;
+    if (S.fluidGiven>2){
+      return {msg:`Crystalloid bolus #${S.fluidGiven} given. CAUTION: continued aggressive fluid resuscitation is a major driver of worsening abdominal compartment syndrome — reassess fluid responsiveness and intra-abdominal pressure before giving more.`, warn:true};
+    }
+    return {msg:`Crystalloid bolus #${S.fluidGiven} given.`};
+  },
+  onIntubate(S){ return 'Patient is already intubated and ventilated; rising peak pressures here are a clue to worsening intra-abdominal pressure, not a primary airway/ventilator problem.'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> Emergency laparotomy yesterday for a bleeding mesenteric vessel injury following a fall; damage-control approach with large-volume resuscitation.<br>
+    <b>Medications:</b> Sedation and analgesic infusions per ICU protocol.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Warehouse worker, previously fit and well.`,
+  exam:{
+    A:'Intubated and ventilated, tube position confirmed and secure.',
+    B:'Ventilated with rising peak inspiratory pressures over the last few hours; chest expansion appears restricted by the tense abdomen beneath.',
+    C:'Cool peripheries, borderline blood pressure. Abdomen tensely distended, tympanic, difficult to palpate any organs.',
+    D:'GCS 6 (sedated and ventilated) — cannot be meaningfully assessed until sedation is lightened.',
+    E:'Temp 37.4°C. Urinary catheter draining minimal urine over the last 4 hours despite reasonable blood pressure.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['bladderpressure_ac','abg_ac','ecg_ac']},
+    {title:'Labs', items:['renal_ac','lactate_ac','cbc_ac']}
+  ],
+  tests:{
+    bladderpressure_ac:{label:'Intra-abdominal (bladder) pressure measurement', delay:5, repeatable:true, result(S){ return `Bladder pressure ${Math.round(8+S.iap*0.28)} mmHg — ${S.iap>40?'severely elevated, consistent with established abdominal compartment syndrome (grade III–IV)':S.iap>20?'elevated, intra-abdominal hypertension':'normalising'}.`; }},
+    abg_ac:{label:'ABG', delay:5, repeatable:true, result(S){ return `pH ${S.iap>50?'7.24':'7.34'}, lactate ${S.lactate.toFixed(1)} mmol/L, PaCO2 ${S.iap>50?48:40} mmHg — ${S.iap>50?'significant ventilatory compromise and hypoperfusion':'improving'}.`; }},
+    ecg_ac:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischaemic changes.'; }},
+    renal_ac:{label:'Renal function', delay:15, repeatable:true, result(S){ return `Urea ${Math.round(9+S.iap*0.15)} mmol/L, Creatinine ${Math.round(120+S.iap*2.2)} µmol/L — worsening renal perfusion from raised intra-abdominal pressure.`; }},
+    lactate_ac:{label:'Lactate', delay:6, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }},
+    cbc_ac:{label:'CBC', delay:20, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 13.2 x10⁹/L, Platelets 205 x10⁹/L.`; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Resuscitation (use fluids sparingly here)', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Decompression', items:[
+      {label:'Measure intra-abdominal (bladder) pressure', handler(){ log('Bladder pressure measured to confirm and grade intra-abdominal hypertension/compartment syndrome.','action'); }},
+      {label:'Arrange emergency decompressive laparotomy', handler(S){
+        if (S.orResultTime || S.decompressed) return;
+        S.orResultTime = S.simTime + 25;
+        log('Theatre notified for emergency decompressive laparotomy with temporary abdominal closure — advance time to complete the procedure.','action');
+      }}
+    ]},
+    {title:'Fluid strategy (use with caution)', items:[
+      {label:'Continue large-volume crystalloid resuscitation to support blood pressure', danger:true, handler(S){
+        S.iap = Math.min(98, S.iap+15);
+        log('ACUTE WORSENING: further large-volume crystalloid resuscitation has significantly worsened intra-abdominal pressure — this is a classic vicious cycle in abdominal compartment syndrome. Decompressive laparotomy, not more fluid, is the treatment once compartment syndrome is established.','crit');
+      }, confirm:{title:'Give more large-volume crystalloid?', body:'This patient already has signs of established abdominal compartment syndrome. Further large-volume crystalloid is a well-recognised driver of worsening compartment syndrome. Proceed anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Continue ICU management', handler(){ log('Patient continues ongoing ICU management.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.decompressed && S.iap<25 && v.sbp>=100; }
+};
+
+// ---------------- CASE: Malignant Hyperthermia ----------------
+CASES.malignant_hyperthermia = {
+  id:'malignant_hyperthermia', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Intraoperative Anaesthetic Emergency',
+  title:'Patient FF — 24M, intraoperative rapid rise in temperature and muscle rigidity',
+  cardTag:'Case FF',
+  cardCC:'24M — intraoperative during appendicectomy, rapidly rising temperature, jaw/muscle rigidity, tachycardia',
+  cardSub:'Reaction developing shortly after induction with a volatile anaesthetic agent and suxamethonium; family history of an anaesthetic problem.',
+  arrivalClock: 10*60+5,
+  briefHtml:`
+    <b>Chief complaint:</b> Rapidly rising temperature, generalised muscle rigidity, and tachycardia developing intraoperatively during an emergency appendicectomy.<br>
+    <b>Brief history:</b> Induced with a volatile anaesthetic agent and suxamethonium approximately 20 minutes ago. Anaesthetist noted masseter (jaw) muscle rigidity at intubation, now generalised rigidity, rising end-tidal CO2, and climbing temperature.<br>
+    <b>Location:</b> Operating theatre, intraoperative.<br>
+    <b>Initial vitals (intraoperative monitor):</b> HR 130 · BP 140/88 · RR 17 (ventilated) · SpO2 99% on ventilator · Temp 39.5&deg;C and rising rapidly · GCS N/A (under general anaesthesia).`,
+  initialLog:'Intraoperative emergency call: 24M during emergency appendicectomy, developing masseter and generalised muscle rigidity, rapidly rising temperature, tachycardia, and rising end-tidal CO2 approximately 20 min after induction with a volatile agent and suxamethonium. HR 130, BP 140/88, RR 17 (ventilated), SpO2 99%, Temp 39.5°C and climbing.',
+  initGcs:3, gcsCeiling:15, initDevice:'vent', initHb:14.6, initLactate:3.4,
+  shockableChance:0.2,
+  initState(){ return { mh:50, triggerStopped:false, dantroleneCount:0, activeCooling:false, hyperkalemiaTreated:false }; },
+  vitals(S){
+    const sbp = clamp(125 + S.mh*0.3 + pressorBoost() + S.fluidBoost, 90, 170);
+    const dbp = Math.round(sbp*0.63);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(95 + S.mh*0.7, 70, 175);
+    const rr = clamp(14 + S.mh*0.05, 10, 30);
+    const dev = DEV[S.device];
+    const spo2raw = 96 - S.mh*0.1;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = clamp(37.5 + S.mh*0.04, 37, 42);
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.triggerStopped && S.dantroleneCount>0){
+      S.mh = Math.max(5, S.mh - (S.dantroleneCount*2.5) - (S.activeCooling?1.5:0));
+    } else if (!S.triggerStopped){
+      S.mh = Math.min(98, S.mh + 4);
+    } else {
+      S.mh = Math.min(98, S.mh + 1.2 - (S.activeCooling?1.5:0));
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid (cooled if available) given — supportive, helps with cooling and rhabdomyolysis-related renal protection, but dantrolene is the specific definitive treatment.'}; },
+  onIntubate(S){ return 'Patient is already intubated and ventilated intraoperatively.'; },
+  ecgPattern(S){ return S.mh>70 && !S.hyperkalemiaTreated ? 'peaked_t' : 'normal'; },
+  history:`<b>PMHx:</b> Previously fit and well. Family history of an unspecified "anaesthetic problem" in an uncle, details unclear.<br>
+    <b>Surgical Hx:</b> None previously — first general anaesthetic.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA reported, though true anaesthetic drug sensitivities were previously unknown.<br>
+    <b>Social:</b> University student, otherwise healthy.`,
+  exam:{
+    A:'Intubated and ventilated, masseter rigidity noted at induction.',
+    B:'Ventilated; rising end-tidal CO2 despite unchanged ventilator settings — an early and sensitive sign.',
+    C:'Tachycardic, mottled skin. Generalised muscle rigidity ("board-like") on examination.',
+    D:'Under general anaesthesia — GCS not formally assessable; no purposeful movement expected.',
+    E:'Temp climbing rapidly and repeatedly on serial measurement — a hallmark, though sometimes late, feature.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['etco2_mh','abg_mh','ecg_mh']},
+    {title:'Labs', items:['ck_mh','electrolytes_mh','renal_mh']}
+  ],
+  tests:{
+    etco2_mh:{label:'End-tidal CO2 trend', delay:2, repeatable:true, result(S){ return `End-tidal CO2 ${S.mh>60?'markedly elevated and rising despite stable minute ventilation':'improving'} — one of the earliest and most sensitive signs of malignant hyperthermia.`; }},
+    abg_mh:{label:'ABG', delay:4, repeatable:true, result(S){ return `pH ${S.mh>60?'7.15':'7.30'}, PaCO2 ${S.mh>60?65:45} mmHg, lactate ${S.lactate.toFixed(1)} mmol/L — severe combined respiratory and metabolic acidosis from the hypermetabolic state.`; }},
+    ecg_mh:{label:'12-lead ECG', delay:4, result(S){ return S.mh>70 && !S.hyperkalemiaTreated ? 'Peaked T waves and widening QRS — hyperkalaemia from rhabdomyolysis and the hypermetabolic state, needs urgent treatment.' : 'Sinus tachycardia, no significant hyperkalaemic changes currently.'; }},
+    ck_mh:{label:'Creatine kinase', delay:20, result(S){ return `CK markedly elevated at ${S.mh>60?'12,500':'4,200'} U/L — significant rhabdomyolysis from the hypermetabolic muscle state.`; }},
+    electrolytes_mh:{label:'Electrolytes (incl. potassium)', delay:8, repeatable:true, result(S){ return `K+ ${S.mh>65 && !S.hyperkalemiaTreated ? '6.8 (dangerously elevated — treat urgently)':'4.6'} mmol/L, Na 138 mmol/L.`; }},
+    renal_mh:{label:'Renal function', delay:20, result(){ return 'Urea and creatinine mildly elevated — monitor closely given the risk of rhabdomyolysis-related acute kidney injury.'; }}
+  },
+  interventionGroups:[
+    {title:'Stop the trigger and treat', items:[
+      {label:'Stop all volatile anaesthetic agents immediately, switch to total IV anaesthesia', handler(S){
+        S.triggerStopped = true;
+        log('All volatile anaesthetic agents stopped immediately and the anaesthetic circuit/machine changed — removing the trigger is the essential first step, alongside dantrolene.','result');
+      }},
+      {label:'Give IV dantrolene 2.5mg/kg, repeat as needed', handler(S){
+        S.dantroleneCount++;
+        log(`IV dantrolene given (dose ${S.dantroleneCount}) — the specific antidote for malignant hyperthermia, reduces calcium release from the sarcoplasmic reticulum. Repeat if signs persist.`,'action');
+      }},
+      {label:'Start active cooling measures', handler(S){ S.activeCooling = true; log('Active cooling started — cold IV fluids, surface cooling, and cooled irrigation as available.','action'); }},
+      {label:'Treat hyperkalaemia (insulin/dextrose, calcium)', handler(S){ S.hyperkalemiaTreated = true; log('IV calcium, insulin/dextrose given for the hyperkalaemia associated with rhabdomyolysis and the hypermetabolic state.','action'); }}
+    ]},
+    {title:'Fluids', items:[{label:'Give IV crystalloid bolus (cooled if available)', action:'bolus'}]},
+    {title:'Approach to consider (use with caution)', items:[
+      {label:'Continue the case and give more volatile anaesthetic to maintain depth', danger:true, handler(S){
+        S.mh = Math.min(98, S.mh+20);
+        log('ACUTE DETERIORATION: continuing to administer the triggering volatile anaesthetic agent drives the hypermetabolic crisis further — malignant hyperthermia is rapidly fatal if the trigger is not stopped immediately and dantrolene given without delay.','crit');
+      }, confirm:{title:'Continue with volatile anaesthetic?', body:'The clinical picture (rigidity, rising end-tidal CO2, climbing temperature) strongly suggests malignant hyperthermia. Continuing the triggering agent is dangerous. Proceed anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU post-stabilisation', handler(){ log('Patient escalated / accepted for ICU transfer for ongoing monitoring and further dantrolene as needed.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.triggerStopped && S.dantroleneCount>=1 && S.mh<25 && parseFloat(v.temp)<38.0; }
+};
+
+// ---------------- CASE: Post-Operative Haemorrhage ----------------
+CASES.postop_haemorrhage = {
+  id:'postop_haemorrhage', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Bleeding',
+  title:'Patient GG — 61F, hours post partial hepatectomy, falling blood pressure and rising drain output',
+  cardTag:'Case GG',
+  cardCC:'61F — post-op partial hepatectomy, pale and hypotensive with heavily blood-stained drain output',
+  cardSub:'Nursing staff concerned about a sudden increase in abdominal drain output and a falling blood pressure trend.',
+  arrivalClock: 2*60+50,
+  briefHtml:`
+    <b>Chief complaint:</b> Falling blood pressure and a sudden increase in blood-stained abdominal drain output, several hours after a partial hepatectomy for a liver tumour.<br>
+    <b>Brief history:</b> Surgery was reported technically difficult with some intraoperative blood loss. Drain output has become heavily blood-stained over the last hour with an accompanying drop in blood pressure.<br>
+    <b>Location:</b> Surgical ward, escalated by the covering nurse.<br>
+    <b>Initial vitals (on review):</b> HR 127 · BP 91/59 · RR 23 · SpO2 98% on 15L non-rebreather · Temp 36.4&deg;C · GCS 14, pale and drowsy.`,
+  initialLog:'Ward escalation: 61F, several hours post partial hepatectomy, drain output heavily blood-stained over the last hour with falling BP. HR 127, BP 91/59, RR 23, SpO2 98% on 15L NRB, Temp 36.4°C, GCS 14, pale.',
+  initGcs:14, gcsCeiling:15, initDevice:'nrb15', initHb:8.6, initLactate:3.1,
+  shockableChance:0.05,
+  initState(){ return { bloodLoss:42, unitsTransfused:0, orResultTime:null, orDone:false, tenxaGiven:false }; },
+  vitals(S){
+    const sbp = clamp(120 - S.bloodLoss*0.7 + pressorBoost() + S.fluidBoost, 55, 130);
+    const dbp = Math.round(sbp*0.65);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(85 + S.bloodLoss*1.0, 65, 160);
+    const rr = clamp(15 + S.bloodLoss*0.2, 12, 32);
+    const dev = DEV[S.device];
+    const spo2raw = 98 - S.bloodLoss*0.08;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = 36.4;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.orResultTime && S.simTime >= S.orResultTime){
+      S.orResultTime = null; S.orDone = true;
+      S.bloodLoss = Math.max(10, S.bloodLoss-32);
+      log('Return to theatre completed — the bleeding vessel on the cut liver surface was identified and controlled.','result');
+    }
+    if (!S.orDone){
+      S.bloodLoss = Math.min(96, S.bloodLoss + 0.5);
+    }
+    S.hb = Math.max(4.5, S.hb - (S.bloodLoss>35 ? 0.06 : 0.02));
+  },
+  onBolus(S){ return {msg:'IV crystalloid given as a bridge — blood products and surgical control of the bleeding are the priority, avoid excessive crystalloid.'}; },
+  onIntubate(S){ return 'Induction agents can worsen hypotension in an under-resuscitated bleeding patient — have blood products and pressor support available.'; },
+  history:`<b>PMHx:</b> Colorectal cancer with a solitary liver metastasis (resected this admission).<br>
+    <b>Surgical Hx:</b> Partial (right) hepatectomy earlier today, reported technically difficult with increased intraoperative blood loss.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Retired librarian, lives with husband.`,
+  exam:{
+    A:'Airway patent, drowsy but rousable.',
+    B:'Mildly tachypnoeic, chest clear.',
+    C:'Pale, cool peripheries, thready rapid pulse, cap refill 4s. Abdominal drain filled with fresh blood, dressing also blood-stained.',
+    D:'GCS 14, drowsy, appropriate for hypovolaemia. No focal neurological deficit.',
+    E:'Temp 36.4°C. Abdomen mildly distended and tender around the surgical site.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['abg_pg','ecg_pg']},
+    {title:'Labs', items:['cbc_pg','coag_pg','group_pg','lactate_pg']}
+  ],
+  tests:{
+    abg_pg:{label:'ABG', delay:5, repeatable:true, result(S){ return `pH ${S.bloodLoss>50?'7.24':'7.33'}, lactate ${S.lactate.toFixed(1)} mmol/L — ${S.bloodLoss>50?'significant hypoperfusion':'improving perfusion'}.`; }},
+    ecg_pg:{label:'12-lead ECG', delay:5, result(){ return 'Sinus tachycardia. No acute ischaemic changes.'; }},
+    cbc_pg:{label:'CBC', delay:15, repeatable:true, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 12.8 x10⁹/L, Platelets ${S.bloodLoss>50?'105 (falling, dilutional)':'175'} x10⁹/L.`; }},
+    coag_pg:{label:'Coagulation profile', delay:20, result(S){ return S.bloodLoss>50 ? 'PT/INR 1.6, aPTT 44 sec, Fibrinogen 1.4 g/L — developing coagulopathy, partly from the liver resection itself and partly dilutional. Consider FFP/cryoprecipitate.' : 'PT/INR 1.2, aPTT 32 sec, Fibrinogen 2.6 g/L — mildly deranged, expected post-hepatectomy.'; }},
+    group_pg:{label:'Group & crossmatch (urgent)', delay:12, result(){ return 'Blood group A positive, 4 units crossmatched urgently.'; }},
+    lactate_pg:{label:'Lactate', delay:8, repeatable:true, result(S){ return `Lactate ${S.lactate.toFixed(1)} mmol/L.`; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Resuscitation', items:[
+      {label:'Give crystalloid bolus', action:'bolus'},
+      {label:'Transfuse 1 unit PRBC', handler(S){ S.unitsTransfused++; S.hb=Math.min(11.5,S.hb+1.1); log(`Unit #${S.unitsTransfused} PRBC transfused.`,'action'); }},
+      {label:'Give tranexamic acid (TXA) 1g IV', handler(S){ if(S.tenxaGiven) return; S.tenxaGiven=true; log('Tranexamic acid 1g IV given.','action'); }}
+    ]},
+    {title:'Source control', items:[
+      {label:'Activate for emergency return to theatre', handler(S){
+        if (S.orResultTime || S.orDone) return;
+        S.orResultTime = S.simTime + 35;
+        log('Theatre notified for emergency re-exploration to control the bleeding — advance time to complete transfer and the procedure.','action');
+      }}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU', handler(){ log('Patient escalated / accepted for ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.orDone && S.bloodLoss<20 && v.sbp>=100 && S.hb>=8; }
+};
+
+// ---------------- CASE: Perioperative Myocardial Infarction ----------------
+CASES.perioperative_mi = {
+  id:'perioperative_mi', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Perioperative Cardiac Event',
+  title:'Patient HH — 73M, day 1 post hip fracture fixation, quiet hypotension and new confusion',
+  cardTag:'Case HH',
+  cardCC:'73M — post-op day 1 hip fracture fixation, unexplained hypotension and new confusion, no chest pain',
+  cardSub:'No chest pain reported — perioperative myocardial infarction is frequently silent or atypical; a high index of suspicion is needed.',
+  arrivalClock: 7*60+15,
+  briefHtml:`
+    <b>Chief complaint:</b> New confusion, unexplained low blood pressure, and generally "not looking right" one day after surgical fixation of a hip fracture. No chest pain reported.<br>
+    <b>Brief history:</b> Hip fracture fixation yesterday under spinal anaesthesia, reported to have gone well. Overnight, nursing staff noted new confusion and borderline low blood pressure not responding as expected to a fluid bolus.<br>
+    <b>Location:</b> Orthopaedic surgical ward, day 1 post-op.<br>
+    <b>Initial vitals (on review):</b> HR 103 · BP 109/69 · RR 24 · SpO2 94% on 6L nasal cannula · Temp 36.9&deg;C · GCS 14, newly confused.`,
+  initialLog:'Ward review: 73M, day 1 post hip fracture fixation, new confusion and unexplained hypotension overnight, no chest pain reported. HR 103, BP 109/69, RR 24, SpO2 94% on 6L NC, Temp 36.9°C, GCS 14.',
+  initGcs:14, gcsCeiling:15, initDevice:'nc6', initHb:9.4, initLactate:2.0,
+  shockableChance:0.3,
+  initState(){ return { occlusion:30, aspirinGiven:false, reperfused:false, betaBlockerRisk:0, anticoagRisk:false }; },
+  vitals(S){
+    const sbp = clamp(118 - S.occlusion*0.3 + pressorBoost() + S.fluidBoost - (S.betaBlockerRisk>0?12:0), 70, 150);
+    const dbp = Math.round(sbp*0.63);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(88 + S.occlusion*0.5 - (S.betaBlockerRisk>0?8:0), 60, 150);
+    const rr = clamp(18 + S.occlusion*0.2, 12, 32);
+    const dev = DEV[S.device];
+    const spo2raw = 96 - S.occlusion*0.15;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = 36.9;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.betaBlockerRisk>0) S.betaBlockerRisk--;
+    if (!S.reperfused) S.occlusion = Math.min(90, S.occlusion + 0.9);
+    if (S.aspirinGiven && S.reperfused) S.occlusion = Math.max(10, S.occlusion - 1.5);
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — reasonable if genuinely hypovolaemic, but be cautious of over-resuscitating a heart with evolving ischaemia and possible impending pump failure.'}; },
+  onIntubate(S){ return 'Induction agents can worsen hypotension in evolving cardiogenic physiology — have pressor support available.'; },
+  ecgPattern(S){ return S.reperfused ? 'normal' : (S.occlusion>45 ? 'st_depression' : 'normal'); },
+  history:`<b>PMHx:</b> Hypertension, type 2 diabetes, known mild coronary artery disease (never stented).<br>
+    <b>Surgical Hx:</b> Hip fracture fixation (dynamic hip screw) yesterday under spinal anaesthesia.<br>
+    <b>Medications:</b> Amlodipine, metformin, low-dose aspirin (held pre-operatively).<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Retired postal worker, lives alone, previously independent with a frame.`,
+  exam:{
+    A:'Airway patent, confused but talking.',
+    B:'Mildly tachypnoeic, chest clear, no crackles yet.',
+    C:'Cool peripheries, thready pulse. No chest pain volunteered or elicited on direct questioning — a classic silent/atypical perioperative presentation.',
+    D:'GCS 14, new confusion — likely a manifestation of reduced cerebral perfusion from a silent cardiac event. No focal neurological deficit.',
+    E:'Temp 36.9°C. Surgical hip wound clean and dry. No calf swelling.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['ecg_pm','abg_pm']},
+    {title:'Labs', items:['troponin_pm','cbc_pm','renal_pm']}
+  ],
+  tests:{
+    ecg_pm:{label:'12-lead ECG', delay:3, repeatable:true, result(S){ return S.reperfused ? 'ST depression substantially resolved — consistent with improved coronary perfusion.' : (S.occlusion>45 ? 'Widespread ST depression, most marked in the lateral leads — consistent with a non-ST-elevation ischaemic event (demand or supply mismatch).' : 'Sinus tachycardia with mild non-specific ST changes.'); }},
+    abg_pm:{label:'ABG', delay:6, repeatable:true, result(S){ return `pH 7.35, lactate ${S.lactate.toFixed(1)} mmol/L — mild hypoperfusion.`; }},
+    troponin_pm:{label:'Troponin (serial)', delay:50, repeatable:true, result(S,v,nth){ const base = 0.3 + S.occlusion*0.3; return `Troponin I ${(base*(1+(nth||1)*0.35)).toFixed(1)} ng/mL — ${nth>1?'rising, consistent with an evolving perioperative myocardial infarction':'elevated, a perioperative myocardial infarction must be considered even without chest pain'}.`; }},
+    cbc_pm:{label:'CBC', delay:20, result(S){ return `Hb ${S.hb.toFixed(1)} g/dL, WBC 10.6 x10⁹/L, Platelets 240 x10⁹/L.`; }},
+    renal_pm:{label:'Renal function', delay:20, result(){ return 'Urea 8.4 mmol/L, Creatinine 108 µmol/L.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Antiplatelet & reperfusion (weigh post-op bleeding risk)', items:[
+      {label:'Give aspirin 300mg (weighing post-op bleeding risk)', handler(S){ if(S.aspirinGiven) return; S.aspirinGiven=true; log('Aspirin 300mg given — appropriate for a suspected acute coronary syndrome, with the post-operative bleeding risk discussed and accepted given the severity of the presentation.','action'); }, confirm:{title:'Give aspirin?', body:'This patient is one day post-op with a suspected acute coronary syndrome. Aspirin is appropriate but carries a surgical bleeding risk that should be weighed with the surgical team. Proceed?'}},
+      {label:'Urgent cardiology referral for consideration of angiography', handler(S){ S.reperfused = true; log('Urgent cardiology referral made — coronary angiography arranged, balancing ischaemic benefit against perioperative bleeding risk with the surgical team involved in the decision.','result'); }}
+    ]},
+    {title:'Rate/rhythm (use with caution)', items:[
+      {label:'Give IV beta-blocker for rate control', danger:true, handler(S){
+        const v = CASES.perioperative_mi.vitals(S);
+        if (v.sbp<105 || S.occlusion>45){
+          S.betaBlockerRisk = 3;
+          log('ACUTE DECOMPENSATION: IV beta-blocker given in a patient with borderline hypotension and an evolving ischaemic event — this can precipitate cardiogenic shock. BP and HR have dropped further.','crit');
+        } else {
+          log('IV beta-blocker given for rate control — haemodynamically tolerated at this time.','action');
+        }
+      }, confirm:{title:'Give IV beta-blocker?', body:'Beta-blockade is only appropriate without hypotension or evolving heart failure/shock. Check the current picture before proceeding. Give anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to CCU/ICU', handler(){ log('Patient escalated / accepted for CCU/ICU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.reperfused && v.sbp>=105 && v.gcs>=14; }
+};
+
+// ---------------- CASE: Post-Operative Rapid Atrial Fibrillation ----------------
+CASES.postop_af = {
+  id:'postop_af', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Arrhythmia',
+  title:'Patient II — 67M, day 2 post oesophagectomy, sudden palpitations and breathlessness',
+  cardTag:'Case II',
+  cardCC:'67M — post-op day 2 oesophagectomy, new rapid irregular palpitations and breathlessness',
+  cardSub:'New-onset atrial fibrillation with rapid ventricular response — a common complication after major thoracic surgery.',
+  arrivalClock: 9*60+40,
+  briefHtml:`
+    <b>Chief complaint:</b> Sudden-onset rapid irregular palpitations and breathlessness, 2 days after an oesophagectomy for oesophageal cancer.<br>
+    <b>Brief history:</b> Major transthoracic oesophagectomy 2 days ago, recovery otherwise unremarkable until this new onset of palpitations about an hour ago.<br>
+    <b>Location:</b> Surgical ward, day 2 post-op.<br>
+    <b>Initial vitals (on review):</b> HR 145 irregular · BP 102/66 · RR 24 · SpO2 92% on 2L nasal cannula · Temp 37.2&deg;C · GCS 15, anxious.`,
+  initialLog:'Ward review: 67M, day 2 post oesophagectomy, new rapid irregular palpitations and breathlessness over the last hour. HR 145 irregular, BP 102/66, RR 24, SpO2 92% on 2L NC, Temp 37.2°C, GCS 15.',
+  initGcs:15, gcsCeiling:15, initDevice:'nc2', initHb:11.2, initLactate:1.6,
+  shockableChance:0.05,
+  initState(){ return { afLoad:55, rateControlled:false, anticoagStarted:false, cardioverted:false, anticoagRiskAccepted:false }; },
+  vitals(S){
+    const sbp = clamp(118 - S.afLoad*0.3 + pressorBoost() + S.fluidBoost, 70, 140);
+    const dbp = Math.round(sbp*0.65);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(90 + S.afLoad*0.9, 70, 175);
+    const rr = clamp(16 + S.afLoad*0.15, 12, 30);
+    const dev = DEV[S.device];
+    const spo2raw = 96 - S.afLoad*0.05;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 70, 100);
+    const temp = 37.2;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.cardioverted){
+      S.afLoad = Math.max(5, S.afLoad - 20);
+    } else if (S.rateControlled){
+      S.afLoad = Math.max(15, S.afLoad - 3);
+    } else {
+      S.afLoad = Math.min(90, S.afLoad + 1.5);
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — reasonable if there is a volume component, but the primary problem here is the rate/rhythm, not volume.'}; },
+  onIntubate(S){ return 'Reserve intubation for airway/ventilatory failure; it does not address the underlying arrhythmia.'; },
+  ecgPattern(S){ return S.cardioverted ? 'normal' : 'afib'; },
+  history:`<b>PMHx:</b> Oesophageal adenocarcinoma (surgery this admission), hypertension.<br>
+    <b>Surgical Hx:</b> Transthoracic oesophagectomy, 2 days ago.<br>
+    <b>Medications:</b> Amlodipine.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Retired engineer, lives with wife.`,
+  exam:{
+    A:'Airway patent, talking, breathless with exertion.',
+    B:'Mildly tachypnoeic, chest clear, surgical thoracotomy wound healing well.',
+    C:'Irregularly irregular pulse, rapid rate, normal volume. Cap refill <2s — not in shock.',
+    D:'GCS 15, alert, anxious. No focal neurological deficit.',
+    E:'Temp 37.2°C. No calf swelling. No fever.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['ecg_pa','abg_pa']},
+    {title:'Labs', items:['electrolytes_pa','tft_pa','cbc_pa']}
+  ],
+  tests:{
+    ecg_pa:{label:'12-lead ECG', delay:3, repeatable:true, result(S){ return S.cardioverted ? 'Sinus rhythm restored.' : `Atrial fibrillation with a rapid ventricular response, rate ${Math.round(90+S.afLoad*0.9)}, no acute ST changes.`; }},
+    abg_pa:{label:'ABG', delay:6, result(S){ return `pH 7.38, lactate ${S.lactate.toFixed(1)} mmol/L — adequate perfusion currently.`; }},
+    electrolytes_pa:{label:'Electrolytes (incl. magnesium)', delay:15, result(){ return 'K+ 3.4 mmol/L (mildly low), Mg2+ 0.6 mmol/L (low) — both can precipitate or perpetuate post-operative atrial fibrillation and should be corrected.'; }},
+    tft_pa:{label:'TSH', delay:35, result(){ return 'TSH normal — thyrotoxicosis excluded as a precipitant.'; }},
+    cbc_pa:{label:'CBC', delay:20, result(){ return 'Hb 11.2 g/dL, WBC 10.1 x10⁹/L, Platelets 260 x10⁹/L.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Electrolyte correction', items:[
+      {label:'Correct potassium and magnesium', handler(S){ log('IV potassium and magnesium replacement given — corrects a common precipitant/perpetuator of post-operative atrial fibrillation.','action'); }}
+    ]},
+    {title:'Rate/rhythm control', items:[
+      {label:'Give IV beta-blocker or calcium-channel blocker for rate control', handler(S){ S.rateControlled = true; log('IV rate-control agent given — appropriate first-line management for hemodynamically tolerated post-operative AF with rapid ventricular response.','action'); }},
+      {label:'Synchronised DC cardioversion (haemodynamically unstable)', danger:true, handler(S){
+        S.cardioverted = true; S.afLoad = Math.max(10, S.afLoad-40);
+        log('Synchronised DC cardioversion performed — reserved for haemodynamic instability or failure of rate control; restores sinus rhythm directly.','result');
+      }, confirm:{title:'Proceed with DC cardioversion?', body:'This is generally reserved for haemodynamic instability, or once other causes/precipitants have been addressed and rate control has failed. Confirm this is indicated now?'}},
+      {label:'Start anticoagulation (weighing post-op bleeding risk)', handler(S){
+        S.anticoagStarted = true;
+        log('Anticoagulation started for new-onset AF, with the post-operative bleeding risk explicitly discussed and accepted alongside the surgical team.','action');
+      }, confirm:{title:'Start anticoagulation?', body:'This patient is 2 days post major thoracic surgery. Anticoagulation reduces thromboembolic risk from AF but carries a surgical bleeding risk that should be discussed with the surgical team. Proceed?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to HDU/ICU with cardiac monitoring', handler(){ log('Patient escalated / accepted for HDU/ICU transfer with continuous cardiac monitoring.','action'); }}]}
+  ],
+  stableWhen(v,S){ return (S.rateControlled||S.cardioverted) && S.afLoad<25 && v.sbp>=100; }
+};
+
+// ---------------- CASE: Local Anaesthetic Systemic Toxicity ----------------
+CASES.last_toxicity = {
+  id:'last_toxicity', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Anaesthetic Emergency',
+  title:'Patient JJ — 39F, perioral tingling, seizure, and collapse during a regional nerve block',
+  cardTag:'Case JJ',
+  cardCC:'39F — during interscalene brachial plexus block, perioral tingling followed by seizure and collapse',
+  cardSub:'Local anaesthetic systemic toxicity (LAST) following inadvertent intravascular injection during a regional block.',
+  arrivalClock: 13*60+25,
+  briefHtml:`
+    <b>Chief complaint:</b> Perioral tingling, metallic taste, and confusion rapidly followed by a generalised seizure and collapse during a regional nerve block for shoulder surgery.<br>
+    <b>Brief history:</b> Interscalene brachial plexus block being performed with a large volume of local anaesthetic prior to planned shoulder surgery. Patient reported perioral tingling and a metallic taste moments before becoming confused, then had a witnessed generalised seizure.<br>
+    <b>Location:</b> Anaesthetic block room, pre-operative.<br>
+    <b>Initial vitals (on review):</b> HR 82 (falling) · BP 93/57 · RR 19 · SpO2 92% on room air · Temp 36.8&deg;C · GCS 12, post-ictal.`,
+  initialLog:'Anaesthetic emergency call: 39F, perioral tingling and metallic taste followed by a witnessed generalised seizure during an interscalene block — local anaesthetic systemic toxicity (LAST) suspected from probable intravascular injection. HR 82 and falling, BP 93/57, RR 19, SpO2 92% RA, GCS 12, post-ictal.',
+  initGcs:12, gcsCeiling:15, initDevice:'room_air', initHb:13.1, initLactate:2.4,
+  shockableChance:0.4,
+  initState(){ return { tox:55, lipidGiven:false, benzoGiven:false, seizureCount:1 }; },
+  vitals(S){
+    const sbp = clamp(120 - S.tox*0.5 + pressorBoost() + S.fluidBoost, 55, 140);
+    const dbp = Math.round(sbp*0.62);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(90 - S.tox*0.15, 30, 150);
+    const rr = clamp(16 + S.tox*0.05, 10, 30);
+    const dev = DEV[S.device];
+    const spo2raw = 97 - S.tox*0.1;
+    const spo2 = clamp(Math.min(spo2raw + dev.boost, dev.ceiling), 55, 100);
+    const temp = 36.8;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.lipidGiven){
+      S.tox = Math.max(5, S.tox - 8);
+      if (S.gcs<15 && Math.random()<0.4) S.gcs = Math.min(15, S.gcs+1);
+    } else {
+      S.tox = Math.min(96, S.tox + 3);
+      if (S.tox>65 && Math.random()<0.2){
+        S.seizureCount++;
+        S.gcs = Math.max(6, S.gcs-2);
+        log('FURTHER SEIZURE — local anaesthetic systemic toxicity is progressing; IV lipid emulsion is the specific treatment and should not be delayed further.','crit');
+      }
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — supportive only; IV lipid emulsion is the specific treatment for local anaesthetic systemic toxicity.'}; },
+  onIntubate(S){ return 'Airway protection is reasonable given reduced GCS/ongoing seizures — avoid propofol for induction if cardiotoxicity is significant, as it can worsen myocardial depression.'; },
+  ecgPattern(S){ return S.tox>65 ? 'st_depression' : 'normal'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> None previously — planned elective shoulder surgery today.<br>
+    <b>Medications:</b> None regular.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works as a physiotherapist, previously fit and well.`,
+  exam:{
+    A:'Airway patent currently, post-ictal, at risk if further seizures occur.',
+    B:'Mildly tachypnoeic, chest clear.',
+    C:'Cool peripheries, pulse rate falling — a warning sign of evolving cardiotoxicity from local anaesthetic. Interscalene block site clean, no haematoma.',
+    D:'GCS 12, post-ictal and drowsy. One witnessed generalised seizure so far.',
+    E:'Temp 36.8°C. No other injury.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['ecg_lt','abg_lt','glucose_lt']},
+    {title:'Labs', items:['cbc_lt','electrolytes_lt']}
+  ],
+  tests:{
+    ecg_lt:{label:'12-lead ECG', delay:3, repeatable:true, result(S){ return S.tox>65 ? 'Widening QRS and ST depression — evolving cardiotoxicity from local anaesthetic systemic toxicity, needs urgent lipid emulsion therapy.' : 'Sinus rhythm, mild non-specific changes, improving.'; }},
+    abg_lt:{label:'ABG', delay:5, repeatable:true, result(S){ return `pH ${S.tox>60?'7.24':'7.34'}, lactate ${S.lactate.toFixed(1)} mmol/L — ${S.tox>60?'significant acidosis from ongoing seizures/toxicity':'improving'}.`; }},
+    glucose_lt:{label:'Fingerstick glucose', delay:2, result(){ return 'Capillary glucose 5.6 mmol/L — normal, hypoglycaemia excluded as a cause of the seizure.'; }},
+    cbc_lt:{label:'CBC', delay:20, result(){ return 'Hb 13.1 g/dL, WBC 9.8 x10⁹/L, Platelets 255 x10⁹/L — unremarkable.'; }},
+    electrolytes_lt:{label:'Electrolytes', delay:15, result(){ return 'Na 138, K 4.0, Ca 2.3 mmol/L — normal, metabolic causes of seizure excluded.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Definitive treatment', items:[
+      {label:'Give IV 20% lipid emulsion bolus, start infusion', handler(S){
+        S.lipidGiven = true;
+        log('IV 20% lipid emulsion given as a bolus with an infusion started — the specific treatment for local anaesthetic systemic toxicity ("lipid rescue"), acting to sequester the local anaesthetic and support cardiac function.','result');
+      }},
+      {label:'Give IV benzodiazepine for ongoing seizure', handler(S){ S.benzoGiven=true; log('IV benzodiazepine given to control the seizure — avoid propofol in large doses if significant cardiotoxicity is present, as it can worsen myocardial depression.','action'); }}
+    ]},
+    {title:'Fluids', items:[{label:'Give crystalloid bolus', action:'bolus'}]},
+    {title:'Approach to consider (use with caution)', items:[
+      {label:'Give further local anaesthetic to "complete" the block', danger:true, handler(S){
+        S.tox = Math.min(98, S.tox+25);
+        log('ACUTE DETERIORATION: further local anaesthetic was given despite clear signs of systemic toxicity — this significantly worsens local anaesthetic systemic toxicity. Stop all local anaesthetic immediately and give lipid emulsion without delay.','crit');
+      }, confirm:{title:'Give further local anaesthetic?', body:'This patient already has signs of local anaesthetic systemic toxicity (perioral tingling, seizure). Giving more local anaesthetic will worsen this. Proceed anyway?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU for monitoring', handler(){ log('Patient escalated / accepted for ICU transfer for extended cardiac monitoring, given the risk of delayed cardiotoxicity.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.lipidGiven && S.tox<20 && v.gcs>=14 && v.sbp>=100; }
+};
+
+// ---------------- CASE: Acute Limb Compartment Syndrome ----------------
+CASES.limb_compartment = {
+  id:'limb_compartment', specialty:'surg',
+  eyebrow:'ICU / ER Simulation · Advanced · Case: Post-Op Limb Emergency',
+  title:'Patient KK — 29M, day 1 post tibial fracture fixation, severe worsening calf pain',
+  cardTag:'Case KK',
+  cardCC:'29M — post-op day 1 tibial fracture fixation, severe pain out of proportion, tense swollen calf',
+  cardSub:'Pain disproportionate to the injury and increasing despite regular analgesia — a limb-threatening emergency until proven otherwise.',
+  arrivalClock: 3*60+35,
+  briefHtml:`
+    <b>Chief complaint:</b> Severe, worsening left calf pain, out of proportion to the injury, one day after intramedullary nailing of a tibial shaft fracture.<br>
+    <b>Brief history:</b> Closed tibial shaft fracture from a motorcycle accident, fixed with an intramedullary nail yesterday. Pain has progressively worsened overnight despite regular opioid analgesia, now severe with the calf tense and swollen.<br>
+    <b>Location:</b> Orthopaedic surgical ward, day 1 post-op.<br>
+    <b>Initial vitals (on review):</b> HR 118 · BP 136/90 · RR 22 · SpO2 97% on room air · Temp 37.0&deg;C · GCS 15, in severe pain.`,
+  initialLog:'Ward review: 29M, day 1 post intramedullary nailing of a tibial shaft fracture, severe worsening calf pain out of proportion to the injury and analgesia given, calf tense and swollen, pain on passive stretch of the toes. HR 118, BP 136/90, RR 22, SpO2 97% RA, Temp 37.0°C, GCS 15.',
+  initGcs:15, gcsCeiling:15, initDevice:'room_air', initHb:13.4, initLactate:1.8,
+  shockableChance:0.05,
+  initState(){ return { compartment:55, fasciotomyDone:false, orResultTime:null, castLoosened:false }; },
+  vitals(S){
+    const sbp = clamp(128 + S.compartment*0.15 + pressorBoost() + S.fluidBoost, 90, 150);
+    const dbp = Math.round(sbp*0.66);
+    const map = Math.round((sbp + 2*dbp)/3);
+    const hr = clamp(88 + S.compartment*0.55, 65, 150);
+    const rr = clamp(16 + S.compartment*0.1, 12, 28);
+    const dev = DEV[S.device];
+    const spo2 = clamp(Math.min(97 + dev.boost, dev.ceiling), 70, 100);
+    const temp = 37.0;
+    return {sbp:Math.round(sbp),dbp,map,hr:Math.round(hr),rr:Math.round(rr),spo2:Math.round(spo2),temp:temp.toFixed(1),gcs:Math.round(S.gcs)};
+  },
+  tick(S){
+    if (S.fasciotomyDone){
+      S.compartment = Math.max(5, S.compartment - 10);
+    } else if (S.castLoosened){
+      S.compartment = Math.min(90, S.compartment + 1.5);
+    } else {
+      S.compartment = Math.min(96, S.compartment + 3);
+    }
+  },
+  onBolus(S){ return {msg:'IV crystalloid given — supportive only, does not address the underlying compartment pressure.'}; },
+  onIntubate(S){ return 'Airway is not the primary problem here — reserve intubation for a separate clinical indication.'; },
+  history:`<b>PMHx:</b> None known.<br>
+    <b>Surgical Hx:</b> Intramedullary nailing of a closed tibial shaft fracture, yesterday, following a motorcycle accident.<br>
+    <b>Medications:</b> Regular opioid and paracetamol analgesia post-operatively.<br>
+    <b>Allergies:</b> NKDA.<br>
+    <b>Social:</b> Works as a mechanic, previously fit and well.`,
+  exam:{
+    A:'Airway patent, talking, in visible severe pain.',
+    B:'Mildly tachypnoeic from pain, chest clear.',
+    C:'Tachycardic from pain. Left calf tense, swollen, and shiny-skinned; pain markedly worsened with passive dorsiflexion/plantarflexion of the toes (a key early sign). Distal pulses are still palpable — their presence does NOT exclude compartment syndrome.',
+    D:'GCS 15, alert, distressed by pain. Reduced sensation in the first web space developing.',
+    E:'Temp 37.0°C. Surgical wound clean. Cast/dressing intact but appears tight.'
+  },
+  testGroups:[
+    {title:'Bedside', items:['compartmentpressure_lc','pulses_lc']},
+    {title:'Labs', items:['ck_lc','cbc_lc','renal_lc']}
+  ],
+  tests:{
+    compartmentpressure_lc:{label:'Intracompartmental pressure measurement', delay:5, repeatable:true, result(S){ return `Intracompartmental pressure ${Math.round(15+S.compartment*0.5)} mmHg (diastolic BP − compartment pressure = ${Math.round(90 - (15+S.compartment*0.5))} mmHg) — ${S.compartment>45?'critically elevated, consistent with acute compartment syndrome; this is a surgical emergency':'monitor closely with serial measurements'}.`; }},
+    pulses_lc:{label:'Distal pulse and neurovascular check', delay:2, repeatable:true, result(S){ return `Distal pulses ${S.compartment>70?'still palpable but reduced':'palpable'}. ${S.compartment>45?'Reduced sensation in the first web space, pain grossly out of proportion on passive stretch.':'Sensation intact.'} Remember: palpable distal pulses do NOT exclude compartment syndrome — it is a clinical diagnosis supported by pressure measurement.`; }},
+    ck_lc:{label:'Creatine kinase', delay:20, result(S){ return `CK ${S.compartment>60?'markedly elevated at 6,200 U/L':'mildly elevated at 1,100 U/L'} — reflects muscle injury/ischaemia within the compartment.`; }},
+    cbc_lc:{label:'CBC', delay:20, result(){ return 'Hb 13.4 g/dL, WBC 11.0 x10⁹/L (post-surgical), Platelets 245 x10⁹/L.'; }},
+    renal_lc:{label:'Renal function', delay:20, result(){ return 'Urea and creatinine currently normal — monitor given the risk of myoglobin-related acute kidney injury if compartment syndrome is prolonged.'; }}
+  },
+  interventionGroups:[
+    {title:'Oxygen device', type:'o2'},
+    {title:'Immediate measures', items:[
+      {label:'Loosen/remove any tight cast, dressing, or bandage', handler(S){ S.castLoosened = true; log('Tight cast/dressing loosened and removed — a reasonable immediate step, though it alone is unlikely to be sufficient once true compartment syndrome is established.','action'); }},
+      {label:'Elevate the limb to heart level (no higher)', handler(){ log('Limb positioned at heart level — avoid elevating above heart level, which can further reduce perfusion pressure to the compartment.','action'); }}
+    ]},
+    {title:'Definitive management', items:[
+      {label:'Arrange emergency fasciotomy', handler(S){
+        if (S.orResultTime || S.fasciotomyDone) return;
+        S.orResultTime = S.simTime + 20;
+        log('Emergency theatre activated for urgent fasciotomy — the definitive treatment for acute compartment syndrome; advance time to complete transfer and the procedure.','action');
+      }}
+    ]},
+    {title:'Approach to consider (use with caution)', items:[
+      {label:'Reassure and continue observation since distal pulses are present', danger:true, handler(S){
+        S.compartment = Math.min(96, S.compartment+10);
+        log('MANAGEMENT ERROR: distal pulses being present does NOT exclude compartment syndrome — it is a clinical diagnosis based on pain, pressure, and neurological findings. Delaying fasciotomy while "reassured" by palpable pulses risks irreversible muscle and nerve damage within hours.','crit');
+      }, confirm:{title:'Continue observation only?', body:'Distal pulses being present does not rule out compartment syndrome. The clinical picture here (pain out of proportion, pain on passive stretch, tense swollen compartment) is highly suggestive. Proceed with observation only?'}}
+    ]},
+    {title:'Disposition', items:[{label:'Escalate / transfer to ICU/HDU post-fasciotomy', handler(){ log('Patient escalated / accepted for ICU/HDU transfer.','action'); }}]}
+  ],
+  stableWhen(v,S){ return S.fasciotomyDone && S.compartment<20; }
+};
+
 // ================= engine state =================
 let CURRENT = null;
 let S = null;
