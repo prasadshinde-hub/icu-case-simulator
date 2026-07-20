@@ -460,6 +460,10 @@ details.brief[open] summary::before{transform:rotate(90deg);}
       <h1 id="procTitle">Procedure</h1>
     </div>
   </div>
+  <details class="brief" open>
+    <summary>Vignette</summary>
+    <div class="brief-body" id="procVignette"></div>
+  </details>
   <div class="monitor four-tile" id="procMonitor"></div>
   <div class="panel" id="procStepPanel" style="padding:20px;"></div>
 </div>
@@ -6512,6 +6516,7 @@ function procLoadCase(key){
     complications:[], ended:false, outcome:null, lastFeedback:null };
   document.getElementById('procEyebrow').textContent = `Procedure Simulator · ${procCURRENT.tag}`;
   document.getElementById('procTitle').textContent = procCURRENT.label;
+  document.getElementById('procVignette').innerHTML = `<p>${procCURRENT.vignette}</p>`;
   revealScreen('procLabScreen');
   renderProcAll();
 }
