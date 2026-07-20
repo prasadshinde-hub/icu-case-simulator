@@ -5842,6 +5842,30 @@ const VENT_PRESETS = {
     physio:{compliance:45,resistance:22,shuntFraction:0.10,deadSpaceFraction:0.45,hco3:32,baselineSBP:126},
     initialLog:'Patient intubated for a severe COPD exacerbation with respiratory exhaustion and hypercapnia. Chronically compensated (elevated bicarbonate). High airway resistance — watch expiratory time closely.',
     teachingNote:'Permissive hypercapnia is usually acceptable. Favour a slower rate and higher flow (shorter Ti, longer Te) over normalising PaCO2 — rushing the rate risks breath stacking, auto-PEEP, and a falling blood pressure.'
+  },
+  asthma:{
+    id:'asthma', label:'Status asthmaticus, post-intubation', tag:'Obstructive · air trapping',
+    desc:'Severe bronchospasm intubated after failing maximal medical therapy. Extremely high airway resistance — watch the peak-to-plateau pressure gradient and expiratory time closely.',
+    initSettings:{mode:'VC',rr:16,vt:450,flow:60,ti:0.8,pInsp:20,peep:5,fio2:40,trigger:2},
+    physio:{compliance:40,resistance:35,shuntFraction:0.08,deadSpaceFraction:0.35,hco3:24,baselineSBP:122},
+    initialLog:'Patient intubated for status asthmaticus after failing nebulised bronchodilators, steroids, and magnesium. Severe bronchospasm with a markedly prolonged expiratory phase. Acute presentation — bicarbonate not yet elevated.',
+    teachingNote:'This is a resistance problem, not a compliance problem — expect a large peak-to-plateau pressure gradient. Keep the rate low and flow high to maximise expiratory time, and accept a high PaCO2 (permissive hypercapnia). Rushing the rate risks breath stacking, auto-PEEP, and sudden hypotension or arrest.'
+  },
+  pulm_fibrosis:{
+    id:'pulm_fibrosis', label:'Pulmonary fibrosis, acute decompensation', tag:'Restrictive · non-recruitable',
+    desc:'Known idiopathic pulmonary fibrosis, intubated for an acute exacerbation. Very low compliance — but unlike ARDS, this lung is scarred rather than collapsed, so PEEP recruits very little.',
+    initSettings:{mode:'VC',rr:20,vt:380,flow:50,ti:0.8,pInsp:24,peep:5,fio2:50,trigger:2},
+    physio:{compliance:18,resistance:9,shuntFraction:0.20,deadSpaceFraction:0.45,hco3:24,baselineSBP:116},
+    initialLog:'Patient with known idiopathic pulmonary fibrosis intubated for an acute exacerbation with worsening hypoxemia. Markedly reduced compliance on very modest tidal volumes. High dead space from destroyed lung units.',
+    teachingNote:'Compliance is severely reduced, so even small tidal volumes generate high plateau pressures — titrate tidal volume to plateau pressure, not a fixed mL/kg target. Unlike ARDS, this lung is fibrotic rather than atelectatic, so increasing PEEP recruits little extra lung and mainly adds pressure — oxygenation gains here come chiefly from FiO2, not PEEP.'
+  },
+  massive_pe_vent:{
+    id:'massive_pe_vent', label:'Massive pulmonary embolism, post-intubation', tag:'Vascular · dead space',
+    desc:'Massive PE with obstructive shock, intubated for a falling GCS. Lung mechanics are near-normal — the problem is wasted ventilation, not stiff or obstructed lungs.',
+    initSettings:{mode:'VC',rr:18,vt:480,flow:50,ti:1.0,pInsp:18,peep:5,fio2:60,trigger:2},
+    physio:{compliance:45,resistance:9,shuntFraction:0.15,deadSpaceFraction:0.60,hco3:24,baselineSBP:95},
+    initialLog:'Patient intubated for a falling GCS in the context of a massive pulmonary embolism with obstructive shock. Plateau and peak pressures are unremarkable — the gas-exchange problem here is a very high dead space fraction from occluded pulmonary vasculature, not a mechanics problem.',
+    teachingNote:'Notice the pressures look almost normal — this is a dead-space problem, not a compliance or resistance problem. A large embolic burden ventilates lung that is no longer perfused, wasting much of each breath and raising PaCO2 despite seemingly adequate minute ventilation. Increasing PEEP or tidal volume will not fix a vascular occlusion — the priority is reperfusion (thrombolysis/embolectomy) and haemodynamic support.'
   }
 };
 let ventCURRENT = null, ventS = null, ventWaveT = 0, ventIntervalId = null;
@@ -6244,6 +6268,78 @@ const ABG_PRESETS = {
     ],
     correctTreatmentId:'a',
     treatmentExplain:'Suspected PE with hypoxemia warrants oxygen, urgent confirmatory imaging (CTPA), and anticoagulation once confirmed (or empirically if imaging is delayed and suspicion is high). Treating this as simple anxiety would miss a life-threatening diagnosis.'
+  },
+  salicylate:{
+    id:'salicylate', label:'Mixed respiratory alkalosis and metabolic acidosis', tag:'Mixed disorder',
+    vignette:'27F brought in confused and tachypnoeic after a large intentional aspirin ingestion ~6 hours ago. Tinnitus and vomiting.',
+    values:{ph:7.44,paco2:20,hco3:13,pao2:92},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'mixed', compensationApplicable:false, correctCompensation:null,
+    interpretExplain:"pH looks deceptively close to normal (7.44), which can distract from how abnormal both underlying numbers are. PaCO2 (20) is very low and HCO3 (13) is very low at the same time. If this were a single primary respiratory alkalosis, the expected HCO3 for an acute PaCO2 drop of this size would only fall to about 20, not 13 — the extra fall in HCO3 reveals an independent metabolic acidosis is also present. This mixed picture (direct respiratory centre stimulation causing hyperventilation, plus accumulating organic acids uncoupling cellular metabolism) is classic for salicylate toxicity.",
+    diagnosisOptions:[
+      {id:'a', label:'Salicylate (aspirin) toxicity'},
+      {id:'b', label:'Pure anxiety-driven hyperventilation'},
+      {id:'c', label:'Opioid overdose'},
+      {id:'d', label:'Simple diabetic ketoacidosis'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Tinnitus, vomiting, and a large aspirin ingestion with this specific mixed respiratory alkalosis/metabolic acidosis pattern is classic salicylate toxicity. Anxiety does not cause a metabolic acidosis; opioid overdose causes respiratory acidosis (hypoventilation), the opposite pattern; DKA alone would not produce the primary respiratory alkalosis component.',
+    treatmentOptions:[
+      {id:'a', label:'IV sodium bicarbonate to alkalinise the serum and urine, plus supportive care and consider haemodialysis if severe'},
+      {id:'b', label:'IV insulin infusion'},
+      {id:'c', label:'Naloxone'},
+      {id:'d', label:'Reassurance and discharge once vomiting settles'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'Urinary alkalinisation with IV sodium bicarbonate enhances renal elimination of salicylate, and serum alkalinisation reduces the drug\'s ability to cross into the CNS. Severe cases (very high levels, renal failure, refractory acidosis, or CNS features) need haemodialysis. Insulin and naloxone treat different poisonings; this patient is too unwell for simple discharge.'
+  },
+  ckd_acidosis:{
+    id:'ckd_acidosis', label:'Chronic metabolic acidosis with respiratory compensation', tag:'Metabolic acidosis',
+    vignette:'58M with known stage 4 chronic kidney disease, routine bloods sent by his GP for increasing fatigue.',
+    values:{ph:7.32,paco2:32,hco3:16,pao2:92},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'met_acidosis', compensationApplicable:true, correctCompensation:'partial',
+    interpretExplain:"Low pH (7.32) with a low HCO3 (16) — primary metabolic acidosis. Winter's formula predicts an expected PaCO2 of about 1.5×16+8=32 (±2) for respiratory compensation — the measured PaCO2 of 32 fits that prediction closely, so the lungs are compensating appropriately. pH has not fully normalised, so this is partial, not full, compensation.",
+    diagnosisOptions:[
+      {id:'a', label:'Chronic kidney disease with reduced acid excretion (uraemic acidosis)'},
+      {id:'b', label:'Acute diabetic ketoacidosis'},
+      {id:'c', label:'Acute salicylate overdose'},
+      {id:'d', label:'Chronic obstructive pulmonary disease'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Advanced CKD reduces the kidney\'s ability to excrete the daily acid load and regenerate bicarbonate, producing a slowly progressive, usually normal-or-mildly-raised anion gap metabolic acidosis. There is no history here of an acute precipitant like missed insulin (DKA) or overdose (salicylates), and the primary disorder is metabolic, not respiratory (excluding COPD).',
+    treatmentOptions:[
+      {id:'a', label:'Oral sodium bicarbonate supplementation and ongoing nephrology follow-up, with dialysis planning if progressive'},
+      {id:'b', label:'IV insulin infusion'},
+      {id:'c', label:'Urinary alkalinisation and dialysis for toxin removal'},
+      {id:'d', label:'No treatment needed — this is a normal finding in CKD'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'Oral bicarbonate supplementation is standard for chronic metabolic acidosis in CKD, slowing progression of bone disease and muscle wasting, alongside routine nephrology follow-up and eventual dialysis planning as renal function declines further. This is not a normal finding and untreated chronic acidosis has real long-term consequences; insulin and toxin-removal dialysis are treatments for different conditions.'
+  },
+  high_altitude:{
+    id:'high_altitude', label:'Chronic compensated respiratory alkalosis', tag:'Respiratory alkalosis',
+    vignette:'44M mountaineer living and working at high altitude for the past 8 months, ABG sent as part of a routine pre-operative work-up.',
+    values:{ph:7.45,paco2:30,hco3:20,pao2:52},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'resp_alkalosis', compensationApplicable:true, correctCompensation:'full',
+    interpretExplain:'PaCO2 is low (30) from chronic hyperventilation, but unlike an acute respiratory alkalosis, pH has returned almost all the way to normal (7.45) because HCO3 has had months to fall (20) as the kidneys excrete bicarbonate in response — this is full, not partial, compensation. The low PaO2 (52) reflects the lower ambient oxygen tension at altitude, which is the physiological drive for the chronic hyperventilation in the first place.',
+    diagnosisOptions:[
+      {id:'a', label:'Chronic physiological adaptation to high-altitude hypoxia'},
+      {id:'b', label:'Acute pulmonary embolism'},
+      {id:'c', label:'Untreated type 1 diabetes'},
+      {id:'d', label:'Acute anxiety attack'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Months of residence at high altitude, a low PaO2 explained entirely by reduced ambient oxygen, and full renal compensation (rather than the acute, uncompensated picture of PE or a panic attack) all point to normal chronic physiological adaptation rather than acute pathology. DKA produces acidosis, not this pattern.',
+    treatmentOptions:[
+      {id:'a', label:'No specific treatment needed — this is expected physiological adaptation; proceed with routine care'},
+      {id:'b', label:'Urgent CT pulmonary angiogram and anticoagulation'},
+      {id:'c', label:'IV insulin infusion'},
+      {id:'d', label:'IV sodium bicarbonate'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'This is a normal, expected chronic adaptation to high altitude, not a disease requiring treatment — recognising it as physiological (rather than chasing it as a pathological finding) is the key learning point. Anticoagulation, insulin, and bicarbonate all treat unrelated conditions and are not indicated here.'
   }
 };
 let abgCURRENT = null, abgS = null;
@@ -6504,6 +6600,87 @@ const PROC_PRESETS = {
       {id:'secure', title:'Confirm & secure', options:[
         {id:'a', label:'Connect to the transducer, confirm an arterial waveform, zero it, then secure and dress', correct:true, feedback:'Correct — confirming a true arterial waveform (not venous/dampened) before relying on the numbers is essential.'},
         {id:'b', label:'Secure the line and start relying on the pressure readings without confirming the waveform', correct:false, severity:'serious', vitalsEffect:{sbp:-6}, feedback:'An unconfirmed or dampened waveform can silently mislead pressor titration — always confirm the waveform and zero the transducer first.'}
+      ]}
+    ]
+  },
+  lumbar_puncture:{
+    id:'lumbar_puncture', label:'Lumbar Puncture', tag:'Neuro',
+    vignette:'34F with fever, severe headache, photophobia, and neck stiffness — suspected bacterial meningitis. You are performing a diagnostic lumbar puncture.',
+    initVitals:{hr:108, sbp:112, spo2:97, gcs:14},
+    steps:[
+      {id:'priorities', title:'Initial priorities', options:[
+        {id:'a', label:'Send blood cultures and start empirical IV antibiotics (plus steroids if indicated) immediately, then proceed to LP without delay', correct:true, feedback:'Correct — in suspected bacterial meningitis, antibiotics must never be delayed for the LP. Blood cultures still capture the organism even after antibiotics are given.'},
+        {id:'b', label:'Wait until after the LP results are back before starting antibiotics', correct:false, severity:'fatal-risk', vitalsEffect:{hr:10, gcs:-1}, feedback:'DELAYED TREATMENT: every hour antibiotics are delayed in bacterial meningitis measurably increases mortality — the patient is deteriorating while waiting for a result that should never have delayed treatment.'}
+      ]},
+      {id:'position', title:'Positioning & landmarking', options:[
+        {id:'a', label:'Lateral decubitus with knees drawn to chest (or sitting flexed forward), landmark the L3–4 or L4–5 interspace (the line joining the iliac crests marks L4) — well below the conus medullaris', correct:true, feedback:'Correct — this level is safely below where the spinal cord ends in adults (typically L1–2), minimising the risk of cord injury.'},
+        {id:'b', label:'Landmark and puncture at the L1–2 interspace for a "higher, easier" approach', correct:false, severity:'serious', vitalsEffect:{gcs:-2}, feedback:'NEUROLOGICAL INJURY RISK: the spinal cord (conus medullaris) typically ends around L1–2 in adults — puncturing this high risks direct cord injury. Always land-mark well below this.'}
+      ]},
+      {id:'needle', title:'Needle insertion & CSF confirmation', options:[
+        {id:'a', label:'Advance slowly in the midline with the stylet in place, withdrawing the stylet periodically to check for CSF flow', correct:true, feedback:'Correct technique — slow, controlled advancement with periodic stylet checks avoids overshooting into a traumatic or epidural vessel puncture.'},
+        {id:'b', label:'Advance quickly until you feel a "pop" through the dura, without checking for flow along the way', correct:false, severity:'serious', vitalsEffect:{hr:8}, feedback:'Advancing without periodically checking risks overshooting the subarachnoid space, causing a traumatic (bloody) tap that can make CSF results very difficult to interpret.'}
+      ]},
+      {id:'pressure', title:'Opening pressure & collection', options:[
+        {id:'a', label:'Attach a manometer to measure the opening pressure before collecting fluid, then collect CSF in sequentially numbered tubes', correct:true, feedback:'Correct — opening pressure is important diagnostic information (e.g. raised in bacterial meningitis, papilloedema, or idiopathic intracranial hypertension) and is lost if not measured before any fluid is drained.'},
+        {id:'b', label:'Skip the opening pressure and go straight to collecting fluid', correct:false, severity:'minor', feedback:'Skipping the opening pressure measurement loses diagnostically useful information that cannot be recovered afterwards.'}
+      ]},
+      {id:'post', title:'Post-procedure care', options:[
+        {id:'a', label:'Replace the stylet before withdrawing the needle, then dress the site and advise the patient on hydration', correct:true, feedback:'Correct — replacing the stylet before withdrawal reduces the risk of a post-dural-puncture headache by reducing CSF leak through the needle tract.'},
+        {id:'b', label:'Withdraw the needle directly without replacing the stylet first', correct:false, severity:'minor', feedback:'Withdrawing without replacing the stylet first is associated with a higher rate of post-dural-puncture headache.'}
+      ]}
+    ]
+  },
+  paracentesis:{
+    id:'paracentesis', label:'Abdominal Paracentesis', tag:'GI / Hepatology',
+    vignette:'61M with decompensated cirrhosis and tense, symptomatic ascites, increasingly breathless. You are performing a large-volume paracentesis.',
+    initVitals:{hr:96, sbp:118, spo2:94, gcs:15},
+    steps:[
+      {id:'site', title:'Site selection', options:[
+        {id:'a', label:'Use ultrasound guidance to select a site in the left or right lower quadrant, lateral to the rectus sheath, avoiding the inferior epigastric vessels', correct:true, feedback:'Correct — ultrasound guidance confirms a fluid pocket and avoids the inferior epigastric vessels and bowel, and lateral-to-the-rectus sites avoid injuring those vessels.'},
+        {id:'b', label:'Puncture blindly in the midline, close to a previous surgical scar', correct:false, severity:'serious', vitalsEffect:{sbp:-8}, feedback:'Blind puncture near a surgical scar risks adherent bowel loops beneath the site — bowel perforation is now a real risk here.'}
+      ]},
+      {id:'technique', title:'Needle technique', options:[
+        {id:'a', label:'Use a Z-track technique — displace the skin before inserting the needle', correct:true, feedback:'Correct — the Z-track technique creates an offset tract through the layers, substantially reducing the risk of persistent ascitic fluid leak after the needle is removed.'},
+        {id:'b', label:'Insert the needle in a single straight vertical pass without displacing the skin', correct:false, severity:'minor', feedback:'Without a Z-track, the straight needle tract is much more likely to leak ascitic fluid persistently after the procedure.'}
+      ]},
+      {id:'advance', title:'Needle advancement & fluid confirmation', options:[
+        {id:'a', label:'Advance slowly with intermittent aspiration until free-flowing ascitic fluid is confirmed', correct:true, feedback:'Correct — slow, intermittent aspiration lets you stop the instant fluid is returned, minimising the chance of advancing into bowel.'},
+        {id:'b', label:'Advance briskly to the expected depth without aspirating along the way', correct:false, severity:'serious', vitalsEffect:{sbp:-10, hr:10}, feedback:'Advancing without checking for fluid return risks perforating a loop of bowel that has not been visualised.'}
+      ]},
+      {id:'drain', title:'Drainage', options:[
+        {id:'a', label:'Drain in a controlled fashion, giving IV albumin (about 6–8g per litre removed beyond 5L) for large-volume taps', correct:true, feedback:'Correct — albumin replacement for large-volume paracentesis (typically >5L) prevents post-paracentesis circulatory dysfunction.'},
+        {id:'b', label:'Rapidly drain a large volume (>5L) without any albumin replacement', correct:false, severity:'serious', vitalsEffect:{sbp:-15}, feedback:'POST-PARACENTESIS CIRCULATORY DYSFUNCTION: rapid large-volume removal without albumin replacement causes a sudden drop in effective circulating volume and blood pressure.'}
+      ]},
+      {id:'postcare', title:'Post-procedure care', options:[
+        {id:'a', label:'Dress the site, monitor blood pressure and for ongoing leak, and document fluid volume removed', correct:true, feedback:'Correct — post-procedure monitoring catches both circulatory dysfunction and site leakage early.'},
+        {id:'b', label:'Send the patient back to the ward immediately with no specific monitoring instructions', correct:false, severity:'minor', feedback:'Skipping post-procedure monitoring instructions risks a delayed diagnosis of circulatory dysfunction or a persistent leak.'}
+      ]}
+    ]
+  },
+  pericardiocentesis:{
+    id:'pericardiocentesis', label:'Pericardiocentesis', tag:'Cardiac',
+    vignette:'52F with a known malignant pericardial effusion, now hypotensive with distended neck veins and muffled heart sounds — cardiac tamponade. You are performing emergency pericardiocentesis.',
+    initVitals:{hr:128, sbp:78, spo2:93, gcs:13},
+    steps:[
+      {id:'approach', title:'Approach & positioning', options:[
+        {id:'a', label:'Position the patient at 30–45°, use the subxiphoid approach under ultrasound guidance', correct:true, feedback:'Correct — the subxiphoid approach under ultrasound guidance is the standard, safest approach, directly visualising the effusion and needle path.'},
+        {id:'b', label:'Use a blind apical approach without ultrasound', correct:false, severity:'serious', vitalsEffect:{sbp:-10}, feedback:'A blind apical approach carries a substantially higher risk of coronary artery or ventricular injury compared to ultrasound-guided subxiphoid access.'}
+      ]},
+      {id:'advance', title:'Needle advancement', options:[
+        {id:'a', label:'Advance the needle angled toward the left shoulder under continuous ultrasound guidance, watching the ECG for new ectopy or ST changes indicating ventricular contact', correct:true, feedback:'Correct — continuous imaging and ECG monitoring let you stop the instant the needle contacts the ventricle, before causing injury.'},
+        {id:'b', label:'Advance without ultrasound or ECG monitoring, continuing past new ectopy on the monitor', correct:false, severity:'fatal-risk', vitalsEffect:{sbp:-25, hr:20}, feedback:'VENTRICULAR PUNCTURE: continuing to advance despite new ectopy means the needle has almost certainly contacted or entered the ventricle — this is a life-threatening complication.'}
+      ]},
+      {id:'confirm', title:'Fluid confirmation', options:[
+        {id:'a', label:'Aspirate and confirm the fluid is non-clotting, consistent with a pericardial effusion (frank ventricular blood typically clots)', correct:true, feedback:'Correct — pericardial blood in tamponade is usually defibrinated and does not clot, a key bedside way to distinguish it from an inadvertent ventricular puncture.'},
+        {id:'b', label:'Assume any blood return confirms a successful pericardial tap without checking further', correct:false, severity:'serious', vitalsEffect:{sbp:-8}, feedback:'Assuming success without checking risks missing an inadvertent ventricular puncture, delaying recognition of a serious complication.'}
+      ]},
+      {id:'drain', title:'Drainage', options:[
+        {id:'a', label:'Drain in controlled aliquots, reassessing haemodynamics and repeating ultrasound as you go', correct:true, feedback:'Correct — incremental drainage with reassessment confirms haemodynamic improvement and reduces the risk of complications from a prolonged single aspiration.'},
+        {id:'b', label:'Aspirate all fluid rapidly in one continuous draw without reassessment', correct:false, severity:'minor', feedback:'Draining without reassessment misses the chance to confirm haemodynamic improvement and catch a developing complication early.'}
+      ]},
+      {id:'secure', title:'Catheter placement & post-procedure', options:[
+        {id:'a', label:'Leave a pigtail catheter in situ for continued drainage, then obtain a post-procedure echocardiogram/chest X-ray', correct:true, feedback:'Correct — a retained catheter allows continued drainage as fluid re-accumulates, and post-procedure imaging confirms the result and excludes a pneumothorax.'},
+        {id:'b', label:'Remove the needle completely without leaving any catheter in place', correct:false, severity:'minor', feedback:'Without a retained catheter, there is no pathway for continued drainage if the effusion re-accumulates, which is common with malignant effusions.'}
       ]}
     ]
   }
