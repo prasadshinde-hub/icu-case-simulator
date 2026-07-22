@@ -339,6 +339,40 @@ body.high-contrast{ --border: var(--text-dim); --text-faint: var(--text-dim); }
 body.no-motion *, body.no-motion *::before, body.no-motion *::after{ animation:none !important; transition:none !important; }
 body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline-offset:2px !important; }
 .ref-range{ color:var(--text-faint); font-size:11px; font-family:var(--mono); margin-left:6px; }
+
+/* ---------- accounts / auth ---------- */
+.account-chip{position:fixed;top:16px;left:16px;z-index:40;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.account-chip .who{font-size:12.5px;color:var(--text-dim);}
+.account-chip .who b{color:var(--text);}
+.account-chip .role-badge{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 7px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);}
+.auth-card{max-width:420px;margin:0 auto;width:100%;background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:14px;}
+.auth-tabs{display:flex;gap:6px;background:var(--panel-2);border-radius:8px;padding:4px;}
+.auth-tab{flex:1;padding:9px;border:none;border-radius:6px;background:transparent;color:var(--text-dim);
+  font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:background .12s,color .12s;}
+.auth-tab.active{background:var(--panel);color:var(--text);}
+.auth-form{display:flex;flex-direction:column;gap:12px;}
+.auth-field{display:flex;flex-direction:column;gap:5px;}
+.auth-field span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-faint);}
+.auth-field input{background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:7px;
+  padding:10px 12px;font-size:14px;font-family:var(--sans);}
+.auth-field input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.auth-role{display:flex;flex-direction:column;gap:6px;}
+.auth-role>span{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-faint);}
+.auth-role-opts{display:flex;gap:8px;}
+.auth-role-btn.selected{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.auth-msg{font-size:12.5px;line-height:1.5;margin:0;min-height:1px;}
+.auth-msg.err{color:var(--crit);}
+.auth-msg.ok{color:var(--good);}
+.history-item{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.history-item .hi-main{display:flex;flex-direction:column;gap:3px;}
+.history-item .hi-mod{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
+.history-item .hi-title{font-size:14px;font-weight:700;}
+.history-item .hi-sub{font-size:12.5px;color:var(--text-dim);}
+.history-item .hi-meta{font-family:var(--mono);font-size:11.5px;color:var(--text-faint);text-align:right;white-space:nowrap;}
+.history-empty{text-align:center;color:var(--text-faint);font-size:13.5px;font-style:italic;padding:30px;}
 </style>
 
 <div class="front" id="frontScreen">
@@ -380,14 +414,64 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
       <button class="btn danger small" id="clearProgressBtn" style="width:100%;">Clear saved progress</button>
     </div>
   </div>
+  <div class="account-chip" id="accountChip"></div>
   <div class="front-icons" id="frontIcons"></div>
-  <span class="eyebrow">Advanced Practice &middot; Offline &middot; Hidden-Diagnosis Training</span>
+  <span class="eyebrow">Advanced Practice &middot; Critical Care &middot; Hidden-Diagnosis Training</span>
   <h1>ICU Case Simulator</h1>
-  <p class="tagline">Practical, scenario-based critical care training. Work up real patients from presentation to disposition — no diagnosis handed to you, no internet required once loaded.</p>
+  <p class="tagline">Practical, scenario-based critical care training. Work up real patients from presentation to disposition — no diagnosis handed to you, sign in to save your progress across devices.</p>
   <div class="front-actions">
     <button class="btn primary large" id="enterBtn">Enter simulator</button>
   </div>
   <p class="front-note">Diagnoses are hidden by design — build your differential from history, exam, and investigations, the same as a real handover.</p>
+</div>
+
+<div class="specialty" id="authScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" id="authBackBtn">&larr; Back</button></div>
+    <span class="eyebrow" id="authEyebrow">Sign in</span>
+    <h1 id="authTitle">Sign in to save your progress</h1>
+    <p>Your case attempts and scores save to your account and follow you across devices. Instructors can review their students' progress.</p>
+  </div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authTabLogin">Log in</button>
+      <button class="auth-tab" id="authTabSignup">Sign up</button>
+    </div>
+    <form class="auth-form" id="authForm" autocomplete="on">
+      <label class="auth-field" id="authNameField" style="display:none;">
+        <span>Display name</span>
+        <input type="text" id="authName" placeholder="e.g. Prasad S." autocomplete="name">
+      </label>
+      <label class="auth-field">
+        <span>Email</span>
+        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" required>
+      </label>
+      <label class="auth-field">
+        <span>Password</span>
+        <input type="password" id="authPassword" placeholder="At least 6 characters" autocomplete="current-password" required>
+      </label>
+      <div class="auth-role" id="authRoleField" style="display:none;">
+        <span>I am a</span>
+        <div class="auth-role-opts">
+          <button type="button" class="btn small auth-role-btn selected" data-role="student">Student</button>
+          <button type="button" class="btn small auth-role-btn" data-role="instructor">Instructor</button>
+        </div>
+      </div>
+      <p class="auth-msg" id="authMsg"></p>
+      <button type="submit" class="btn primary" id="authSubmitBtn">Log in</button>
+    </form>
+    <button class="btn ghost small" id="authGuestBtn" style="margin-top:10px;width:100%;">Continue as guest (progress saved on this device only)</button>
+  </div>
+</div>
+
+<div class="specialty" id="historyScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" id="historyBackBtn">&larr; Back</button></div>
+    <span class="eyebrow">Your record</span>
+    <h1>My history</h1>
+    <p>Every completed case, blood gas, and procedure you've attempted while signed in.</p>
+  </div>
+  <div id="historyList"></div>
 </div>
 
 <div class="specialty" id="simulatorsScreen" style="display:none;">
@@ -719,11 +803,26 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
 "use strict";
 const osReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function isReducedMotion(){ return osReduceMotion || reducedMotionPref; }
+
+// ================= online backend (Supabase) =================
+const SUPABASE_URL = 'https://tlkecqrainlvizvgfnhc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_C0RZ4tCgbUHCz1YBgztDMQ_swKrxLzO';
+let sb = null;            // supabase client (null if the CDN failed to load — app still runs as guest)
+let authUser = null;      // { id, email } when signed in
+let authProfile = null;   // { display_name, role }
+try {
+  if (window.supabase && window.supabase.createClient){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession:true, autoRefreshToken:true }
+    });
+  }
+} catch(e){ sb = null; /* offline / CDN blocked — fall back to guest mode */ }
 
 // ================= shared helpers =================
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
@@ -5408,6 +5507,15 @@ function showDebrief(final){
   stopArrestAlarm();
   revealScreen('debriefScreen');
 
+  if (final && !S._recorded){
+    S._recorded = true;
+    recordAttempt({
+      module:'icu', scenario_id:CURRENT.id, scenario_label:CURRENT.title,
+      outcome:outcomeLabel, critical_errors:crits.length, cautions:warns.length,
+      duration_min:S.simTime, detail:{ endReason:S.endReason||null }
+    });
+  }
+
   document.getElementById('debriefExportBtn').addEventListener('click', ()=>document.getElementById('exportBtn').click());
   if (final){
     document.getElementById('debriefRestartBtn').addEventListener('click', ()=>{
@@ -5640,7 +5748,7 @@ function buildSimulatorsGrid(){
   });
 }
 
-const ALL_SCREENS = ['frontScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
+const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
   'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen'];
 
 function revealScreen(id){
@@ -5729,6 +5837,153 @@ function restoreSession(){
   return false;
 }
 
+// ================= accounts / auth =================
+let authMode = 'login';   // 'login' | 'signup'
+let signupRole = 'student';
+
+function renderAccountChip(){
+  const chip = document.getElementById('accountChip');
+  if (!chip) return;
+  if (authUser){
+    const name = (authProfile && authProfile.display_name) || authUser.email;
+    const role = authProfile && authProfile.role === 'instructor' ? '<span class="role-badge">Instructor</span>' : '';
+    chip.innerHTML = `<span class="who">Signed in as <b>${escapeHtml(name)}</b></span>${role}
+      <button class="btn ghost small" id="historyBtn">My history</button>
+      <button class="btn ghost small" id="logoutBtn">Log out</button>`;
+    document.getElementById('historyBtn').addEventListener('click', showHistoryScreen);
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  } else {
+    chip.innerHTML = `<button class="btn small" id="signInBtn">Sign in / Sign up</button>`;
+    document.getElementById('signInBtn').addEventListener('click', showAuthScreen);
+  }
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function refreshAuthState(){
+  if (!sb){ authUser = null; authProfile = null; renderAccountChip(); return; }
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (session && session.user){
+      authUser = { id: session.user.id, email: session.user.email };
+      const { data: prof } = await sb.from('profiles').select('display_name, role').eq('id', authUser.id).single();
+      authProfile = prof || null;
+    } else {
+      authUser = null; authProfile = null;
+    }
+  } catch(e){ authUser = null; authProfile = null; }
+  renderAccountChip();
+}
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById('authTabLogin').classList.toggle('active', mode==='login');
+  document.getElementById('authTabSignup').classList.toggle('active', mode==='signup');
+  document.getElementById('authNameField').style.display = mode==='signup' ? '' : 'none';
+  document.getElementById('authRoleField').style.display = mode==='signup' ? '' : 'none';
+  document.getElementById('authSubmitBtn').textContent = mode==='signup' ? 'Create account' : 'Log in';
+  document.getElementById('authTitle').textContent = mode==='signup' ? 'Create your account' : 'Sign in to save your progress';
+  document.getElementById('authEyebrow').textContent = mode==='signup' ? 'Sign up' : 'Sign in';
+  document.getElementById('authPassword').setAttribute('autocomplete', mode==='signup' ? 'new-password' : 'current-password');
+  setAuthMsg('');
+}
+
+function setAuthMsg(text, kind){
+  const el = document.getElementById('authMsg');
+  el.textContent = text || '';
+  el.className = 'auth-msg' + (kind ? ' '+kind : '');
+}
+
+function showAuthScreen(){
+  if (!sb){ setAuthMsg('Online accounts are unavailable right now — you can still continue as a guest.', 'err'); }
+  setAuthMode('login');
+  document.getElementById('authForm').reset();
+  revealScreen('authScreen');
+}
+
+async function handleAuthSubmit(e){
+  e.preventDefault();
+  if (!sb){ setAuthMsg('Backend not reachable — continue as guest for now.', 'err'); return; }
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const btn = document.getElementById('authSubmitBtn');
+  if (!email || password.length < 6){ setAuthMsg('Enter an email and a password of at least 6 characters.', 'err'); return; }
+  btn.disabled = true; setAuthMsg('Working…');
+  try {
+    if (authMode==='signup'){
+      const display_name = document.getElementById('authName').value.trim() || email.split('@')[0];
+      const { data, error } = await sb.auth.signUp({
+        email, password,
+        options: { data: { display_name, role: signupRole } }
+      });
+      if (error) throw error;
+      if (data.session){
+        await refreshAuthState();
+        setAuthMsg('Account created — you\'re signed in.', 'ok');
+        setTimeout(()=>showSimulatorsScreen(), 500);
+      } else {
+        setAuthMsg('Account created. Check your email to confirm, then log in.', 'ok');
+        setAuthMode('login');
+      }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await refreshAuthState();
+      setAuthMsg('Signed in.', 'ok');
+      setTimeout(()=>showSimulatorsScreen(), 400);
+    }
+  } catch(err){
+    setAuthMsg(err.message || 'Something went wrong. Please try again.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doLogout(){
+  if (sb){ try { await sb.auth.signOut(); } catch(e){} }
+  authUser = null; authProfile = null;
+  renderAccountChip();
+  showFront();
+}
+
+async function showHistoryScreen(){
+  revealScreen('historyScreen');
+  const list = document.getElementById('historyList');
+  list.innerHTML = '<p class="history-empty">Loading…</p>';
+  if (!sb || !authUser){ list.innerHTML = '<p class="history-empty">Sign in to keep a record of your attempts.</p>'; return; }
+  try {
+    const { data, error } = await sb.from('attempts').select('*').order('created_at', { ascending:false }).limit(200);
+    if (error) throw error;
+    if (!data || !data.length){ list.innerHTML = '<p class="history-empty">No attempts yet — complete a case, blood gas, or procedure and it will appear here.</p>'; return; }
+    const MOD_LABEL = { icu:'ICU Case', ventilator:'Ventilator', abg:'ABG Trainer', procedure:'Procedure' };
+    list.innerHTML = data.map(a=>{
+      const d = new Date(a.created_at);
+      const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      const bits = [];
+      if (a.outcome) bits.push(a.outcome);
+      if (a.critical_errors) bits.push(`${a.critical_errors} critical`);
+      if (a.cautions) bits.push(`${a.cautions} caution${a.cautions>1?'s':''}`);
+      return `<div class="history-item">
+        <div class="hi-main">
+          <span class="hi-mod">${MOD_LABEL[a.module]||a.module}</span>
+          <span class="hi-title">${escapeHtml(a.scenario_label||a.scenario_id)}</span>
+          <span class="hi-sub">${escapeHtml(bits.join(' · ')) || '—'}</span>
+        </div>
+        <span class="hi-meta">${dateStr}</span>
+      </div>`;
+    }).join('');
+  } catch(err){
+    list.innerHTML = `<p class="history-empty">Couldn't load your history: ${escapeHtml(err.message||'error')}.</p>`;
+  }
+}
+
+async function recordAttempt(row){
+  if (!sb || !authUser) return;
+  try {
+    await sb.from('attempts').insert(Object.assign({ user_id: authUser.id }, row));
+  } catch(e){ /* non-blocking — a failed save shouldn't interrupt training */ }
+}
+
 function showFront(){
   revealScreen('frontScreen');
   document.getElementById('specialtyScreen').style.display='none';
@@ -5801,6 +6056,18 @@ document.getElementById('backToFrontBtn').addEventListener('click', showSimulato
 document.getElementById('backToFrontFromSimsBtn').addEventListener('click', showFront);
 document.querySelectorAll('[data-back-to-sims]').forEach(b=>b.addEventListener('click', showSimulatorsScreen));
 document.getElementById('backToSpecialtyBtn').addEventListener('click', showSpecialtyScreen);
+
+// auth screen wiring
+document.getElementById('authBackBtn').addEventListener('click', showFront);
+document.getElementById('historyBackBtn').addEventListener('click', showSimulatorsScreen);
+document.getElementById('authTabLogin').addEventListener('click', ()=>setAuthMode('login'));
+document.getElementById('authTabSignup').addEventListener('click', ()=>setAuthMode('signup'));
+document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
+document.getElementById('authGuestBtn').addEventListener('click', ()=>showSimulatorsScreen());
+document.querySelectorAll('.auth-role-btn').forEach(b=>b.addEventListener('click', ()=>{
+  signupRole = b.dataset.role;
+  document.querySelectorAll('.auth-role-btn').forEach(x=>x.classList.toggle('selected', x===b));
+}));
 
 document.getElementById('randomizeBtn').addEventListener('click', ()=>{
   const keys = casesFor(currentSpecialty);
@@ -6616,6 +6883,14 @@ function renderAbgStep(){
   } else if (abgS.step==='summary'){
     const score = abgScore();
     const msg = score===3 ? 'Clean sweep — interpretation, diagnosis, and treatment all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations above before moving on.';
+    if (!abgS._recorded){
+      abgS._recorded = true;
+      recordAttempt({
+        module:'abg', scenario_id:abgCURRENT.id, scenario_label:abgCURRENT.label,
+        outcome:`${score}/3`, score:score/3,
+        detail:{ interpret:abgS.interpretCorrect, diagnose:abgS.diagnosisCorrect, treat:abgS.treatCorrect }
+      });
+    }
     panel.innerHTML = `<p class="quiz-step-label">Summary</p>
       <div class="quiz-score">${score}/3</div>
       <p style="font-size:13.5px;color:var(--text-dim);">${msg}</p>
@@ -6899,6 +7174,16 @@ function renderProcMonitor(){
 
 function renderProcStep(){
   const panel = document.getElementById('procStepPanel');
+  if (procS.ended && !procS._recorded){
+    procS._recorded = true;
+    const serious = procS.complications.filter(c=>c.severity==='serious'||c.severity==='fatal-risk').length;
+    recordAttempt({
+      module:'procedure', scenario_id:procCURRENT.id, scenario_label:procCURRENT.label,
+      outcome: procS.outcome==='arrest' ? 'cardiac arrest' : procS.outcome,
+      critical_errors: serious, cautions: procS.complications.length - serious,
+      detail:{ complications: procS.complications.map(c=>({step:c.step, severity:c.severity})) }
+    });
+  }
   if (procS.outcome==='arrest'){
     panel.innerHTML = `<p class="quiz-step-label" style="color:var(--crit);">Cardiac arrest</p>
       <p style="font-size:13.5px;color:var(--text-dim);">${procS.log[procS.log.length-1].msg}</p>
@@ -6977,6 +7262,11 @@ buildVentPresetGrid();
 buildAbgPresetGrid();
 buildProcPresetGrid();
 if (!restoreSession()) { applyAllSettingsButtons(); }
+renderAccountChip();
+refreshAuthState();
+if (sb){
+  sb.auth.onAuthStateChange((_event, _session)=>{ refreshAuthState(); });
+}
 requestAnimationFrame(animate);
 })();
 </script>
