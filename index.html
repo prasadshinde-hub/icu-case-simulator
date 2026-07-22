@@ -49,9 +49,10 @@ body{padding:18px; min-height:100vh;}
 .case-grid-empty{grid-column:1/-1;font-size:13px;color:var(--text-faint);font-style:italic;text-align:center;padding:20px;}
 .case-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
 @media (max-width:640px){.case-grid{grid-template-columns:1fr;}}
-.case-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;
+.case-card{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:16px;text-align:left;
   cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;font-family:var(--sans);color:var(--text);}
-.case-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.35);}
+.case-card:hover{border-color:var(--accent);transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(0,0,0,.35), 0 0 18px color-mix(in srgb, var(--accent) 25%, transparent);}
 @media (prefers-reduced-motion: reduce){ .case-card:hover{transform:none;} }
 .case-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .case-card .tag{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;display:block;}
@@ -73,10 +74,15 @@ body{padding:18px; min-height:100vh;}
 
 /* ---------- settings panel (front screen) ---------- */
 .settings-btn{position:fixed;top:16px;right:16px;z-index:40;}
-.settings-popover{position:fixed;top:52px;right:16px;z-index:41;width:230px;background:var(--panel);
-  border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);
-  display:flex;flex-direction:column;gap:10px;}
-.settings-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-dim);}
+.settings-popover{position:fixed;top:52px;right:16px;z-index:41;width:270px;max-height:calc(100vh - 72px);overflow-y:auto;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:flex;flex-direction:column;gap:4px;}
+.settings-group{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.settings-group:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.settings-group h4{margin:0;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--text-dim);}
+.settings-row span{flex:1;}
+.settings-row .btn{flex-shrink:0;min-width:64px;}
 
 /* ---------- specialty screen ---------- */
 .specialty{max-width:900px;margin:40px auto;display:flex;flex-direction:column;gap:18px;}
@@ -88,18 +94,23 @@ body{padding:18px; min-height:100vh;}
 .specialty-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
 @media (max-width:760px){.specialty-grid{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:480px){.specialty-grid{grid-template-columns:1fr;}}
-.specialty-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:left;
+.specialty-card{background:var(--panel);border:1px solid var(--border);
+  border-left:3px solid var(--spec-color, var(--accent));border-radius:12px;padding:20px;text-align:left;position:relative;overflow:hidden;
   cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;gap:10px;}
-.specialty-card:not(.empty):hover{border-color:var(--spec-color, var(--accent));transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.35);}
+.specialty-card:not(.empty):hover{border-color:var(--spec-color, var(--accent));transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(0,0,0,.35), 0 0 18px color-mix(in srgb, var(--spec-color, var(--accent)) 25%, transparent);}
 @media (prefers-reduced-motion: reduce){ .specialty-card:hover{transform:none;} }
 .specialty-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .specialty-card svg{width:34px;height:34px;}
 .specialty-card .sc-name{font-size:15px;font-weight:700;margin:0;}
 .specialty-card .sc-count{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--spec-color, var(--accent));}
 .specialty-card .sc-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:0;}
-.specialty-card.empty{cursor:not-allowed;opacity:.55;}
+.specialty-card.empty{cursor:not-allowed;opacity:.75;border-left-color:var(--border);}
 .specialty-card.empty:hover{border-color:var(--border);}
 .specialty-card.empty .sc-count{color:var(--text-faint);}
+.specialty-card.empty::after{content:'Soon';position:absolute;top:10px;right:-26px;width:100px;padding:3px 0;
+  background:var(--text-faint);color:var(--panel);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  text-align:center;transform:rotate(45deg);}
 
 /* ---------- debrief screen ---------- */
 .debrief{max-width:760px;margin:30px auto;padding:0 4px;}
@@ -244,6 +255,12 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .quiz-explain.incorrect{border-left-color:var(--crit);}
 .quiz-score{font-size:44px;font-weight:800;font-family:var(--mono);margin:6px 0;}
 
+/* ---------- module accent identity ---------- */
+/* ICU Case Simulator and shared chrome keep the default theme accent (cyan/teal). */
+#ventPresetScreen, #ventLabScreen{ --accent: var(--violet); }
+#abgPresetScreen, #abgLabScreen{ --accent: var(--amber); }
+#procPresetScreen, #procLabScreen{ --accent: var(--crit); }
+
 /* ---------- log ---------- */
 .logpanel{display:flex;flex-direction:column;height:560px;}
 .logpanel h3{padding:12px 16px;margin:0;font-size:11px;font-weight:700;letter-spacing:.07em;
@@ -313,20 +330,55 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .logfeed::-webkit-scrollbar, .tabs::-webkit-scrollbar{ height:6px; width:6px; }
 .logfeed::-webkit-scrollbar-thumb, .tabs::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
 .logfeed::-webkit-scrollbar-track, .tabs::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- accessibility / display settings ---------- */
+body.text-large{ zoom:1.12; }
+body.minimal-guidance .teaching-note{ display:none; }
+body.minimal-guidance .time-helper-note{ display:none; }
+body.high-contrast{ --border: var(--text-dim); --text-faint: var(--text-dim); }
+body.no-motion *, body.no-motion *::before, body.no-motion *::after{ animation:none !important; transition:none !important; }
+body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline-offset:2px !important; }
+.ref-range{ color:var(--text-faint); font-size:11px; font-family:var(--mono); margin-left:6px; }
 </style>
 
 <div class="front" id="frontScreen">
   <button class="btn ghost small settings-btn" id="settingsBtn">Settings</button>
   <div class="settings-popover" id="settingsPopover" style="display:none;">
-    <div class="settings-row">
-      <span>Appearance</span>
-      <button class="btn small" id="themeToggleBtn">Dark</button>
+    <div class="settings-group">
+      <h4>Appearance</h4>
+      <div class="settings-row"><span>Theme</span><button class="btn small" id="themeToggleBtn">Dark</button></div>
+      <div class="settings-row"><span>Text size</span><button class="btn small" id="textSizeBtn">Normal</button></div>
     </div>
-    <div class="settings-row">
-      <span>Sound</span>
-      <button class="btn small" id="soundToggleBtn">On</button>
+    <div class="settings-group">
+      <h4>Clinical content</h4>
+      <div class="settings-row"><span>Guidance level</span><button class="btn small" id="guidanceBtn">Full</button></div>
     </div>
-    <button class="btn small" id="testSoundBtn" style="width:100%;margin-top:8px;">Test sound</button>
+    <div class="settings-group">
+      <h4>Alerts</h4>
+      <div class="settings-row"><span>Sound</span><button class="btn small" id="soundToggleBtn">On</button></div>
+      <div class="settings-row"><span>Critical value alerts</span><button class="btn small" id="critAlertsBtn">On</button></div>
+      <button class="btn small" id="testSoundBtn" style="width:100%;margin-top:4px;">Test sound</button>
+    </div>
+    <div class="settings-group">
+      <h4>Behavior</h4>
+      <div class="settings-row"><span>Confirm before time jumps</span><button class="btn small" id="confirmJumpsBtn">Off</button></div>
+      <div class="settings-row"><span>Default landing screen</span><button class="btn small" id="landingPrefBtn">Last used</button></div>
+    </div>
+    <div class="settings-group">
+      <h4>Accessibility</h4>
+      <div class="settings-row"><span>High contrast</span><button class="btn small" id="highContrastBtn">Off</button></div>
+      <div class="settings-row"><span>Reduced motion</span><button class="btn small" id="reducedMotionBtn">Off</button></div>
+      <div class="settings-row"><span>Keyboard nav emphasis</span><button class="btn small" id="kbNavBtn">Off</button></div>
+    </div>
+    <div class="settings-group">
+      <h4>Units &amp; labs</h4>
+      <div class="settings-row"><span>Temperature</span><button class="btn small" id="tempUnitBtn">&deg;C</button></div>
+      <div class="settings-row"><span>Show reference ranges</span><button class="btn small" id="refRangesBtn">Off</button></div>
+    </div>
+    <div class="settings-group">
+      <h4>Data</h4>
+      <button class="btn danger small" id="clearProgressBtn" style="width:100%;">Clear saved progress</button>
+    </div>
   </div>
   <div class="front-icons" id="frontIcons"></div>
   <span class="eyebrow">Advanced Practice &middot; Offline &middot; Hidden-Diagnosis Training</span>
@@ -556,7 +608,7 @@ details.brief[open] summary::before{transform:rotate(90deg);}
             <button class="btn" data-adv="30">+30 min</button>
             <button class="btn" data-adv="60">+60 min</button>
           </div>
-          <p style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-top:10px;">
+          <p class="time-helper-note" style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-top:10px;">
             Time only advances when you press one of these — ordered tests resolve and the patient's
             physiology evolves based on your interventions so far. Reassess before and after each jump.
           </p>
@@ -670,7 +722,8 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 <script>
 (function(){
 "use strict";
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const osReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function isReducedMotion(){ return osReduceMotion || reducedMotionPref; }
 
 // ================= shared helpers =================
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
@@ -4615,6 +4668,16 @@ let waveT = 0;
 let instructorMode = false;
 let instructorPaused = false;
 let muted = false;
+let textLarge = false;
+let guidanceFull = true;
+let critAlertsOn = true;
+let confirmTimeJumps = false;
+let landingPref = 'last';
+let highContrast = false;
+let reducedMotionPref = false;
+let kbNavEmphasis = false;
+let tempUnit = 'C';
+let showRefRanges = false;
 
 // ================= sound =================
 let audioCtx = null;
@@ -4636,7 +4699,7 @@ function beep(freq, dur, vol){
   osc.connect(gain); gain.connect(ctx.destination);
   osc.start(); osc.stop(ctx.currentTime+dur);
 }
-function playCriticalBeep(){ if (!muted) beep(880, 0.15); }
+function playCriticalBeep(){ if (!muted && critAlertsOn) beep(880, 0.15); }
 function playTestTones(){ ensureAudio(); beep(660,0.15); setTimeout(()=>beep(880,0.15), 180); }
 function startArrestAlarm(){
   if (alarmTimer || muted) return;
@@ -4929,6 +4992,12 @@ function statusOf(val, kind){
   return 'ok';
 }
 
+function formatTemp(celsiusStr){
+  const c = parseFloat(celsiusStr);
+  if (tempUnit==='F') return `${(c*9/5+32).toFixed(1)}<span class="unit"> °F</span>`;
+  return `${celsiusStr}<span class="unit"> °C</span>`;
+}
+
 function renderMonitor(){
   const v = vitals();
   const m = document.getElementById('monitor');
@@ -4942,7 +5011,7 @@ function renderMonitor(){
     <div class="tile spo2"><span class="flag ${statusOf(v.spo2,'spo2')}"></span><span class="label">SpO2</span>
       <span class="value">${v.spo2}<span class="unit"> %</span></span><canvas id="wf-spo2" width="200" height="40"></canvas></div>
     <div class="tile"><span class="flag ${statusOf(parseFloat(v.temp),'temp')}"></span><span class="label">Temp</span>
-      <span class="value">${v.temp}<span class="unit"> °C</span></span></div>
+      <span class="value">${formatTemp(v.temp)}</span></div>
     <div class="tile"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
       <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
   `;
@@ -5091,7 +5160,7 @@ function drawWave(id, kind, val, pattern, amp){
 }
 
 function animate(){
-  waveT += reduceMotion? 0 : 1.4;
+  waveT += isReducedMotion()? 0 : 1.4;
   if (S){
     const v = vitals();
     const pattern = ecgPatternFor();
@@ -5103,7 +5172,7 @@ function animate(){
     drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
   }
   if (ventS){
-    ventWaveT += reduceMotion? 0 : 0.03;
+    ventWaveT += isReducedMotion()? 0 : 0.03;
     ventDrawWave('wf-vent-pressure','pressure');
     ventDrawWave('wf-vent-flow','flow');
     ventDrawWave('wf-vent-volume','volume');
@@ -5117,6 +5186,29 @@ function renderO2(){
   });
 }
 
+const LAB_RANGES = {
+  'cbc':'Hb 12–16 g/dL · WBC 4–11 x10⁹/L · Platelets 150–400 x10⁹/L',
+  'abg':'pH 7.35–7.45 · PaCO2 35–45 mmHg · PaO2 80–100 mmHg',
+  'vbg':'pH 7.32–7.42 · HCO3 22–28 mmol/L',
+  'electrolyte':'Na 135–145 mmol/L · K 3.5–5.0 mmol/L',
+  'renal':'Urea 2.5–7.8 mmol/L · Creatinine 60–110 µmol/L',
+  'coagulation':'PT/INR 0.9–1.1 · aPTT 25–35 sec',
+  'troponin':'<0.04 ng/mL',
+  'lactate':'0.5–1.6 mmol/L',
+  'glucose':'4.0–7.8 mmol/L (fasting)',
+  'lft':'ALT 7–56 U/L · Bilirubin 3–17 µmol/L · Albumin 35–50 g/L',
+  'tsh':'0.4–4.0 mIU/L',
+  'd-dimer':'<500 ng/mL FEU',
+  'ketone':'<0.6 mmol/L',
+  'osmolality':'275–295 mOsm/kg',
+  'creatine kinase':'30–200 U/L'
+};
+function refRangeHtml(label){
+  const low = label.toLowerCase();
+  const key = Object.keys(LAB_RANGES).find(k=>low.indexOf(k)>=0);
+  return key ? ` <span class="ref-range">[normal: ${LAB_RANGES[key]}]</span>` : '';
+}
+
 function renderInvest(){
   const out = document.getElementById('invest-out');
   if (!out) return;
@@ -5126,7 +5218,8 @@ function renderInvest(){
     const n = S.doneCount[k]||0;
     if (S.done[k]){
       const tag = t.repeatable ? ` <span style="color:var(--text-faint);font-weight:400;">(latest${n>1?`, ${n} done`:''})</span>` : '';
-      return `<div class="finding"><b>${t.label}:</b>${tag} ${S.done[k]}</div>`;
+      const range = showRefRanges ? refRangeHtml(t.label) : '';
+      return `<div class="finding"><b>${t.label}:</b>${tag} ${S.done[k]}${range}</div>`;
     }
     if (pending) return `<div class="finding" style="border-left-color:var(--warn);opacity:.8;"><b>${t.label}:</b> pending…</div>`;
     return '';
@@ -5476,7 +5569,7 @@ const SPECIALTIES = {
   em: {label:'Emergency Medicine', desc:'Undifferentiated emergencies, resuscitation, shock, stroke, arrest.', color:'var(--cyan)'},
   med: {label:'Medicine', desc:'Medical ICU decompensations — metabolic, respiratory, renal, electrolyte.', color:'var(--lime)'},
   tox: {label:'Toxicology', desc:'Poisoning and overdose — antidotes, decontamination, safe disposition.', color:'var(--violet)'},
-  surg: {label:'Surgical', desc:'Post-operative complications and surgical emergencies.', color:'var(--text-faint)'},
+  surg: {label:'Surgical', desc:'Post-operative complications and surgical emergencies.', color:'var(--amber)'},
   trauma: {label:'Trauma', desc:'Blunt and penetrating trauma, polytrauma resuscitation.', color:'var(--crit)'},
   peds: {label:'Pediatrics', desc:'Paediatric critical illness.', color:'var(--text-faint)'}
 };
@@ -5524,9 +5617,9 @@ const SIM_ICONS = {
 };
 const SIMULATORS = {
   icu: {label:'ICU Case Simulator', desc:'Hidden-diagnosis patient cases across every specialty in the case bank.', color:'var(--cyan)', action:()=>showSpecialtyScreen()},
-  vent: {label:'Ventilator + ABG Lab', desc:'Live mechanical ventilation physiology — volume/pressure control, waveforms, on-demand ABGs.', color:'var(--lime)', action:()=>showVentPresetScreen()},
-  abg: {label:'ABG Interpretation Trainer', desc:'Interpret, diagnose, and treat 4 standalone blood-gas cases with graded feedback.', color:'var(--violet)', action:()=>showAbgPresetScreen()},
-  proc: {label:'Procedure Simulator', desc:'Step-by-step bedside procedures — wrong steps cause real, modeled complications.', color:'var(--amber)', action:()=>showProcPresetScreen()},
+  vent: {label:'Ventilator + ABG Lab', desc:'Live mechanical ventilation physiology — volume/pressure control, waveforms, on-demand ABGs.', color:'var(--violet)', action:()=>showVentPresetScreen()},
+  abg: {label:'ABG Interpretation Trainer', desc:'Interpret, diagnose, and treat 4 standalone blood-gas cases with graded feedback.', color:'var(--amber)', action:()=>showAbgPresetScreen()},
+  proc: {label:'Procedure Simulator', desc:'Step-by-step bedside procedures — wrong steps cause real, modeled complications.', color:'var(--crit)', action:()=>showProcPresetScreen()},
   ecg: {label:'ECG Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true},
   cxr: {label:'Chest X-Ray Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true}
 };
@@ -5577,7 +5670,9 @@ function saveSession(){
     const data = {
       screen: currentScreenName(), specialty: currentSpecialty,
       caseId: CURRENT ? CURRENT.id : null, state: S,
-      theme: document.documentElement.dataset.theme || null, muted, instructorMode
+      theme: document.documentElement.dataset.theme || null, muted, instructorMode,
+      textLarge, guidanceFull, critAlertsOn, confirmTimeJumps, landingPref,
+      highContrast, reducedMotionPref, kbNavEmphasis, tempUnit, showRefRanges
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch(e){ /* localStorage unavailable or quota exceeded — session just won't persist */ }
@@ -5589,7 +5684,12 @@ function restoreSession(){
     const data = JSON.parse(raw);
     if (data.theme) document.documentElement.dataset.theme = data.theme;
     muted = !!data.muted; instructorMode = !!data.instructorMode;
-    applyThemeButton(); applySoundButton(); renderInstructorBar();
+    textLarge = !!data.textLarge; guidanceFull = data.guidanceFull!==false; critAlertsOn = data.critAlertsOn!==false;
+    confirmTimeJumps = !!data.confirmTimeJumps; landingPref = data.landingPref || 'last';
+    highContrast = !!data.highContrast; reducedMotionPref = !!data.reducedMotionPref; kbNavEmphasis = !!data.kbNavEmphasis;
+    tempUnit = data.tempUnit || 'C'; showRefRanges = !!data.showRefRanges;
+    applyAllSettingsButtons(); renderInstructorBar();
+    if (landingPref==='picker') return false;
     if (data.caseId && CASES[data.caseId] && data.state){
       CURRENT = CASES[data.caseId];
       S = data.state;
@@ -5741,8 +5841,30 @@ function applyThemeButton(){
 function applySoundButton(){
   document.getElementById('soundToggleBtn').textContent = muted ? 'Off' : 'On';
 }
-applyThemeButton();
-applySoundButton();
+function setBtnText(id, txt){ const el = document.getElementById(id); if (el) el.textContent = txt; }
+function applyBodyClasses(){
+  document.body.classList.toggle('text-large', textLarge);
+  document.body.classList.toggle('minimal-guidance', !guidanceFull);
+  document.body.classList.toggle('high-contrast', highContrast);
+  document.body.classList.toggle('no-motion', isReducedMotion());
+  document.body.classList.toggle('kb-nav-emphasis', kbNavEmphasis);
+}
+function applyAllSettingsButtons(){
+  applyThemeButton();
+  applySoundButton();
+  setBtnText('textSizeBtn', textLarge ? 'Large' : 'Normal');
+  setBtnText('guidanceBtn', guidanceFull ? 'Full' : 'Minimal');
+  setBtnText('critAlertsBtn', critAlertsOn ? 'On' : 'Off');
+  setBtnText('confirmJumpsBtn', confirmTimeJumps ? 'On' : 'Off');
+  setBtnText('landingPrefBtn', landingPref==='picker' ? 'Picker' : 'Last used');
+  setBtnText('highContrastBtn', highContrast ? 'On' : 'Off');
+  setBtnText('reducedMotionBtn', reducedMotionPref ? 'On' : 'Off');
+  setBtnText('kbNavBtn', kbNavEmphasis ? 'On' : 'Off');
+  setBtnText('tempUnitBtn', tempUnit==='F' ? '°F' : '°C');
+  setBtnText('refRangesBtn', showRefRanges ? 'On' : 'Off');
+  applyBodyClasses();
+}
+applyAllSettingsButtons();
 document.getElementById('settingsBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
   const pop = document.getElementById('settingsPopover');
@@ -5767,6 +5889,20 @@ document.getElementById('soundToggleBtn').addEventListener('click', ()=>{
   saveSession();
 });
 document.getElementById('testSoundBtn').addEventListener('click', playTestTones);
+document.getElementById('textSizeBtn').addEventListener('click', ()=>{ textLarge=!textLarge; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('guidanceBtn').addEventListener('click', ()=>{ guidanceFull=!guidanceFull; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('critAlertsBtn').addEventListener('click', ()=>{ critAlertsOn=!critAlertsOn; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('confirmJumpsBtn').addEventListener('click', ()=>{ confirmTimeJumps=!confirmTimeJumps; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('landingPrefBtn').addEventListener('click', ()=>{ landingPref = landingPref==='picker'?'last':'picker'; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('highContrastBtn').addEventListener('click', ()=>{ highContrast=!highContrast; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('reducedMotionBtn').addEventListener('click', ()=>{ reducedMotionPref=!reducedMotionPref; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('kbNavBtn').addEventListener('click', ()=>{ kbNavEmphasis=!kbNavEmphasis; applyAllSettingsButtons(); saveSession(); });
+document.getElementById('tempUnitBtn').addEventListener('click', ()=>{ tempUnit = tempUnit==='F'?'C':'F'; applyAllSettingsButtons(); if (S) renderMonitor(); saveSession(); });
+document.getElementById('refRangesBtn').addEventListener('click', ()=>{ showRefRanges=!showRefRanges; applyAllSettingsButtons(); if (S) renderInvest(); saveSession(); });
+document.getElementById('clearProgressBtn').addEventListener('click', async ()=>{
+  const ok = await confirmModal('Clear saved progress?', 'This clears your saved session and settings, and reloads the app. This cannot be undone.');
+  if (ok){ try { localStorage.removeItem(STORAGE_KEY); } catch(e){} location.reload(); }
+});
 
 // ---------- global wiring (tabs, tests, o2, time, exam, restart, export) ----------
 document.querySelectorAll('.tab').forEach(t=>{
@@ -5777,7 +5913,14 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.getElementById('tab-'+t.dataset.tab).classList.add('active');
   });
 });
-document.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click', ()=>advance(parseInt(b.dataset.adv,10))));
+document.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click', async ()=>{
+  const mins = parseInt(b.dataset.adv,10);
+  if (confirmTimeJumps){
+    const ok = await confirmModal(`Advance ${mins} minutes?`, "Ordered tests will resolve and the patient's physiology will evolve based on interventions so far. Proceed?");
+    if (!ok) return;
+  }
+  advance(mins);
+}));
 document.querySelectorAll('[data-code]').forEach(b=>b.addEventListener('click', ()=>codeAction(b.dataset.code)));
 
 document.querySelector('[data-action="hist"]').addEventListener('click', takeHistory);
@@ -6140,8 +6283,8 @@ function buildVentPresetGrid(){
     const p = VENT_PRESETS[key];
     const card = document.createElement('button');
     card.className = 'specialty-card';
-    card.style.setProperty('--spec-color','var(--lime)');
-    card.innerHTML = `<span class="sc-count" style="color:var(--lime)">${p.tag}</span>
+    card.style.setProperty('--spec-color','var(--violet)');
+    card.innerHTML = `<span class="sc-count">${p.tag}</span>
       <p class="sc-name">${p.label}</p>
       <p class="sc-desc">${p.desc}</p>`;
     card.addEventListener('click', ()=>loadVentPreset(key));
@@ -6391,6 +6534,12 @@ function abgNextStep(){
 }
 function abgScore(){ return [abgS.interpretCorrect, abgS.diagnosisCorrect, abgS.treatCorrect].filter(Boolean).length; }
 
+function gradePrefix(cls){
+  if (cls.indexOf(' correct')>=0) return '✓ ';
+  if (cls.indexOf(' incorrect')>=0) return '✗ ';
+  return '';
+}
+
 function renderAbgStep(){
   const panel = document.getElementById('abgStepPanel');
   if (abgS.step==='interpret'){
@@ -6402,7 +6551,7 @@ function renderAbgStep(){
       let cls='quiz-option';
       if (abgS.interpretSubmitted){ if(id===abgCURRENT.correctPrimary) cls+=' correct'; else if(id===abgS.primary) cls+=' incorrect'; }
       else if (abgS.primary===id) cls+=' picked';
-      html += `<button class="${cls}" data-primary="${id}" ${abgS.interpretSubmitted?'disabled':''}>${ABG_PRIMARY_LABELS[id]}</button>`;
+      html += `<button class="${cls}" data-primary="${id}" ${abgS.interpretSubmitted?'disabled':''}>${gradePrefix(cls)}${ABG_PRIMARY_LABELS[id]}</button>`;
     });
     html += `</div>`;
     if (needsComp || (abgS.interpretSubmitted && abgCURRENT.compensationApplicable && abgCURRENT.correctPrimary!=='mixed' && abgCURRENT.correctPrimary!=='normal')){
@@ -6411,7 +6560,7 @@ function renderAbgStep(){
         let cls='quiz-option';
         if (abgS.interpretSubmitted){ if(id===abgCURRENT.correctCompensation) cls+=' correct'; else if(id===abgS.compensation) cls+=' incorrect'; }
         else if (abgS.compensation===id) cls+=' picked';
-        html += `<button class="${cls}" data-comp="${id}" ${abgS.interpretSubmitted?'disabled':''}>${ABG_COMPENSATION_LABELS[id]}</button>`;
+        html += `<button class="${cls}" data-comp="${id}" ${abgS.interpretSubmitted?'disabled':''}>${gradePrefix(cls)}${ABG_COMPENSATION_LABELS[id]}</button>`;
       });
       html += `</div>`;
     }
@@ -6437,7 +6586,7 @@ function renderAbgStep(){
     abgCURRENT.diagnosisOptions.forEach(opt=>{
       let cls='quiz-option';
       if (abgS.diagnosisSubmitted){ if(opt.id===abgCURRENT.correctDiagnosisId) cls+=' correct'; else if(opt.id===abgS.diagnosisChoice) cls+=' incorrect'; }
-      html += `<button class="${cls}" data-diag="${opt.id}" ${abgS.diagnosisSubmitted?'disabled':''}>${opt.label}</button>`;
+      html += `<button class="${cls}" data-diag="${opt.id}" ${abgS.diagnosisSubmitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
     });
     html += `</div>`;
     if (abgS.diagnosisSubmitted){
@@ -6454,7 +6603,7 @@ function renderAbgStep(){
     abgCURRENT.treatmentOptions.forEach(opt=>{
       let cls='quiz-option';
       if (abgS.treatSubmitted){ if(opt.id===abgCURRENT.correctTreatmentId) cls+=' correct'; else if(opt.id===abgS.treatChoice) cls+=' incorrect'; }
-      html += `<button class="${cls}" data-treat="${opt.id}" ${abgS.treatSubmitted?'disabled':''}>${opt.label}</button>`;
+      html += `<button class="${cls}" data-treat="${opt.id}" ${abgS.treatSubmitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
     });
     html += `</div>`;
     if (abgS.treatSubmitted){
@@ -6486,8 +6635,8 @@ function buildAbgPresetGrid(){
     const p = ABG_PRESETS[key];
     const card = document.createElement('button');
     card.className = 'specialty-card';
-    card.style.setProperty('--spec-color','var(--violet)');
-    card.innerHTML = `<span class="sc-count" style="color:var(--violet)">${p.tag}</span>
+    card.style.setProperty('--spec-color','var(--amber)');
+    card.innerHTML = `<span class="sc-count">${p.tag}</span>
       <p class="sc-name">${p.label}</p>
       <p class="sc-desc">${p.vignette}</p>`;
     card.addEventListener('click', ()=>abgLoadCase(key));
@@ -6776,9 +6925,10 @@ function renderProcStep(){
     step.options.forEach(opt=>{
       let cls = 'quiz-option';
       if (procS.lastFeedback){
-        if (opt.id===procS.lastFeedback.optionId) cls += procS.lastFeedback.correct ? ' correct' : ' incorrect';
+        if (opt.correct) cls += ' correct';
+        else if (opt.id===procS.lastFeedback.optionId) cls += ' incorrect';
       }
-      html += `<button class="${cls}" data-opt="${opt.id}" ${procS.lastFeedback?'disabled':''}>${opt.label}</button>`;
+      html += `<button class="${cls}" data-opt="${opt.id}" ${procS.lastFeedback?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
     });
     html += `</div>`;
     if (procS.lastFeedback){
@@ -6809,8 +6959,8 @@ function buildProcPresetGrid(){
     const p = PROC_PRESETS[key];
     const card = document.createElement('button');
     card.className = 'specialty-card';
-    card.style.setProperty('--spec-color','var(--amber)');
-    card.innerHTML = `<span class="sc-count" style="color:var(--amber)">${p.tag}</span>
+    card.style.setProperty('--spec-color','var(--crit)');
+    card.innerHTML = `<span class="sc-count">${p.tag}</span>
       <p class="sc-name">${p.label}</p>
       <p class="sc-desc">${p.vignette}</p>`;
     card.addEventListener('click', ()=>procLoadCase(key));
@@ -6826,7 +6976,7 @@ buildSimulatorsGrid();
 buildVentPresetGrid();
 buildAbgPresetGrid();
 buildProcPresetGrid();
-if (!restoreSession()) { applyThemeButton(); applySoundButton(); }
+if (!restoreSession()) { applyAllSettingsButtons(); }
 requestAnimationFrame(animate);
 })();
 </script>
