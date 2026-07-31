@@ -4771,7 +4771,7 @@ let textLarge = false;
 let guidanceFull = true;
 let critAlertsOn = true;
 let confirmTimeJumps = false;
-let landingPref = 'last';
+let landingPref = 'picker';   // 'picker' = always open on the home/landing page; 'last' = resume the last in-progress case
 let highContrast = false;
 let reducedMotionPref = false;
 let kbNavEmphasis = false;
@@ -5766,7 +5766,7 @@ function revealScreen(id){
 }
 
 // ---------- session persistence ----------
-const STORAGE_KEY = 'icuSimSession_v1';
+const STORAGE_KEY = 'icuSimSession_v2';
 function currentScreenName(){
   if (document.getElementById('appScreen').style.display!=='none' || document.getElementById('arrestScreen').style.display!=='none') return 'app';
   if (document.getElementById('menuScreen').style.display!=='none') return 'menu';
@@ -5793,7 +5793,7 @@ function restoreSession(){
     if (data.theme) document.documentElement.dataset.theme = data.theme;
     muted = !!data.muted; instructorMode = !!data.instructorMode;
     textLarge = !!data.textLarge; guidanceFull = data.guidanceFull!==false; critAlertsOn = data.critAlertsOn!==false;
-    confirmTimeJumps = !!data.confirmTimeJumps; landingPref = data.landingPref || 'last';
+    confirmTimeJumps = !!data.confirmTimeJumps; landingPref = data.landingPref || 'picker';
     highContrast = !!data.highContrast; reducedMotionPref = !!data.reducedMotionPref; kbNavEmphasis = !!data.kbNavEmphasis;
     tempUnit = data.tempUnit || 'C'; showRefRanges = !!data.showRefRanges;
     applyAllSettingsButtons(); renderInstructorBar();
@@ -6123,7 +6123,7 @@ function applyAllSettingsButtons(){
   setBtnText('guidanceBtn', guidanceFull ? 'Full' : 'Minimal');
   setBtnText('critAlertsBtn', critAlertsOn ? 'On' : 'Off');
   setBtnText('confirmJumpsBtn', confirmTimeJumps ? 'On' : 'Off');
-  setBtnText('landingPrefBtn', landingPref==='picker' ? 'Picker' : 'Last used');
+  setBtnText('landingPrefBtn', landingPref==='picker' ? 'Home page' : 'Last used');
   setBtnText('highContrastBtn', highContrast ? 'On' : 'Off');
   setBtnText('reducedMotionBtn', reducedMotionPref ? 'On' : 'Off');
   setBtnText('kbNavBtn', kbNavEmphasis ? 'On' : 'Off');
