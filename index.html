@@ -260,6 +260,11 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 #ventPresetScreen, #ventLabScreen{ --accent: var(--violet); }
 #abgPresetScreen, #abgLabScreen{ --accent: var(--amber); }
 #procPresetScreen, #procLabScreen{ --accent: var(--crit); }
+#ecgPresetScreen, #ecgLabScreen{ --accent: var(--lime); }
+.ecg-strip-wrap{background:#0a0d12;border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:6px;}
+.ecg-strip-wrap canvas{width:100%;height:140px;display:block;}
+.ecg-rate{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--text-dim);margin:0 0 14px;}
+.ecg-rate b{color:var(--lime);}
 
 /* ---------- log ---------- */
 .logpanel{display:flex;flex-direction:column;height:560px;}
@@ -602,6 +607,36 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   </details>
   <div class="monitor four-tile" id="procMonitor"></div>
   <div class="panel" id="procStepPanel" style="padding:20px;"></div>
+</div>
+
+<div class="specialty" id="ecgPresetScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" data-back-to-sims>&larr; Back</button></div>
+    <span class="eyebrow">ECG Interpretation Trainer</span>
+    <h1>Choose a rhythm</h1>
+    <p>Read the live rhythm strip, then identify it, interpret the clinical picture, and choose management — with graded feedback at each step.</p>
+  </div>
+  <div class="specialty-grid" id="ecgPresetGrid"></div>
+</div>
+
+<div class="app" id="ecgLabScreen" style="display:none;">
+  <div class="hdr">
+    <div class="hdr-title">
+      <div class="top-row" style="margin-bottom:4px;"><button class="btn ghost small" id="ecgBackBtn">&larr; Back</button></div>
+      <span class="eyebrow" id="ecgEyebrow">ECG Interpretation Trainer</span>
+      <h1 id="ecgTitle">Rhythm</h1>
+    </div>
+  </div>
+
+  <details class="brief" open>
+    <summary>Clinical context</summary>
+    <div class="brief-body" id="ecgVignette"></div>
+  </details>
+
+  <div class="ecg-strip-wrap"><canvas id="ecgStrip" width="640" height="140"></canvas></div>
+  <p class="ecg-rate" id="ecgRate"></p>
+
+  <div class="panel" id="ecgStepPanel" style="padding:20px;"></div>
 </div>
 
 <div class="menu" id="menuScreen" style="display:none;">
@@ -5276,6 +5311,9 @@ function animate(){
     ventDrawWave('wf-vent-flow','flow');
     ventDrawWave('wf-vent-volume','volume');
   }
+  if (ecgCURRENT && document.getElementById('ecgLabScreen').style.display!=='none'){
+    drawEcgStrip();
+  }
   requestAnimationFrame(animate);
 }
 
@@ -5726,9 +5764,9 @@ const SIM_ICONS = {
 const SIMULATORS = {
   icu: {label:'ICU Case Simulator', desc:'Hidden-diagnosis patient cases across every specialty in the case bank.', color:'var(--cyan)', action:()=>showSpecialtyScreen()},
   vent: {label:'Ventilator + ABG Lab', desc:'Live mechanical ventilation physiology — volume/pressure control, waveforms, on-demand ABGs.', color:'var(--violet)', action:()=>showVentPresetScreen()},
-  abg: {label:'ABG Interpretation Trainer', desc:'Interpret, diagnose, and treat 4 standalone blood-gas cases with graded feedback.', color:'var(--amber)', action:()=>showAbgPresetScreen()},
+  abg: {label:'ABG Interpretation Trainer', desc:'Interpret, diagnose, and treat standalone blood-gas cases with graded feedback.', color:'var(--amber)', action:()=>showAbgPresetScreen()},
   proc: {label:'Procedure Simulator', desc:'Step-by-step bedside procedures — wrong steps cause real, modeled complications.', color:'var(--crit)', action:()=>showProcPresetScreen()},
-  ecg: {label:'ECG Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true},
+  ecg: {label:'ECG Interpretation', desc:'Read a live rhythm strip, then identify, interpret, and manage it with graded feedback.', color:'var(--lime)', action:()=>showEcgPresetScreen()},
   cxr: {label:'Chest X-Ray Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true}
 };
 function buildSimulatorsGrid(){
@@ -5749,7 +5787,7 @@ function buildSimulatorsGrid(){
 }
 
 const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
-  'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen'];
+  'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen'];
 
 function revealScreen(id){
   ALL_SCREENS.forEach(sid=>{
@@ -6276,6 +6314,22 @@ const VENT_PRESETS = {
     physio:{compliance:45,resistance:9,shuntFraction:0.15,deadSpaceFraction:0.60,hco3:24,baselineSBP:95},
     initialLog:'Patient intubated for a falling GCS in the context of a massive pulmonary embolism with obstructive shock. Plateau and peak pressures are unremarkable — the gas-exchange problem here is a very high dead space fraction from occluded pulmonary vasculature, not a mechanics problem.',
     teachingNote:'Notice the pressures look almost normal — this is a dead-space problem, not a compliance or resistance problem. A large embolic burden ventilates lung that is no longer perfused, wasting much of each breath and raising PaCO2 despite seemingly adequate minute ventilation. Increasing PEEP or tidal volume will not fix a vascular occlusion — the priority is reperfusion (thrombolysis/embolectomy) and haemodynamic support.'
+  },
+  obesity_hypovent:{
+    id:'obesity_hypovent', label:'Obesity hypoventilation, post-op respiratory failure', tag:'Restrictive · chest wall',
+    desc:'Morbidly obese patient in post-operative respiratory failure. The lungs themselves are reasonable, but the heavy chest wall and abdomen stiffen the respiratory system and collapse dependent lung — a chest-wall compliance problem that needs higher PEEP.',
+    initSettings:{mode:'VC',rr:16,vt:500,flow:50,ti:1.0,pInsp:18,peep:6,fio2:50,trigger:2},
+    physio:{compliance:32,resistance:11,shuntFraction:0.18,deadSpaceFraction:0.35,hco3:30,baselineSBP:130},
+    initialLog:'Morbidly obese patient (BMI 48) intubated for post-operative hypoxaemic-hypercapnic respiratory failure. Chronically compensated hypercapnia (elevated bicarbonate). Reduced respiratory-system compliance is driven mainly by the chest wall and abdomen, with dependent atelectasis.',
+    teachingNote:'The low compliance here is largely extrapulmonary (chest wall/abdomen), and dependent lung collapses easily — so this patient genuinely needs more PEEP than usual to keep alveoli open, and often steeper head-up positioning. Unlike fibrosis, higher PEEP does recruit lung and improve oxygenation here; just watch that plateau pressure and blood pressure stay acceptable as you titrate it up.'
+  },
+  metabolic_acidosis_vent:{
+    id:'metabolic_acidosis_vent', label:'Severe metabolic acidosis on the ventilator', tag:'High minute-ventilation demand',
+    desc:'Intubated after a peri-arrest from severe metabolic (lactic) acidosis. The lungs are mechanically fine — the trap is that the ventilator must sustain the very high minute ventilation the patient was generating to compensate, or the pH crashes.',
+    initSettings:{mode:'VC',rr:26,vt:500,flow:60,ti:0.9,pInsp:18,peep:5,fio2:45,trigger:2},
+    physio:{compliance:48,resistance:9,shuntFraction:0.10,deadSpaceFraction:0.30,hco3:12,baselineSBP:98},
+    initialLog:'Patient intubated peri-arrest with a severe metabolic (lactic) acidosis and a markedly low bicarbonate. Before intubation they were hyperventilating hard to compensate. Lung mechanics are essentially normal — the acid-base status is the driver.',
+    teachingNote:'This is the classic post-intubation pitfall in severe metabolic acidosis: the patient was blowing off large volumes of CO2 to hold their pH up, and if you set a comfortable "normal" rate the PaCO2 rises and the pH plummets, sometimes to cardiac arrest. Match (or exceed) their pre-intubation minute ventilation with a high rate/tidal volume while the underlying acidosis is treated — and watch expiratory time so you do not create auto-PEEP.'
   }
 };
 let ventCURRENT = null, ventS = null, ventWaveT = 0, ventIntervalId = null;
@@ -6750,6 +6804,54 @@ const ABG_PRESETS = {
     ],
     correctTreatmentId:'a',
     treatmentExplain:'This is a normal, expected chronic adaptation to high altitude, not a disease requiring treatment — recognising it as physiological (rather than chasing it as a pathological finding) is the key learning point. Anticoagulation, insulin, and bicarbonate all treat unrelated conditions and are not indicated here.'
+  },
+  opioid_resp_acidosis:{
+    id:'opioid_resp_acidosis', label:'Acute respiratory acidosis (uncompensated)', tag:'Respiratory acidosis',
+    vignette:'24M found drowsy at a party with a respiratory rate of 6 and pinpoint pupils. Rousable only to pain.',
+    values:{ph:7.21,paco2:68,hco3:26,pao2:58},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'resp_acidosis', compensationApplicable:true, correctCompensation:'none',
+    interpretExplain:'Low pH (7.21) with a high PaCO2 (68) is a primary respiratory acidosis from hypoventilation. HCO3 (26) is essentially normal — there has been no time for renal (metabolic) compensation, which takes days — so this is an acute, uncompensated respiratory acidosis. The low PaO2 reflects the hypoventilation too.',
+    diagnosisOptions:[
+      {id:'a', label:'Opioid overdose causing respiratory depression'},
+      {id:'b', label:'Diabetic ketoacidosis'},
+      {id:'c', label:'Acute pulmonary embolism'},
+      {id:'d', label:'Panic attack with hyperventilation'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'A drowsy young patient with a respiratory rate of 6 and pinpoint pupils has opioid toxicity causing hypoventilation and CO2 retention. DKA and PE both cause a low PaCO2 (hyperventilation), the opposite pattern, and a panic attack causes respiratory alkalosis, not acidosis.',
+    treatmentOptions:[
+      {id:'a', label:'Support ventilation (airway/oxygen/bag-mask) and give naloxone'},
+      {id:'b', label:'IV insulin and fluids'},
+      {id:'c', label:'Therapeutic anticoagulation'},
+      {id:'d', label:'IV sodium bicarbonate to correct the pH'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'The problem is hypoventilation from opioids, so the treatment is to support ventilation and reverse the cause with naloxone — this corrects the CO2 and the pH directly. Insulin, anticoagulation, and bicarbonate treat other conditions; bicarbonate in particular does not fix a ventilation problem and can worsen intracellular acidosis.'
+  },
+  diarrhoea_nagma:{
+    id:'diarrhoea_nagma', label:'Normal anion-gap metabolic acidosis', tag:'Metabolic acidosis',
+    vignette:'31F with 6 days of profuse watery diarrhoea, now weak and lightheaded. Na 138, Cl 116, HCO3 15 (a normal anion gap).',
+    values:{ph:7.32,paco2:30,hco3:15,pao2:98},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'met_acidosis', compensationApplicable:true, correctCompensation:'partial',
+    interpretExplain:"Low pH (7.32) with a low HCO3 (15) is a primary metabolic acidosis. Winter's formula predicts an expected PaCO2 of about 1.5×15+8=30 (±2) — the measured 30 matches, so respiratory compensation is appropriate. With a normal anion gap and a raised chloride, this is a hyperchloraemic (normal anion-gap) metabolic acidosis from bicarbonate loss. pH is not fully normalised, so compensation is partial.",
+    diagnosisOptions:[
+      {id:'a', label:'Bicarbonate loss from severe diarrhoea'},
+      {id:'b', label:'Diabetic ketoacidosis'},
+      {id:'c', label:'Salicylate overdose'},
+      {id:'d', label:'Prolonged vomiting'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Profuse diarrhoea loses large amounts of intestinal bicarbonate, producing a hyperchloraemic (normal anion-gap) metabolic acidosis — the anion gap here is normal, which points away from the raised-gap acidoses of DKA and salicylates. Vomiting causes a metabolic alkalosis, the opposite disturbance.',
+    treatmentOptions:[
+      {id:'a', label:'IV fluid resuscitation with attention to potassium, and treat the underlying diarrhoea'},
+      {id:'b', label:'IV insulin infusion'},
+      {id:'c', label:'Urinary alkalinisation'},
+      {id:'d', label:'IV normal saline with potassium to replace gastric losses'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'The mainstay is restoring volume and electrolytes (diarrhoea also loses potassium) and treating the cause of the diarrhoea — the acidosis resolves as perfusion and bicarbonate handling recover. Insulin and urinary alkalinisation treat other poisonings/acidoses, and the vomiting-focused answer is the wrong clinical picture.'
   }
 };
 let abgCURRENT = null, abgS = null;
@@ -7107,6 +7209,60 @@ const PROC_PRESETS = {
         {id:'b', label:'Remove the needle completely without leaving any catheter in place', correct:false, severity:'minor', feedback:'Without a retained catheter, there is no pathway for continued drainage if the effusion re-accumulates, which is common with malignant effusions.'}
       ]}
     ]
+  },
+  ng_tube:{
+    id:'ng_tube', label:'Nasogastric Tube Insertion', tag:'GI',
+    vignette:'72M with a small-bowel obstruction needs a nasogastric tube for gastric decompression before theatre.',
+    initVitals:{hr:92, sbp:126, spo2:97, gcs:15},
+    steps:[
+      {id:'prep', title:'Preparation & measurement', options:[
+        {id:'a', label:'Sit the patient upright, estimate the length (nose–earlobe–xiphisternum), and check for contraindications to the nasal route', correct:true, feedback:'Correct — measuring the NEX distance and sitting the patient up gives the right insertion depth and a safer, easier passage.'},
+        {id:'b', label:'Insert a fixed 40 cm in every patient without measuring', correct:false, severity:'minor', feedback:'A fixed length ignores patient size — the tube can sit in the oesophagus (ineffective, aspiration risk) or be advanced too far.'}
+      ]},
+      {id:'route', title:'Choosing the route', options:[
+        {id:'a', label:'Confirm there is no base-of-skull fracture or severe midface trauma before using the nasal route', correct:true, feedback:'Correct — with a base-of-skull fracture the tube can pass intracranially, so the nasal route must be avoided in that setting.'},
+        {id:'b', label:'Pass the tube nasally in a patient with a known base-of-skull fracture to save time', correct:false, severity:'fatal-risk', vitalsEffect:{gcs:-4}, feedback:'INTRACRANIAL PLACEMENT: passing a nasal tube through a base-of-skull fracture can drive it into the cranial vault — a catastrophic complication. Use the oral route if a skull-base fracture is possible.'}
+      ]},
+      {id:'insert', title:'Insertion', options:[
+        {id:'a', label:'Advance gently, pausing to let the patient sip water and swallow as it passes the oropharynx', correct:true, feedback:'Correct — swallowing directs the tube into the oesophagus and reduces gagging and tracheal misplacement.'},
+        {id:'b', label:'Push firmly and continuously against any resistance', correct:false, severity:'serious', vitalsEffect:{spo2:-8, hr:12}, feedback:'Coughing, choking, and a falling SpO2 — forcing against resistance has misdirected the tube toward the airway. Stop, withdraw, and try again.'}
+      ]},
+      {id:'confirm', title:'Confirming placement', options:[
+        {id:'a', label:'Aspirate and check the pH is ≤5.5, and/or confirm the tip position on chest X-ray before use', correct:true, feedback:'Correct — a gastric aspirate pH ≤5.5 (or a confirmatory X-ray) is the standard, safe way to confirm placement before using the tube.'},
+        {id:'b', label:'Push air in and listen over the stomach ("whoosh test") to confirm placement, then start feeding', correct:false, severity:'fatal-risk', vitalsEffect:{spo2:-10}, feedback:'The auscultatory "whoosh" test is unreliable and has been abandoned — a tube in the lung can sound identical. Feeding or medicating down a misplaced tube can be fatal. Confirm with pH or X-ray.'}
+      ]},
+      {id:'secure', title:'Securing', options:[
+        {id:'a', label:'Secure the tube to the nose, document the confirmed position and external length, and set it to free drainage/suction as indicated', correct:true, feedback:'Correct — securing and documenting the confirmed length lets staff detect later migration at a glance.'},
+        {id:'b', label:'Leave the tube unsecured and undocumented', correct:false, severity:'minor', feedback:'An unsecured, undocumented tube can migrate without anyone noticing it has moved from its confirmed position.'}
+      ]}
+    ]
+  },
+  urinary_catheter:{
+    id:'urinary_catheter', label:'Urethral Catheterisation (Male)', tag:'Urology',
+    vignette:'68M in acute urinary retention with a painful, palpable bladder needs a urethral catheter for drainage.',
+    initVitals:{hr:96, sbp:150, spo2:98, gcs:15},
+    steps:[
+      {id:'prep', title:'Preparation & consent', options:[
+        {id:'a', label:'Confirm consent, use an aseptic technique with sterile gloves, and instil lubricant/local-anaesthetic gel into the urethra', correct:true, feedback:'Correct — aseptic technique reduces catheter-associated UTI, and urethral gel eases passage and reduces trauma and pain.'},
+        {id:'b', label:'Proceed quickly with clean (non-sterile) gloves and no lubricant', correct:false, severity:'serious', vitalsEffect:{}, feedback:'Skipping asepsis raises the catheter-associated infection risk, and passing a dry catheter causes urethral trauma and a false passage.'}
+      ]},
+      {id:'insert', title:'Insertion', options:[
+        {id:'a', label:'Hold the penis upright with gentle traction and advance the catheter fully to the hilt', correct:true, feedback:'Correct — inserting to the hilt ensures the balloon is well within the bladder, not the urethra, before inflation.'},
+        {id:'b', label:'Advance only until you meet the external sphincter and stop there', correct:false, severity:'serious', vitalsEffect:{}, feedback:'Stopping short leaves the balloon in the urethra — inflating there causes serious urethral injury. Advance fully before inflating.'}
+      ]},
+      {id:'urine', title:'Confirming bladder entry', options:[
+        {id:'a', label:'Wait to see urine return (or flush and aspirate) to confirm the tip is in the bladder before inflating the balloon', correct:true, feedback:'Correct — urine return confirms intravesical placement and is the key safety check before balloon inflation.'},
+        {id:'b', label:'Inflate the balloon immediately on insertion without waiting for urine', correct:false, severity:'fatal-risk', vitalsEffect:{sbp:20, hr:15}, feedback:'URETHRAL RUPTURE: inflating the balloon in the urethra (before confirming urine return) tears the urethra — sudden severe pain and a haemodynamic/autonomic response. Never inflate until urine confirms bladder placement.'}
+      ]},
+      {id:'balloon', title:'Balloon & connection', options:[
+        {id:'a', label:'Inflate the balloon with the stated volume of sterile water, withdraw gently until it seats, and connect a drainage bag', correct:true, feedback:'Correct — sterile water to the marked volume, then gentle withdrawal to seat the balloon at the bladder neck.'},
+        {id:'b', label:'Inflate the balloon with air and leave the catheter on free flow onto the bed', correct:false, severity:'minor', feedback:'Air can leak from the balloon over time (risking dislodgement), and an unconnected catheter loses the closed drainage system that limits infection.'}
+      ]},
+      {id:'post', title:'Post-procedure', options:[
+        {id:'a', label:'Ensure the foreskin is reduced, document the residual volume drained, and monitor for post-obstructive diuresis', correct:true, feedback:'Correct — a retracted foreskin left unreduced can cause paraphimosis, and a large residual warns of post-obstructive diuresis to monitor.'},
+        {id:'b', label:'Leave the foreskin retracted and record nothing', correct:false, severity:'serious', vitalsEffect:{}, feedback:'A foreskin left retracted can swell into a paraphimosis — a painful urological emergency — and undocumented residual volumes miss important post-obstructive diuresis.'}
+      ]}
+    ]
   }
 };
 let procCURRENT = null, procS = null;
@@ -7255,12 +7411,336 @@ function buildProcPresetGrid(){
 function showProcPresetScreen(){ revealScreen('procPresetScreen'); }
 document.getElementById('procBackBtn').addEventListener('click', showProcPresetScreen);
 
+// ================= ECG Interpretation Trainer =================
+const ECG_PRESETS = {
+  afib_rvr:{
+    id:'afib_rvr', label:'Atrial fibrillation with rapid ventricular response', tag:'Irregular narrow-complex',
+    pattern:'afib', rate:138,
+    vignette:'68M with palpitations and breathlessness for 2 hours. Pulse is irregularly irregular. BP 118/74, alert and not in distress.',
+    rhythmOptions:[
+      {id:'a', label:'Atrial fibrillation'},
+      {id:'b', label:'Atrial flutter with fixed block'},
+      {id:'c', label:'Sinus tachycardia'},
+      {id:'d', label:'Ventricular tachycardia'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'An irregularly irregular rhythm with no discernible P waves and a chaotic fibrillatory baseline is atrial fibrillation. Atrial flutter is usually regular (or regularly irregular) with sawtooth flutter waves; sinus tachycardia is regular with clear P waves; VT is a regular broad-complex rhythm.',
+    diagnosisOptions:[
+      {id:'a', label:'New-onset AF with a rapid ventricular response'},
+      {id:'b', label:'Ventricular fibrillation'},
+      {id:'c', label:'Complete heart block'},
+      {id:'d', label:'Normal sinus rhythm'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'The narrow QRS complexes confirm a supraventricular origin conducted through the normal His-Purkinje system, and the ventricular rate is fast (~140) — this is AF with a rapid ventricular response, not a ventricular or arrest rhythm.',
+    managementOptions:[
+      {id:'a', label:'Rate control (e.g. a beta-blocker or diltiazem) and assess stroke risk for anticoagulation'},
+      {id:'b', label:'Immediate unsynchronised defibrillation'},
+      {id:'c', label:'IV adenosine to terminate the rhythm'},
+      {id:'d', label:'No treatment — this is a normal finding'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'This patient is haemodynamically stable, so the priority is rate control (beta-blocker or a rate-limiting calcium-channel blocker) plus a formal stroke-risk assessment (e.g. CHA₂DS₂-VASc) to guide anticoagulation. Unsynchronised defibrillation is for VF/pulseless VT; adenosine does not terminate AF; and AF with a rapid ventricular response is certainly not a normal finding.'
+  },
+  anterior_stemi:{
+    id:'anterior_stemi', label:'Anterior ST-elevation myocardial infarction', tag:'ST elevation',
+    pattern:'st_elevation', rate:92,
+    vignette:'61M with 40 minutes of crushing central chest pain radiating to the jaw, diaphoretic. This is the precordial (V1–V4) lead group.',
+    rhythmOptions:[
+      {id:'a', label:'Sinus rhythm'},
+      {id:'b', label:'Atrial fibrillation'},
+      {id:'c', label:'Ventricular tachycardia'},
+      {id:'d', label:'Complete heart block'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'The rhythm itself is regular with a P wave before each narrow QRS at a normal-ish rate — sinus rhythm. The critical abnormality here is not the rhythm but the ST segments.',
+    diagnosisOptions:[
+      {id:'a', label:'Anterior STEMI (ST elevation in V1–V4)'},
+      {id:'b', label:'Acute pericarditis'},
+      {id:'c', label:'Benign early repolarisation'},
+      {id:'d', label:'Left bundle branch block'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Marked, convex ST elevation localised to the anterior precordial leads in a patient with classic ischaemic chest pain is an anterior STEMI. Pericarditis causes widespread (not territorial) saddle-shaped ST elevation with PR depression; benign early repolarisation is a stable, asymptomatic pattern; and this QRS is narrow, not an LBBB.',
+    managementOptions:[
+      {id:'a', label:'Activate the cath lab for primary PCI, give aspirin and a second antiplatelet, and anticoagulate'},
+      {id:'b', label:'Reassure and discharge with outpatient follow-up'},
+      {id:'c', label:'Give high-dose NSAIDs and colchicine'},
+      {id:'d', label:'Rate control with a beta-blocker only'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'An anterior STEMI needs emergency reperfusion — primary PCI (or thrombolysis if PCI is not promptly available) plus dual antiplatelet therapy and anticoagulation. NSAIDs/colchicine treat pericarditis, not STEMI, and discharge or rate control alone would miss a time-critical, life-threatening diagnosis.'
+  },
+  hyperkalaemia:{
+    id:'hyperkalaemia', label:'Hyperkalaemia — peaked T waves', tag:'Metabolic',
+    pattern:'peaked_t', rate:78,
+    vignette:'59M on haemodialysis who missed his last two sessions, now with generalised weakness. The T waves are tall, narrow, and tented.',
+    rhythmOptions:[
+      {id:'a', label:'Sinus rhythm with tall, peaked T waves'},
+      {id:'b', label:'Ventricular fibrillation'},
+      {id:'c', label:'Atrial flutter'},
+      {id:'d', label:'Normal ECG'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'There is still an underlying regular sinus rhythm, but each beat carries a tall, narrow, symmetrically "tented" T wave — the earliest and most characteristic ECG sign of hyperkalaemia.',
+    diagnosisOptions:[
+      {id:'a', label:'Hyperkalaemia'},
+      {id:'b', label:'Hypokalaemia'},
+      {id:'c', label:'Hypercalcaemia'},
+      {id:'d', label:'Acute anterior ischaemia'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'A missed-dialysis patient with weakness and tall, tented T waves has hyperkalaemia. Hypokalaemia flattens T waves and produces U waves; hypercalcaemia shortens the QT; and ischaemic T-wave changes are usually inverted or biphasic rather than tall and symmetric.',
+    managementOptions:[
+      {id:'a', label:'IV calcium to stabilise the myocardium, then insulin-dextrose (± salbutamol) to shift potassium, and urgent dialysis'},
+      {id:'b', label:'Give IV potassium replacement'},
+      {id:'c', label:'Reassure — this resolves on its own'},
+      {id:'d', label:'Immediate synchronised cardioversion'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'ECG changes make this an emergency: IV calcium first for cardiac membrane stabilisation, then insulin-dextrose (and often nebulised salbutamol) to shift potassium intracellularly, with definitive removal by dialysis given the missed sessions. Giving more potassium would be catastrophic, and cardioversion does not treat the underlying electrolyte problem.'
+  },
+  vfib:{
+    id:'vfib', label:'Ventricular fibrillation', tag:'Shockable arrest rhythm',
+    pattern:'vf', rate:0,
+    vignette:'A monitored 66M suddenly collapses and is unresponsive with no palpable pulse. This is the rhythm on the defibrillator monitor.',
+    rhythmOptions:[
+      {id:'a', label:'Ventricular fibrillation'},
+      {id:'b', label:'Monomorphic ventricular tachycardia'},
+      {id:'c', label:'Asystole'},
+      {id:'d', label:'Coarse atrial fibrillation'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'A chaotic, irregular waveform with no identifiable P waves, QRS complexes, or T waves — and no organised electrical activity — is ventricular fibrillation. VT is organised and regular; asystole is a flat line; and AF still has narrow QRS complexes.',
+    diagnosisOptions:[
+      {id:'a', label:'Cardiac arrest in a shockable rhythm'},
+      {id:'b', label:'Stable supraventricular tachycardia'},
+      {id:'c', label:'A normal variant'},
+      {id:'d', label:'Non-shockable (PEA) arrest'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'A pulseless patient in VF is in cardiac arrest with a shockable rhythm — this and pulseless VT are the two rhythms that respond to defibrillation. PEA and asystole are the non-shockable arrest rhythms.',
+    managementOptions:[
+      {id:'a', label:'Immediate defibrillation and high-quality CPR, following the ACLS algorithm'},
+      {id:'b', label:'Synchronised cardioversion'},
+      {id:'c', label:'IV adenosine'},
+      {id:'d', label:'Observe and repeat the ECG in 15 minutes'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'VF arrest is treated with immediate unsynchronised defibrillation and uninterrupted, high-quality CPR per ACLS, with adrenaline and amiodarone as the algorithm dictates. Synchronisation is impossible without organised QRS complexes, adenosine has no role in arrest, and any delay to defibrillation directly worsens survival.'
+  },
+  vtach:{
+    id:'vtach', label:'Monomorphic ventricular tachycardia (with a pulse)', tag:'Broad-complex tachycardia',
+    pattern:'vtach', rate:180,
+    vignette:'58M with ischaemic heart disease, sudden palpitations and chest pain. He has a pulse but is clammy with a BP of 82/50.',
+    rhythmOptions:[
+      {id:'a', label:'Monomorphic ventricular tachycardia'},
+      {id:'b', label:'Sinus tachycardia'},
+      {id:'c', label:'Atrial fibrillation'},
+      {id:'d', label:'First-degree AV block'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'A regular, broad-complex tachycardia at ~180/min with uniform (monomorphic) QRS complexes and no preceding P waves is ventricular tachycardia — and in a patient with known ischaemic heart disease, a broad-complex tachycardia should be treated as VT until proven otherwise.',
+    diagnosisOptions:[
+      {id:'a', label:'Unstable VT (pulse present but haemodynamically compromised)'},
+      {id:'b', label:'Pulseless VT / cardiac arrest'},
+      {id:'c', label:'Stable narrow-complex SVT'},
+      {id:'d', label:'Benign ectopy'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'He has a pulse, so this is not a pulseless arrest, but hypotension and clamminess make him haemodynamically unstable — this is unstable VT with a pulse. That distinction drives the management pathway.',
+    managementOptions:[
+      {id:'a', label:'Synchronised DC cardioversion (with sedation), seeking expert help'},
+      {id:'b', label:'Unsynchronised defibrillation'},
+      {id:'c', label:'IV adenosine'},
+      {id:'d', label:'Oral beta-blocker and discharge'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Unstable VT with a pulse is treated with synchronised DC cardioversion (synchronised, to avoid delivering a shock on the T wave and precipitating VF). Unsynchronised defibrillation is reserved for pulseless VT/VF; adenosine is for regular narrow-complex SVT; and this patient is far too unstable for oral treatment and discharge.'
+  },
+  chb:{
+    id:'chb', label:'Complete (third-degree) heart block', tag:'Bradyarrhythmia',
+    pattern:'brady', rate:36,
+    vignette:'74F with recurrent syncope and dizziness, now persistently light-headed. Her pulse is very slow at ~36/min and regular.',
+    rhythmOptions:[
+      {id:'a', label:'Complete heart block / severe bradycardia'},
+      {id:'b', label:'Sinus rhythm at a normal rate'},
+      {id:'c', label:'Atrial fibrillation with a rapid response'},
+      {id:'d', label:'Ventricular tachycardia'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'A very slow (~36/min) regular ventricular rhythm in a patient with syncope reflects a high-grade bradyarrhythmia — in complete (third-degree) AV block the atria and ventricles beat independently and a slow ventricular escape rhythm maintains output. It is neither a normal rate, a tachyarrhythmia, nor VT.',
+    diagnosisOptions:[
+      {id:'a', label:'Symptomatic bradycardia from high-grade AV block'},
+      {id:'b', label:'Asymptomatic athletic bradycardia'},
+      {id:'c', label:'Vasovagal syncope with a normal ECG'},
+      {id:'d', label:'Anterior STEMI'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Syncope and persistent light-headedness with a rate in the mid-30s is symptomatic bradycardia due to high-grade AV block — a haemodynamically significant conduction problem, not benign athletic bradycardia (which is asymptomatic) or a normal ECG.',
+    managementOptions:[
+      {id:'a', label:'IV atropine, and transcutaneous pacing / an isoprenaline infusion as a bridge to a pacemaker'},
+      {id:'b', label:'Give a beta-blocker to control the rhythm'},
+      {id:'c', label:'Reassure and discharge'},
+      {id:'d', label:'Immediate defibrillation'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Symptomatic bradycardia is treated with atropine first, escalating to transcutaneous pacing (or an isoprenaline/adrenaline infusion) as a bridge to definitive transvenous or permanent pacing. A beta-blocker would slow the rate further and could be fatal; the patient is too symptomatic to discharge; and defibrillation is not a treatment for bradycardia.'
+  }
+};
+let ecgCURRENT = null, ecgS = null;
+
+function drawEcgStrip(){
+  const c = document.getElementById('ecgStrip');
+  if (!c || !ecgCURRENT) return;
+  const ctx = c.getContext('2d');
+  const w=c.width, h=c.height;
+  ctx.clearRect(0,0,w,h);
+  // faint monitor grid
+  ctx.strokeStyle='rgba(130,210,150,0.10)'; ctx.lineWidth=1;
+  for(let gx=0;gx<w;gx+=16){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke(); }
+  for(let gy=0;gy<h;gy+=16){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
+  const col = (getComputedStyle(document.documentElement).getPropertyValue('--lime').trim()) || '#8ee686';
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath();
+  const pattern = ecgCURRENT.pattern, rate = ecgCURRENT.rate;
+  const scroll = waveT*2.4;
+  if (pattern==='vf'){
+    for(let x=0;x<w;x++){
+      const xx=x+scroll;
+      const y = h/2 - (Math.sin(xx*0.09+waveT*0.5)+Math.sin(xx*0.037+waveT*1.3)+Math.sin(xx*0.16+waveT*0.21))*h*0.16;
+      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke(); return;
+  }
+  const pxPerBeat = clamp(9600/(rate||60), 42, 300);
+  for(let x=0;x<w;x++){
+    let xx = x+scroll;
+    if (pattern==='afib') xx += Math.sin(x*0.05+waveT*0.02)*20 + Math.sin(x*0.13+waveT*0.05)*11; // beat-to-beat irregularity
+    let frac = (xx % pxPerBeat) / pxPerBeat; if (frac<0) frac+=1;
+    let dev;
+    if (pattern==='vtach'){
+      dev = Math.sin(frac*Math.PI*2)*h*0.32;            // broad, regular, monomorphic complexes
+    } else {
+      const p = (pattern==='brady') ? 'normal' : pattern;
+      dev = ecgY(frac, h*0.74, p, x);
+    }
+    const y = h/2 - dev;
+    if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+function ecgLoadCase(key){
+  ecgCURRENT = ECG_PRESETS[key];
+  ecgS = { step:'rhythm', rhythmChoice:null, rhythmSubmitted:false, rhythmCorrect:false,
+    diagnosisChoice:null, diagnosisSubmitted:false, diagnosisCorrect:false,
+    mgmtChoice:null, mgmtSubmitted:false, mgmtCorrect:false, _recorded:false };
+  document.getElementById('ecgEyebrow').textContent = `ECG Interpretation Trainer · ${ecgCURRENT.tag}`;
+  document.getElementById('ecgTitle').textContent = ecgCURRENT.label;
+  document.getElementById('ecgVignette').innerHTML = `<p>${ecgCURRENT.vignette}</p>`;
+  document.getElementById('ecgRate').innerHTML = ecgCURRENT.rate>0 ? `Ventricular rate: <b>~${ecgCURRENT.rate}/min</b> · single-lead rhythm strip` : `<b>No organised rhythm</b> · single-lead rhythm strip`;
+  revealScreen('ecgLabScreen');
+  renderEcgStep();
+}
+
+function ecgChooseRhythm(id){ if (ecgS.rhythmSubmitted) return; ecgS.rhythmChoice=id; ecgS.rhythmCorrect=id===ecgCURRENT.correctRhythmId; ecgS.rhythmSubmitted=true; renderEcgStep(); }
+function ecgChooseDiagnosis(id){ if (ecgS.diagnosisSubmitted) return; ecgS.diagnosisChoice=id; ecgS.diagnosisCorrect=id===ecgCURRENT.correctDiagnosisId; ecgS.diagnosisSubmitted=true; renderEcgStep(); }
+function ecgChooseMgmt(id){ if (ecgS.mgmtSubmitted) return; ecgS.mgmtChoice=id; ecgS.mgmtCorrect=id===ecgCURRENT.correctManagementId; ecgS.mgmtSubmitted=true; renderEcgStep(); }
+function ecgNextStep(){
+  if (ecgS.step==='rhythm' && ecgS.rhythmSubmitted) ecgS.step='diagnose';
+  else if (ecgS.step==='diagnose' && ecgS.diagnosisSubmitted) ecgS.step='manage';
+  else if (ecgS.step==='manage' && ecgS.mgmtSubmitted) ecgS.step='summary';
+  renderEcgStep();
+}
+function ecgScore(){ return [ecgS.rhythmCorrect, ecgS.diagnosisCorrect, ecgS.mgmtCorrect].filter(Boolean).length; }
+
+function ecgOptionsBlock(opts, dataAttr, chosen, submitted, correctId){
+  let html = `<div class="quiz-options">`;
+  opts.forEach(opt=>{
+    let cls='quiz-option';
+    if (submitted){ if(opt.id===correctId) cls+=' correct'; else if(opt.id===chosen) cls+=' incorrect'; }
+    html += `<button class="${cls}" data-${dataAttr}="${opt.id}" ${submitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
+  });
+  return html + `</div>`;
+}
+
+function renderEcgStep(){
+  const panel = document.getElementById('ecgStepPanel');
+  if (ecgS.step==='rhythm'){
+    let html = `<p class="quiz-step-label">Step 1 of 3 — Identify the rhythm</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is this rhythm?</p>`;
+    html += ecgOptionsBlock(ecgCURRENT.rhythmOptions, 'rhythm', ecgS.rhythmChoice, ecgS.rhythmSubmitted, ecgCURRENT.correctRhythmId);
+    if (ecgS.rhythmSubmitted) html += `<div class="quiz-explain ${ecgS.rhythmCorrect?'correct':'incorrect'}">${ecgS.rhythmCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.rhythmExplain}</div>
+      <button class="btn primary" id="ecgNextBtn">Continue to interpretation</button>`;
+    panel.innerHTML = html;
+    if (!ecgS.rhythmSubmitted) panel.querySelectorAll('[data-rhythm]').forEach(b=>b.addEventListener('click', ()=>ecgChooseRhythm(b.dataset.rhythm)));
+    else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
+  } else if (ecgS.step==='diagnose'){
+    let html = `<p class="quiz-step-label">Step 2 of 3 — Interpretation</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is the clinical interpretation?</p>`;
+    html += ecgOptionsBlock(ecgCURRENT.diagnosisOptions, 'diag', ecgS.diagnosisChoice, ecgS.diagnosisSubmitted, ecgCURRENT.correctDiagnosisId);
+    if (ecgS.diagnosisSubmitted) html += `<div class="quiz-explain ${ecgS.diagnosisCorrect?'correct':'incorrect'}">${ecgS.diagnosisCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.diagnosisExplain}</div>
+      <button class="btn primary" id="ecgNextBtn">Continue to management</button>`;
+    panel.innerHTML = html;
+    if (!ecgS.diagnosisSubmitted) panel.querySelectorAll('[data-diag]').forEach(b=>b.addEventListener('click', ()=>ecgChooseDiagnosis(b.dataset.diag)));
+    else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
+  } else if (ecgS.step==='manage'){
+    let html = `<p class="quiz-step-label">Step 3 of 3 — Management</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is the most appropriate immediate management?</p>`;
+    html += ecgOptionsBlock(ecgCURRENT.managementOptions, 'mgmt', ecgS.mgmtChoice, ecgS.mgmtSubmitted, ecgCURRENT.correctManagementId);
+    if (ecgS.mgmtSubmitted) html += `<div class="quiz-explain ${ecgS.mgmtCorrect?'correct':'incorrect'}">${ecgS.mgmtCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.managementExplain}</div>
+      <button class="btn primary" id="ecgNextBtn">See summary</button>`;
+    panel.innerHTML = html;
+    if (!ecgS.mgmtSubmitted) panel.querySelectorAll('[data-mgmt]').forEach(b=>b.addEventListener('click', ()=>ecgChooseMgmt(b.dataset.mgmt)));
+    else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
+  } else if (ecgS.step==='summary'){
+    const score = ecgScore();
+    const msg = score===3 ? 'Clean sweep — rhythm, interpretation, and management all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations above before moving on.';
+    if (!ecgS._recorded){
+      ecgS._recorded = true;
+      recordAttempt({
+        module:'ecg', scenario_id:ecgCURRENT.id, scenario_label:ecgCURRENT.label,
+        outcome:`${score}/3`, score:score/3,
+        detail:{ rhythm:ecgS.rhythmCorrect, interpret:ecgS.diagnosisCorrect, manage:ecgS.mgmtCorrect }
+      });
+    }
+    panel.innerHTML = `<p class="quiz-step-label">Summary</p>
+      <div class="quiz-score">${score}/3</div>
+      <p style="font-size:13.5px;color:var(--text-dim);">${msg}</p>
+      <div class="debrief-actions" style="margin-top:16px;">
+        <button class="btn primary" id="ecgRestartBtn">Try this rhythm again</button>
+        <button class="btn" id="ecgBackToListBtn">Back to rhythm list</button>
+      </div>`;
+    document.getElementById('ecgRestartBtn').addEventListener('click', ()=>ecgLoadCase(ecgCURRENT.id));
+    document.getElementById('ecgBackToListBtn').addEventListener('click', showEcgPresetScreen);
+  }
+}
+
+function buildEcgPresetGrid(){
+  const grid = document.getElementById('ecgPresetGrid');
+  grid.innerHTML = '';
+  Object.keys(ECG_PRESETS).forEach(key=>{
+    const p = ECG_PRESETS[key];
+    const card = document.createElement('button');
+    card.className = 'specialty-card';
+    card.style.setProperty('--spec-color','var(--lime)');
+    card.innerHTML = `<span class="sc-count">${p.tag}</span>
+      <p class="sc-name">${p.label}</p>
+      <p class="sc-desc">${p.vignette}</p>`;
+    card.addEventListener('click', ()=>ecgLoadCase(key));
+    grid.appendChild(card);
+  });
+}
+function showEcgPresetScreen(){ ecgCURRENT = null; revealScreen('ecgPresetScreen'); }
+document.getElementById('ecgBackBtn').addEventListener('click', showEcgPresetScreen);
+
 buildFrontIcons();
 buildSpecialtyGrid();
 buildSimulatorsGrid();
 buildVentPresetGrid();
 buildAbgPresetGrid();
 buildProcPresetGrid();
+buildEcgPresetGrid();
 if (!restoreSession()) { applyAllSettingsButtons(); }
 renderAccountChip();
 refreshAuthState();
