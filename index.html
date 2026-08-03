@@ -181,6 +181,14 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 .tile .value{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;line-height:1.1;}
 .tile .unit{font-size:10.5px;color:var(--text-faint);font-weight:500;}
 .tile canvas{width:100%;height:40px;display:block;margin-top:2px;}
+.trends-panel .trend-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 0 12px;}
+@media (max-width:700px){.trends-panel .trend-grid{grid-template-columns:repeat(2,1fr);}}
+.trend-tile{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+.trend-tile .tt-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+.trend-tile .tt-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);}
+.trend-tile .tt-val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;}
+.trend-tile .tt-delta{font-family:var(--mono);font-size:10.5px;}
+.trend-tile canvas{width:100%;height:34px;display:block;margin-top:4px;}
 .tile.hr .value{color:var(--cyan);} .tile.spo2 .value{color:var(--lime);}
 .tile.bp .value{color:var(--violet);} .tile.rr .value{color:var(--amber);}
 .tile .flag{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--good);}
@@ -378,6 +386,19 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
 .history-item .hi-sub{font-size:12.5px;color:var(--text-dim);}
 .history-item .hi-meta{font-family:var(--mono);font-size:11.5px;color:var(--text-faint);text-align:right;white-space:nowrap;}
 .history-empty{text-align:center;color:var(--text-faint);font-size:13.5px;font-style:italic;padding:30px;}
+.progress-section-h{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);margin:22px 0 10px;}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+@media (max-width:560px){.stat-row{grid-template-columns:1fr;}}
+.stat-tile{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;}
+.stat-tile .st-val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;line-height:1.05;}
+.stat-tile .st-lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:4px;}
+.stat-tile .st-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.modbar-row{display:flex;align-items:center;gap:12px;margin-bottom:9px;}
+.modbar-row .mb-name{width:120px;flex-shrink:0;font-size:12.5px;color:var(--text-dim);}
+.modbar-row .mb-track{flex:1;height:10px;background:var(--panel-2);border-radius:6px;overflow:hidden;}
+.modbar-row .mb-fill{height:100%;border-radius:6px;background:var(--accent);}
+.modbar-row .mb-val{width:78px;flex-shrink:0;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+.modbar-empty{color:var(--text-faint);font-size:11.5px;}
 </style>
 
 <div class="front" id="frontScreen">
@@ -391,6 +412,7 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <div class="settings-group">
       <h4>Clinical content</h4>
       <div class="settings-row"><span>Guidance level</span><button class="btn small" id="guidanceBtn">Full</button></div>
+      <div class="settings-row"><span>Trainer mode</span><button class="btn small" id="examModeBtn">Practice</button></div>
     </div>
     <div class="settings-group">
       <h4>Alerts</h4>
@@ -472,10 +494,12 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
 <div class="specialty" id="historyScreen" style="display:none;">
   <div class="specialty-hdr">
     <div class="top-row"><button class="btn ghost small" id="historyBackBtn">&larr; Back</button></div>
-    <span class="eyebrow">Your record</span>
-    <h1>My history</h1>
-    <p>Every completed case, blood gas, and procedure you've attempted while signed in.</p>
+    <span class="eyebrow">Your progress</span>
+    <h1>Progress dashboard</h1>
+    <p id="progressSourceNote">Your performance across every module — competency, streak, and where to focus next.</p>
   </div>
+  <div id="progressStats"></div>
+  <h3 class="progress-section-h">Recent attempts</h3>
   <div id="historyList"></div>
 </div>
 
@@ -677,6 +701,11 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   </details>
 
   <div id="monitorSlotApp"><div class="monitor" id="monitor"></div></div>
+
+  <details class="brief trends-panel" id="trendsPanel">
+    <summary>Trends <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0;">— how the patient is trajectory-tracking over time</span></summary>
+    <div class="trend-grid" id="trendGrid"></div>
+  </details>
 
   <div class="instr-bar" id="instrBarApp" style="display:none;">
     <span class="instr-label">Instructor tools</span>
@@ -4812,6 +4841,7 @@ let reducedMotionPref = false;
 let kbNavEmphasis = false;
 let tempUnit = 'C';
 let showRefRanges = false;
+let examMode = false;
 
 // ================= sound =================
 let audioCtx = null;
@@ -4857,9 +4887,24 @@ function freshState(caseDef){
     shockCount:0, epiCount:0, lastEpiCycleGiven:-99, amioGiven:false, amioDose2:false,
     causesChecked:{hypovolemia:false,hypoxia:false,acidosis:false,hyperkalemia:false,hypothermia:false,
       tension_pneumo:false,tamponade:false,toxins:false,thrombosis_pulm:false,thrombosis_cor:false},
-    arrestStart:0
+    arrestStart:0,
+    trend:{ t:[], sbp:[], spo2:[], lactate:[], gcs:[] }
   };
   return Object.assign(base, caseDef.initState());
+}
+
+// record a snapshot of the key trajectory variables for the ICU trend sparklines.
+// must be called only when the global S is the active case (vitals()/pressorBoost() read global S).
+function sampleTrend(st){
+  if (!st || !st.trend) return;
+  const v = vitals();
+  st.trend.t.push(st.simTime);
+  st.trend.sbp.push(v.sbp);
+  st.trend.spo2.push(v.spo2);
+  st.trend.lactate.push(+st.lactate.toFixed(1));
+  st.trend.gcs.push(v.gcs);
+  const CAP = 120;
+  ['t','sbp','spo2','lactate','gcs'].forEach(k=>{ if (st.trend[k].length>CAP) st.trend[k].shift(); });
 }
 
 function fmtClock(mins){
@@ -4921,6 +4966,7 @@ function stepOnce(){
     S.ended = true; S.endReason='stable';
     log('Patient hemodynamically stable and meeting case-specific recovery criteria. Appropriate for ward/ICU step-down as clinically indicated.','result');
   }
+  sampleTrend(S);
 }
 
 function advance(mins){
@@ -5401,6 +5447,7 @@ function renderInterventionLocks(){
 
 function renderAll(){
   renderMonitor(); renderO2(); renderInvest(); renderPressor(); renderLog(); renderInterventionLocks();
+  renderTrends();
   syncArrestScreen();
   renderInstructorBar();
   saveSession();
@@ -5408,6 +5455,63 @@ function renderAll(){
     S.debriefShown = true;
     showDebrief(true);
   }
+}
+
+const TREND_SPECS = [
+  { key:'sbp',     lbl:'Systolic BP', unit:'', good:'higher', color:'--violet' },
+  { key:'spo2',    lbl:'SpO2',        unit:'%', good:'higher', color:'--lime' },
+  { key:'lactate', lbl:'Lactate',     unit:'', good:'lower',  color:'--amber' },
+  { key:'gcs',     lbl:'GCS',         unit:'', good:'higher', color:'--cyan' }
+];
+function drawSparkline(canvas, series, colorVar){
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  if (!series || series.length<2) return;
+  let mn=Math.min(...series), mx=Math.max(...series);
+  if (mx===mn){ mn-=1; mx+=1; }
+  const pad=4;
+  const x=i=> pad + i*(w-2*pad)/(series.length-1);
+  const y=v=> h-pad - (v-mn)*(h-2*pad)/(mx-mn);
+  const col = (getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim())||'#4fd1e8';
+  // area fill
+  ctx.beginPath(); ctx.moveTo(x(0), h);
+  series.forEach((v,i)=>ctx.lineTo(x(i), y(v)));
+  ctx.lineTo(x(series.length-1), h); ctx.closePath();
+  ctx.fillStyle = col+'22'; ctx.fill();
+  // line
+  ctx.beginPath();
+  series.forEach((v,i)=>{ i? ctx.lineTo(x(i),y(v)) : ctx.moveTo(x(i),y(v)); });
+  ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.stroke();
+  // endpoint dot
+  ctx.beginPath(); ctx.arc(x(series.length-1), y(series[series.length-1]), 2.4, 0, Math.PI*2);
+  ctx.fillStyle=col; ctx.fill();
+}
+function renderTrends(){
+  const panel = document.getElementById('trendsPanel');
+  const grid = document.getElementById('trendGrid');
+  if (!panel || !grid) return;
+  const n = (S.trend && S.trend.t) ? S.trend.t.length : 0;
+  panel.style.display = n>=2 ? '' : 'none';   // only show once there's a trajectory to see
+  if (n<2) return;
+  grid.innerHTML = TREND_SPECS.map(spec=>{
+    const cur = S.trend[spec.key][n-1];
+    const prev = S.trend[spec.key][n-2];
+    const delta = +(cur-prev).toFixed(spec.key==='lactate'?1:0);
+    const improving = spec.good==='higher' ? delta>0 : delta<0;
+    const worsening = spec.good==='higher' ? delta<0 : delta>0;
+    const dcol = delta===0 ? 'var(--text-faint)' : (improving?'var(--good)':'var(--crit)');
+    const arrow = delta===0 ? '→' : (delta>0?'▲':'▼');
+    return `<div class="trend-tile">
+      <div class="tt-top"><span class="tt-lbl">${spec.lbl}</span><span class="tt-delta" style="color:${dcol};">${arrow} ${Math.abs(delta)}</span></div>
+      <span class="tt-val">${cur}${spec.unit}</span>
+      <canvas data-trend="${spec.key}" width="150" height="34"></canvas>
+    </div>`;
+  }).join('');
+  TREND_SPECS.forEach(spec=>{
+    drawSparkline(grid.querySelector(`[data-trend="${spec.key}"]`), S.trend[spec.key], spec.color);
+  });
 }
 
 function syncArrestScreen(){
@@ -5547,9 +5651,13 @@ function showDebrief(final){
 
   if (final && !S._recorded){
     S._recorded = true;
+    // derive a 0..1 competency score so ICU cases sit alongside the graded modules
+    let icuScore;
+    if (S.dead || S.endReason==='unsafe_discharge') icuScore = clamp(0.2 - 0.1*crits.length, 0, 0.2);
+    else icuScore = clamp(1 - 0.34*crits.length - 0.08*warns.length, 0, 1);
     recordAttempt({
       module:'icu', scenario_id:CURRENT.id, scenario_label:CURRENT.title,
-      outcome:outcomeLabel, critical_errors:crits.length, cautions:warns.length,
+      outcome:outcomeLabel, score:icuScore, critical_errors:crits.length, cautions:warns.length,
       duration_min:S.simTime, detail:{ endReason:S.endReason||null }
     });
   }
@@ -5670,6 +5778,7 @@ function confirmModal(title, body){
 function loadCase(key){
   CURRENT = CASES[key];
   S = freshState(CURRENT);
+  sampleTrend(S);   // seed the arrival values now that the global S is set
   document.getElementById('menuScreen').style.display='none';
   revealScreen('appScreen');
   document.getElementById('debriefScreen').style.display='none';
@@ -5818,7 +5927,7 @@ function saveSession(){
       caseId: CURRENT ? CURRENT.id : null, state: S,
       theme: document.documentElement.dataset.theme || null, muted, instructorMode,
       textLarge, guidanceFull, critAlertsOn, confirmTimeJumps, landingPref,
-      highContrast, reducedMotionPref, kbNavEmphasis, tempUnit, showRefRanges
+      highContrast, reducedMotionPref, kbNavEmphasis, tempUnit, showRefRanges, examMode
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch(e){ /* localStorage unavailable or quota exceeded — session just won't persist */ }
@@ -5833,7 +5942,7 @@ function restoreSession(){
     textLarge = !!data.textLarge; guidanceFull = data.guidanceFull!==false; critAlertsOn = data.critAlertsOn!==false;
     confirmTimeJumps = !!data.confirmTimeJumps; landingPref = data.landingPref || 'picker';
     highContrast = !!data.highContrast; reducedMotionPref = !!data.reducedMotionPref; kbNavEmphasis = !!data.kbNavEmphasis;
-    tempUnit = data.tempUnit || 'C'; showRefRanges = !!data.showRefRanges;
+    tempUnit = data.tempUnit || 'C'; showRefRanges = !!data.showRefRanges; examMode = !!data.examMode;
     applyAllSettingsButtons(); renderInstructorBar();
     if (landingPref==='picker') return false;
     if (data.caseId && CASES[data.caseId] && data.state){
@@ -5886,12 +5995,14 @@ function renderAccountChip(){
     const name = (authProfile && authProfile.display_name) || authUser.email;
     const role = authProfile && authProfile.role === 'instructor' ? '<span class="role-badge">Instructor</span>' : '';
     chip.innerHTML = `<span class="who">Signed in as <b>${escapeHtml(name)}</b></span>${role}
-      <button class="btn ghost small" id="historyBtn">My history</button>
+      <button class="btn ghost small" id="historyBtn">Progress</button>
       <button class="btn ghost small" id="logoutBtn">Log out</button>`;
     document.getElementById('historyBtn').addEventListener('click', showHistoryScreen);
     document.getElementById('logoutBtn').addEventListener('click', doLogout);
   } else {
-    chip.innerHTML = `<button class="btn small" id="signInBtn">Sign in / Sign up</button>`;
+    chip.innerHTML = `<button class="btn ghost small" id="historyBtn">Progress</button>
+      <button class="btn small" id="signInBtn">Sign in / Sign up</button>`;
+    document.getElementById('historyBtn').addEventListener('click', showHistoryScreen);
     document.getElementById('signInBtn').addEventListener('click', showAuthScreen);
   }
 }
@@ -5984,42 +6095,130 @@ async function doLogout(){
   showFront();
 }
 
+const MOD_LABEL = { icu:'ICU Case', ecg:'ECG', abg:'ABG Trainer', ventilator:'Ventilator', procedure:'Procedure' };
+const MOD_ORDER = ['icu','ecg','abg','procedure'];
+
+function computeStreak(rows){
+  // consecutive calendar days (ending today or yesterday) with at least one attempt
+  const days = new Set(rows.map(r=> new Date(r.created_at).toDateString()));
+  if (!days.size) return 0;
+  let streak = 0;
+  const d = new Date();
+  // allow the streak to still count if they haven't trained yet today but did yesterday
+  if (!days.has(d.toDateString())) d.setDate(d.getDate()-1);
+  while (days.has(d.toDateString())){ streak++; d.setDate(d.getDate()-1); }
+  return streak;
+}
+
 async function showHistoryScreen(){
   revealScreen('historyScreen');
+  const statsEl = document.getElementById('progressStats');
   const list = document.getElementById('historyList');
+  const note = document.getElementById('progressSourceNote');
+  statsEl.innerHTML = '';
   list.innerHTML = '<p class="history-empty">Loading…</p>';
-  if (!sb || !authUser){ list.innerHTML = '<p class="history-empty">Sign in to keep a record of your attempts.</p>'; return; }
-  try {
-    const { data, error } = await sb.from('attempts').select('*').order('created_at', { ascending:false }).limit(200);
-    if (error) throw error;
-    if (!data || !data.length){ list.innerHTML = '<p class="history-empty">No attempts yet — complete a case, blood gas, or procedure and it will appear here.</p>'; return; }
-    const MOD_LABEL = { icu:'ICU Case', ventilator:'Ventilator', abg:'ABG Trainer', procedure:'Procedure' };
-    list.innerHTML = data.map(a=>{
-      const d = new Date(a.created_at);
-      const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      const bits = [];
-      if (a.outcome) bits.push(a.outcome);
-      if (a.critical_errors) bits.push(`${a.critical_errors} critical`);
-      if (a.cautions) bits.push(`${a.cautions} caution${a.cautions>1?'s':''}`);
-      return `<div class="history-item">
-        <div class="hi-main">
-          <span class="hi-mod">${MOD_LABEL[a.module]||a.module}</span>
-          <span class="hi-title">${escapeHtml(a.scenario_label||a.scenario_id)}</span>
-          <span class="hi-sub">${escapeHtml(bits.join(' · ')) || '—'}</span>
-        </div>
-        <span class="hi-meta">${dateStr}</span>
-      </div>`;
-    }).join('');
-  } catch(err){
-    list.innerHTML = `<p class="history-empty">Couldn't load your history: ${escapeHtml(err.message||'error')}.</p>`;
+  const { source, rows } = await getAttempts();
+  note.textContent = source==='cloud'
+    ? 'Your performance across every module — synced to your account.'
+    : (authUser ? 'Your performance across every module.' : 'Your performance on this device. Sign in to sync it across devices.');
+
+  if (!rows || !rows.length){
+    statsEl.innerHTML = '';
+    list.innerHTML = '<p class="history-empty">No attempts yet — complete a case, blood gas, ECG, or procedure and your progress will build here.</p>';
+    return;
   }
+
+  const scored = rows.filter(r=> typeof r.score === 'number');
+  const overall = scored.length ? Math.round(scored.reduce((s,r)=>s+r.score,0)/scored.length*100) : null;
+  const streak = computeStreak(rows);
+
+  // per-module aggregation
+  const byMod = {};
+  rows.forEach(r=>{
+    const m = byMod[r.module] || (byMod[r.module] = { count:0, scoreSum:0, scoreN:0 });
+    m.count++;
+    if (typeof r.score === 'number'){ m.scoreSum += r.score; m.scoreN++; }
+  });
+  const modAvgs = Object.keys(byMod).filter(m=>byMod[m].scoreN).map(m=>({ m, avg:byMod[m].scoreSum/byMod[m].scoreN }));
+  modAvgs.sort((a,b)=>b.avg-a.avg);
+  const strongest = modAvgs.length ? modAvgs[0] : null;
+  const weakest = modAvgs.length>1 ? modAvgs[modAvgs.length-1] : null;
+
+  statsEl.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-tile"><div class="st-val">${overall!=null?overall+'%':'—'}</div><div class="st-lbl">Competency</div><div class="st-sub">${scored.length} scored attempt${scored.length===1?'':'s'}</div></div>
+      <div class="stat-tile"><div class="st-val">${rows.length}</div><div class="st-lbl">Total attempts</div><div class="st-sub">across all modules</div></div>
+      <div class="stat-tile"><div class="st-val">${streak}</div><div class="st-lbl">Day streak</div><div class="st-sub">${streak? 'keep it going':'train today to start one'}</div></div>
+    </div>
+    ${(strongest||weakest) ? `<div class="stat-row" style="grid-template-columns:1fr 1fr;">
+      <div class="stat-tile" style="border-left-color:var(--good);"><div class="st-lbl">Strongest</div><div class="st-sub" style="color:var(--text);font-weight:700;">${strongest?MOD_LABEL[strongest.m]+' · '+Math.round(strongest.avg*100)+'%':'—'}</div></div>
+      <div class="stat-tile" style="border-left-color:var(--warn);"><div class="st-lbl">Focus next</div><div class="st-sub" style="color:var(--text);font-weight:700;">${weakest?MOD_LABEL[weakest.m]+' · '+Math.round(weakest.avg*100)+'%':'—'}</div></div>
+    </div>` : ''}
+    <h3 class="progress-section-h">By module</h3>
+    <div id="modBars"></div>`;
+
+  const modBars = document.getElementById('modBars');
+  const mods = MOD_ORDER.filter(m=>byMod[m]).concat(Object.keys(byMod).filter(m=>!MOD_ORDER.includes(m)));
+  modBars.innerHTML = mods.map(m=>{
+    const info = byMod[m];
+    const avg = info.scoreN ? Math.round(info.scoreSum/info.scoreN*100) : null;
+    return `<div class="modbar-row">
+      <span class="mb-name">${MOD_LABEL[m]||m}</span>
+      <div class="mb-track"><div class="mb-fill" style="width:${avg!=null?avg:0}%;"></div></div>
+      <span class="mb-val">${avg!=null?avg+'%':'—'} · ${info.count}×</span>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = rows.slice(0,50).map(a=>{
+    const d = new Date(a.created_at);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const bits = [];
+    if (a.outcome) bits.push(a.outcome);
+    if (a.critical_errors) bits.push(`${a.critical_errors} critical`);
+    if (a.cautions) bits.push(`${a.cautions} caution${a.cautions>1?'s':''}`);
+    if (a.mode==='exam') bits.push('exam');
+    return `<div class="history-item">
+      <div class="hi-main">
+        <span class="hi-mod">${MOD_LABEL[a.module]||a.module}</span>
+        <span class="hi-title">${escapeHtml(a.scenario_label||a.scenario_id)}</span>
+        <span class="hi-sub">${escapeHtml(bits.join(' · ')) || '—'}</span>
+      </div>
+      <span class="hi-meta">${dateStr}</span>
+    </div>`;
+  }).join('');
+}
+
+const ATTEMPTS_KEY = 'icuSimAttempts_v1';
+function localAttempts(){
+  try { return JSON.parse(localStorage.getItem(ATTEMPTS_KEY) || '[]'); } catch(e){ return []; }
+}
+function pushLocalAttempt(row){
+  try {
+    const arr = localAttempts();
+    arr.unshift(Object.assign({ created_at: new Date().toISOString() }, row));
+    localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(arr.slice(0, 300)));
+  } catch(e){ /* storage unavailable — progress just won't persist locally */ }
 }
 
 async function recordAttempt(row){
+  const full = Object.assign({ mode: examMode ? 'exam' : 'practice' }, row);
+  pushLocalAttempt(full);                       // always keep a local record (works for guests)
   if (!sb || !authUser) return;
   try {
-    await sb.from('attempts').insert(Object.assign({ user_id: authUser.id }, row));
-  } catch(e){ /* non-blocking — a failed save shouldn't interrupt training */ }
+    await sb.from('attempts').insert(Object.assign({ user_id: authUser.id }, full));
+  } catch(e){ /* non-blocking — a failed cloud save shouldn't interrupt training */ }
+}
+
+// Returns a normalised attempts array from the cloud (if signed in) or local storage.
+async function getAttempts(){
+  if (sb && authUser){
+    try {
+      const { data, error } = await sb.from('attempts').select('*').order('created_at', { ascending:false }).limit(300);
+      if (error) throw error;
+      if (data) return { source:'cloud', rows:data };
+    } catch(e){ /* fall back to local below */ }
+  }
+  return { source:'local', rows: localAttempts() };
 }
 
 function showFront(){
@@ -6167,6 +6366,7 @@ function applyAllSettingsButtons(){
   setBtnText('kbNavBtn', kbNavEmphasis ? 'On' : 'Off');
   setBtnText('tempUnitBtn', tempUnit==='F' ? '°F' : '°C');
   setBtnText('refRangesBtn', showRefRanges ? 'On' : 'Off');
+  setBtnText('examModeBtn', examMode ? 'Exam' : 'Practice');
   applyBodyClasses();
 }
 applyAllSettingsButtons();
@@ -6204,6 +6404,7 @@ document.getElementById('reducedMotionBtn').addEventListener('click', ()=>{ redu
 document.getElementById('kbNavBtn').addEventListener('click', ()=>{ kbNavEmphasis=!kbNavEmphasis; applyAllSettingsButtons(); saveSession(); });
 document.getElementById('tempUnitBtn').addEventListener('click', ()=>{ tempUnit = tempUnit==='F'?'C':'F'; applyAllSettingsButtons(); if (S) renderMonitor(); saveSession(); });
 document.getElementById('refRangesBtn').addEventListener('click', ()=>{ showRefRanges=!showRefRanges; applyAllSettingsButtons(); if (S) renderInvest(); saveSession(); });
+document.getElementById('examModeBtn').addEventListener('click', ()=>{ examMode=!examMode; applyAllSettingsButtons(); saveSession(); });
 document.getElementById('clearProgressBtn').addEventListener('click', async ()=>{
   const ok = await confirmModal('Clear saved progress?', 'This clears your saved session and settings, and reloads the app. This cannot be undone.');
   if (ok){ try { localStorage.removeItem(STORAGE_KEY); } catch(e){} location.reload(); }
@@ -7005,8 +7206,21 @@ function gradePrefix(cls){
   return '';
 }
 
+function abgReviewHtml(){
+  const optLabel = (opts,id)=>{ const o=opts.find(x=>x.id===id); return o?o.label:'—'; };
+  const yourInterp = (abgS.primary?ABG_PRIMARY_LABELS[abgS.primary]:'—') + (abgCURRENT.compensationApplicable && abgS.compensation ? ' · '+ABG_COMPENSATION_LABELS[abgS.compensation] : '');
+  const rightInterp = ABG_PRIMARY_LABELS[abgCURRENT.correctPrimary] + (abgCURRENT.correctCompensation ? ' · '+ABG_COMPENSATION_LABELS[abgCURRENT.correctCompensation] : '');
+  const rows = [
+    { q:'Interpretation', your:yourInterp, right:rightInterp, ok:abgS.interpretCorrect, explain:abgCURRENT.interpretExplain },
+    { q:'Diagnosis', your:optLabel(abgCURRENT.diagnosisOptions, abgS.diagnosisChoice), right:optLabel(abgCURRENT.diagnosisOptions, abgCURRENT.correctDiagnosisId), ok:abgS.diagnosisCorrect, explain:abgCURRENT.diagnosisExplain },
+    { q:'Treatment', your:optLabel(abgCURRENT.treatmentOptions, abgS.treatChoice), right:optLabel(abgCURRENT.treatmentOptions, abgCURRENT.correctTreatmentId), ok:abgS.treatCorrect, explain:abgCURRENT.treatmentExplain }
+  ];
+  return rows.map(r=>`<div class="quiz-explain ${r.ok?'correct':'incorrect'}"><b>${r.ok?'✓':'✗'} ${r.q}</b><br>Your answer: ${escapeHtml(r.your)}${r.ok?'':'<br>Correct: '+escapeHtml(r.right)}<br><span style="color:var(--text-dim);">${r.explain}</span></div>`).join('');
+}
+
 function renderAbgStep(){
   const panel = document.getElementById('abgStepPanel');
+  const reveal = !examMode;   // exam mode withholds per-step grading + explanations until the summary
   if (abgS.step==='interpret'){
     const needsComp = abgCURRENT.compensationApplicable && abgS.primary && abgS.primary!=='mixed' && abgS.primary!=='normal';
     let html = `<p class="quiz-step-label">Step 1 of 3 — Interpret</p>
@@ -7014,7 +7228,7 @@ function renderAbgStep(){
       <div class="quiz-options" id="abgPrimaryOptions">`;
     abgCURRENT.primaryOptions.forEach(id=>{
       let cls='quiz-option';
-      if (abgS.interpretSubmitted){ if(id===abgCURRENT.correctPrimary) cls+=' correct'; else if(id===abgS.primary) cls+=' incorrect'; }
+      if (abgS.interpretSubmitted && reveal){ if(id===abgCURRENT.correctPrimary) cls+=' correct'; else if(id===abgS.primary) cls+=' incorrect'; }
       else if (abgS.primary===id) cls+=' picked';
       html += `<button class="${cls}" data-primary="${id}" ${abgS.interpretSubmitted?'disabled':''}>${gradePrefix(cls)}${ABG_PRIMARY_LABELS[id]}</button>`;
     });
@@ -7023,7 +7237,7 @@ function renderAbgStep(){
       html += `<p style="font-size:13.5px;color:var(--text-dim);">Is it compensated?</p><div class="quiz-options" id="abgCompOptions">`;
       Object.keys(ABG_COMPENSATION_LABELS).forEach(id=>{
         let cls='quiz-option';
-        if (abgS.interpretSubmitted){ if(id===abgCURRENT.correctCompensation) cls+=' correct'; else if(id===abgS.compensation) cls+=' incorrect'; }
+        if (abgS.interpretSubmitted && reveal){ if(id===abgCURRENT.correctCompensation) cls+=' correct'; else if(id===abgS.compensation) cls+=' incorrect'; }
         else if (abgS.compensation===id) cls+=' picked';
         html += `<button class="${cls}" data-comp="${id}" ${abgS.interpretSubmitted?'disabled':''}>${gradePrefix(cls)}${ABG_COMPENSATION_LABELS[id]}</button>`;
       });
@@ -7032,8 +7246,8 @@ function renderAbgStep(){
     if (!abgS.interpretSubmitted){
       html += `<button class="btn primary" id="abgSubmitBtn">Submit</button>`;
     } else {
-      html += `<div class="quiz-explain ${abgS.interpretCorrect?'correct':'incorrect'}">${abgS.interpretCorrect?'Correct. ':'Not quite. '}${abgCURRENT.interpretExplain}</div>
-        <button class="btn primary" id="abgNextBtn">Continue to Diagnose</button>`;
+      if (reveal) html += `<div class="quiz-explain ${abgS.interpretCorrect?'correct':'incorrect'}">${abgS.interpretCorrect?'Correct. ':'Not quite. '}${abgCURRENT.interpretExplain}</div>`;
+      html += `<button class="btn primary" id="abgNextBtn">Continue to Diagnose</button>`;
     }
     panel.innerHTML = html;
     if (!abgS.interpretSubmitted){
@@ -7050,13 +7264,14 @@ function renderAbgStep(){
       <div class="quiz-options" id="abgDiagOptions">`;
     abgCURRENT.diagnosisOptions.forEach(opt=>{
       let cls='quiz-option';
-      if (abgS.diagnosisSubmitted){ if(opt.id===abgCURRENT.correctDiagnosisId) cls+=' correct'; else if(opt.id===abgS.diagnosisChoice) cls+=' incorrect'; }
+      if (abgS.diagnosisSubmitted && reveal){ if(opt.id===abgCURRENT.correctDiagnosisId) cls+=' correct'; else if(opt.id===abgS.diagnosisChoice) cls+=' incorrect'; }
+      else if (abgS.diagnosisSubmitted && opt.id===abgS.diagnosisChoice) cls+=' picked';
       html += `<button class="${cls}" data-diag="${opt.id}" ${abgS.diagnosisSubmitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
     });
     html += `</div>`;
     if (abgS.diagnosisSubmitted){
-      html += `<div class="quiz-explain ${abgS.diagnosisCorrect?'correct':'incorrect'}">${abgS.diagnosisCorrect?'Correct. ':'Not quite. '}${abgCURRENT.diagnosisExplain}</div>
-        <button class="btn primary" id="abgNextBtn">Continue to Treat</button>`;
+      if (reveal) html += `<div class="quiz-explain ${abgS.diagnosisCorrect?'correct':'incorrect'}">${abgS.diagnosisCorrect?'Correct. ':'Not quite. '}${abgCURRENT.diagnosisExplain}</div>`;
+      html += `<button class="btn primary" id="abgNextBtn">Continue to Treat</button>`;
     }
     panel.innerHTML = html;
     if (!abgS.diagnosisSubmitted) panel.querySelectorAll('[data-diag]').forEach(b=>b.addEventListener('click', ()=>abgChooseDiagnosis(b.dataset.diag)));
@@ -7067,20 +7282,21 @@ function renderAbgStep(){
       <div class="quiz-options" id="abgTreatOptions">`;
     abgCURRENT.treatmentOptions.forEach(opt=>{
       let cls='quiz-option';
-      if (abgS.treatSubmitted){ if(opt.id===abgCURRENT.correctTreatmentId) cls+=' correct'; else if(opt.id===abgS.treatChoice) cls+=' incorrect'; }
+      if (abgS.treatSubmitted && reveal){ if(opt.id===abgCURRENT.correctTreatmentId) cls+=' correct'; else if(opt.id===abgS.treatChoice) cls+=' incorrect'; }
+      else if (abgS.treatSubmitted && opt.id===abgS.treatChoice) cls+=' picked';
       html += `<button class="${cls}" data-treat="${opt.id}" ${abgS.treatSubmitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
     });
     html += `</div>`;
     if (abgS.treatSubmitted){
-      html += `<div class="quiz-explain ${abgS.treatCorrect?'correct':'incorrect'}">${abgS.treatCorrect?'Correct. ':'Not quite. '}${abgCURRENT.treatmentExplain}</div>
-        <button class="btn primary" id="abgNextBtn">See summary</button>`;
+      if (reveal) html += `<div class="quiz-explain ${abgS.treatCorrect?'correct':'incorrect'}">${abgS.treatCorrect?'Correct. ':'Not quite. '}${abgCURRENT.treatmentExplain}</div>`;
+      html += `<button class="btn primary" id="abgNextBtn">See summary</button>`;
     }
     panel.innerHTML = html;
     if (!abgS.treatSubmitted) panel.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click', ()=>abgChooseTreatment(b.dataset.treat)));
     else document.getElementById('abgNextBtn').addEventListener('click', abgNextStep);
   } else if (abgS.step==='summary'){
     const score = abgScore();
-    const msg = score===3 ? 'Clean sweep — interpretation, diagnosis, and treatment all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations above before moving on.';
+    const msg = score===3 ? 'Clean sweep — interpretation, diagnosis, and treatment all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations before moving on.';
     if (!abgS._recorded){
       abgS._recorded = true;
       recordAttempt({
@@ -7089,9 +7305,10 @@ function renderAbgStep(){
         detail:{ interpret:abgS.interpretCorrect, diagnose:abgS.diagnosisCorrect, treat:abgS.treatCorrect }
       });
     }
-    panel.innerHTML = `<p class="quiz-step-label">Summary</p>
+    panel.innerHTML = `<p class="quiz-step-label">Summary${examMode?' · Exam':''}</p>
       <div class="quiz-score">${score}/3</div>
       <p style="font-size:13.5px;color:var(--text-dim);">${msg}</p>
+      ${examMode ? '<h3 class="progress-section-h">Review</h3>'+abgReviewHtml() : ''}
       <div class="debrief-actions" style="margin-top:16px;">
         <button class="btn primary" id="abgRestartBtn">Try this case again</button>
         <button class="btn" id="abgBackToListBtn">Back to case list</button>
@@ -7911,23 +8128,38 @@ function ecgNextStep(){
 function ecgScore(){ return [ecgS.rhythmCorrect, ecgS.diagnosisCorrect, ecgS.mgmtCorrect].filter(Boolean).length; }
 
 function ecgOptionsBlock(opts, dataAttr, chosen, submitted, correctId){
+  const reveal = !examMode;
   let html = `<div class="quiz-options">`;
   opts.forEach(opt=>{
     let cls='quiz-option';
-    if (submitted){ if(opt.id===correctId) cls+=' correct'; else if(opt.id===chosen) cls+=' incorrect'; }
+    if (submitted && reveal){ if(opt.id===correctId) cls+=' correct'; else if(opt.id===chosen) cls+=' incorrect'; }
+    else if (submitted && opt.id===chosen) cls+=' picked';
     html += `<button class="${cls}" data-${dataAttr}="${opt.id}" ${submitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
   });
   return html + `</div>`;
 }
 
+function ecgReviewHtml(){
+  const optLabel = (opts,id)=>{ const o=opts.find(x=>x.id===id); return o?o.label:'—'; };
+  const rows = [
+    { q:'Rhythm', your:optLabel(ecgCURRENT.rhythmOptions, ecgS.rhythmChoice), right:optLabel(ecgCURRENT.rhythmOptions, ecgCURRENT.correctRhythmId), ok:ecgS.rhythmCorrect, explain:ecgCURRENT.rhythmExplain },
+    { q:'Interpretation', your:optLabel(ecgCURRENT.diagnosisOptions, ecgS.diagnosisChoice), right:optLabel(ecgCURRENT.diagnosisOptions, ecgCURRENT.correctDiagnosisId), ok:ecgS.diagnosisCorrect, explain:ecgCURRENT.diagnosisExplain },
+    { q:'Management', your:optLabel(ecgCURRENT.managementOptions, ecgS.mgmtChoice), right:optLabel(ecgCURRENT.managementOptions, ecgCURRENT.correctManagementId), ok:ecgS.mgmtCorrect, explain:ecgCURRENT.managementExplain }
+  ];
+  return rows.map(r=>`<div class="quiz-explain ${r.ok?'correct':'incorrect'}"><b>${r.ok?'✓':'✗'} ${r.q}</b><br>Your answer: ${escapeHtml(r.your)}${r.ok?'':'<br>Correct: '+escapeHtml(r.right)}<br><span style="color:var(--text-dim);">${r.explain}</span></div>`).join('');
+}
+
 function renderEcgStep(){
   const panel = document.getElementById('ecgStepPanel');
+  const reveal = !examMode;
   if (ecgS.step==='rhythm'){
     let html = `<p class="quiz-step-label">Step 1 of 3 — Identify the rhythm</p>
       <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is this rhythm?</p>`;
     html += ecgOptionsBlock(ecgCURRENT.rhythmOptions, 'rhythm', ecgS.rhythmChoice, ecgS.rhythmSubmitted, ecgCURRENT.correctRhythmId);
-    if (ecgS.rhythmSubmitted) html += `<div class="quiz-explain ${ecgS.rhythmCorrect?'correct':'incorrect'}">${ecgS.rhythmCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.rhythmExplain}</div>
-      <button class="btn primary" id="ecgNextBtn">Continue to interpretation</button>`;
+    if (ecgS.rhythmSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${ecgS.rhythmCorrect?'correct':'incorrect'}">${ecgS.rhythmCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.rhythmExplain}</div>`;
+      html += `<button class="btn primary" id="ecgNextBtn">Continue to interpretation</button>`;
+    }
     panel.innerHTML = html;
     if (!ecgS.rhythmSubmitted) panel.querySelectorAll('[data-rhythm]').forEach(b=>b.addEventListener('click', ()=>ecgChooseRhythm(b.dataset.rhythm)));
     else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
@@ -7935,8 +8167,10 @@ function renderEcgStep(){
     let html = `<p class="quiz-step-label">Step 2 of 3 — Interpretation</p>
       <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is the clinical interpretation?</p>`;
     html += ecgOptionsBlock(ecgCURRENT.diagnosisOptions, 'diag', ecgS.diagnosisChoice, ecgS.diagnosisSubmitted, ecgCURRENT.correctDiagnosisId);
-    if (ecgS.diagnosisSubmitted) html += `<div class="quiz-explain ${ecgS.diagnosisCorrect?'correct':'incorrect'}">${ecgS.diagnosisCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.diagnosisExplain}</div>
-      <button class="btn primary" id="ecgNextBtn">Continue to management</button>`;
+    if (ecgS.diagnosisSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${ecgS.diagnosisCorrect?'correct':'incorrect'}">${ecgS.diagnosisCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.diagnosisExplain}</div>`;
+      html += `<button class="btn primary" id="ecgNextBtn">Continue to management</button>`;
+    }
     panel.innerHTML = html;
     if (!ecgS.diagnosisSubmitted) panel.querySelectorAll('[data-diag]').forEach(b=>b.addEventListener('click', ()=>ecgChooseDiagnosis(b.dataset.diag)));
     else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
@@ -7944,14 +8178,16 @@ function renderEcgStep(){
     let html = `<p class="quiz-step-label">Step 3 of 3 — Management</p>
       <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is the most appropriate immediate management?</p>`;
     html += ecgOptionsBlock(ecgCURRENT.managementOptions, 'mgmt', ecgS.mgmtChoice, ecgS.mgmtSubmitted, ecgCURRENT.correctManagementId);
-    if (ecgS.mgmtSubmitted) html += `<div class="quiz-explain ${ecgS.mgmtCorrect?'correct':'incorrect'}">${ecgS.mgmtCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.managementExplain}</div>
-      <button class="btn primary" id="ecgNextBtn">See summary</button>`;
+    if (ecgS.mgmtSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${ecgS.mgmtCorrect?'correct':'incorrect'}">${ecgS.mgmtCorrect?'Correct. ':'Not quite. '}${ecgCURRENT.managementExplain}</div>`;
+      html += `<button class="btn primary" id="ecgNextBtn">See summary</button>`;
+    }
     panel.innerHTML = html;
     if (!ecgS.mgmtSubmitted) panel.querySelectorAll('[data-mgmt]').forEach(b=>b.addEventListener('click', ()=>ecgChooseMgmt(b.dataset.mgmt)));
     else document.getElementById('ecgNextBtn').addEventListener('click', ecgNextStep);
   } else if (ecgS.step==='summary'){
     const score = ecgScore();
-    const msg = score===3 ? 'Clean sweep — rhythm, interpretation, and management all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations above before moving on.';
+    const msg = score===3 ? 'Clean sweep — rhythm, interpretation, and management all correct.' : score===0 ? 'Worth reviewing this one from the start — none of the three steps landed.' : 'Partial credit — review the explanations before moving on.';
     if (!ecgS._recorded){
       ecgS._recorded = true;
       recordAttempt({
@@ -7960,9 +8196,10 @@ function renderEcgStep(){
         detail:{ rhythm:ecgS.rhythmCorrect, interpret:ecgS.diagnosisCorrect, manage:ecgS.mgmtCorrect }
       });
     }
-    panel.innerHTML = `<p class="quiz-step-label">Summary</p>
+    panel.innerHTML = `<p class="quiz-step-label">Summary${examMode?' · Exam':''}</p>
       <div class="quiz-score">${score}/3</div>
       <p style="font-size:13.5px;color:var(--text-dim);">${msg}</p>
+      ${examMode ? '<h3 class="progress-section-h">Review</h3>'+ecgReviewHtml() : ''}
       <div class="debrief-actions" style="margin-top:16px;">
         <button class="btn primary" id="ecgRestartBtn">Try this rhythm again</button>
         <button class="btn" id="ecgBackToListBtn">Back to rhythm list</button>
