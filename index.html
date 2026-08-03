@@ -6330,6 +6330,30 @@ const VENT_PRESETS = {
     physio:{compliance:48,resistance:9,shuntFraction:0.10,deadSpaceFraction:0.30,hco3:12,baselineSBP:98},
     initialLog:'Patient intubated peri-arrest with a severe metabolic (lactic) acidosis and a markedly low bicarbonate. Before intubation they were hyperventilating hard to compensate. Lung mechanics are essentially normal — the acid-base status is the driver.',
     teachingNote:'This is the classic post-intubation pitfall in severe metabolic acidosis: the patient was blowing off large volumes of CO2 to hold their pH up, and if you set a comfortable "normal" rate the PaCO2 rises and the pH plummets, sometimes to cardiac arrest. Match (or exceed) their pre-intubation minute ventilation with a high rate/tidal volume while the underlying acidosis is treated — and watch expiratory time so you do not create auto-PEEP.'
+  },
+  cardiogenic_oedema:{
+    id:'cardiogenic_oedema', label:'Cardiogenic pulmonary oedema, post-intubation', tag:'Restrictive · recruitable',
+    desc:'Flash pulmonary oedema from acute heart failure, intubated for exhaustion. Alveoli are flooded rather than scarred, so compliance is low but the lung is highly recruitable — PEEP both improves oxygenation and offloads the failing left ventricle.',
+    initSettings:{mode:'VC',rr:20,vt:450,flow:50,ti:1.0,pInsp:20,peep:6,fio2:70,trigger:2},
+    physio:{compliance:28,resistance:12,shuntFraction:0.30,deadSpaceFraction:0.35,hco3:22,baselineSBP:122},
+    initialLog:'Patient intubated for exhaustion from flash cardiogenic pulmonary oedema. Reduced compliance and a significant shunt from alveolar flooding, with hypoxaemia. This is a wet lung, not a scarred one.',
+    teachingNote:'Unlike fibrosis, this low-compliance lung is highly recruitable — PEEP pushes fluid out of the alveoli and, by raising intrathoracic pressure, reduces LV preload and afterload, so it treats both the oxygenation and the heart failure. Titrate PEEP up (watching BP), while the real fix is happening in parallel: diuresis, afterload reduction (e.g. GTN), and treating the cause. Distinguish this from ARDS, where the fluid is inflammatory rather than hydrostatic.'
+  },
+  neuromuscular:{
+    id:'neuromuscular', label:'Neuromuscular respiratory failure (Guillain-Barré)', tag:'Pump failure · normal lungs',
+    desc:'Ascending weakness from Guillain-Barré syndrome, intubated for a failing respiratory pump and a weak cough. The lungs themselves are normal — the problem is the bellows, not the gas exchanger.',
+    initSettings:{mode:'VC',rr:14,vt:480,flow:45,ti:1.0,pInsp:14,peep:5,fio2:30,trigger:2},
+    physio:{compliance:50,resistance:9,shuntFraction:0.06,deadSpaceFraction:0.32,hco3:24,baselineSBP:120},
+    initialLog:'Patient with Guillain-Barré syndrome intubated for neuromuscular respiratory failure (falling vital capacity and a weak cough), not for a primary lung problem. Lung mechanics are essentially normal.',
+    teachingNote:'The lungs are normal here, so the numbers look easy — the pitfall is the opposite of the others: do not rush to wean. Recovery of the respiratory pump lags behind the ventilator looking "fine", and premature extubation of a patient who still cannot cough or maintain their vital capacity leads to atelectasis, aspiration, and reintubation. Provide full support, protect the airway, and wean only once objective respiratory muscle strength (e.g. vital capacity) has genuinely recovered.'
+  },
+  post_arrest_vent:{
+    id:'post_arrest_vent', label:'Post-cardiac-arrest ventilation (ROSC)', tag:'Neuroprotective targets',
+    desc:'Return of spontaneous circulation after a cardiac arrest, now ventilated and comatose. The lungs may be reasonable, but the goal shifts to protecting the brain: strict normocapnia and avoiding hyperoxia.',
+    initSettings:{mode:'VC',rr:16,vt:450,flow:50,ti:1.0,pInsp:16,peep:6,fio2:90,trigger:2},
+    physio:{compliance:42,resistance:11,shuntFraction:0.14,deadSpaceFraction:0.35,hco3:20,baselineSBP:112},
+    initialLog:'Comatose patient ventilated after ROSC from a cardiac arrest. FiO2 was left at 90% during the resuscitation. Lung mechanics are moderately affected, but the priority now is post-arrest neuroprotective ventilation.',
+    teachingNote:'Post-ROSC the targets are about the brain, not just the lungs: aim for strict normocapnia (both hypocapnia, which causes cerebral vasoconstriction, and hypercapnia are harmful), and wean the FiO2 down to target normoxia — sustained hyperoxia after arrest worsens reperfusion injury and outcomes. So here your job is to bring the FiO2 down to keep SpO2 in a safe target range and adjust ventilation to keep PaCO2 normal, not to chase a supranormal oxygen level.'
   }
 };
 let ventCURRENT = null, ventS = null, ventWaveT = 0, ventIntervalId = null;
@@ -6852,6 +6876,78 @@ const ABG_PRESETS = {
     ],
     correctTreatmentId:'a',
     treatmentExplain:'The mainstay is restoring volume and electrolytes (diarrhoea also loses potassium) and treating the cause of the diarrhoea — the acidosis resolves as perfusion and bicarbonate handling recover. Insulin and urinary alkalinisation treat other poisonings/acidoses, and the vomiting-focused answer is the wrong clinical picture.'
+  },
+  copd_chronic:{
+    id:'copd_chronic', label:'Chronic compensated respiratory acidosis', tag:'Respiratory acidosis',
+    vignette:'66M with severe COPD, seen in clinic at his stable baseline. He is comfortable at rest on home oxygen. This is his usual gas.',
+    values:{ph:7.37,paco2:55,hco3:31,pao2:62},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'resp_acidosis', compensationApplicable:true, correctCompensation:'partial',
+    interpretExplain:'A mildly low pH (7.37) with a high PaCO2 (55) is a respiratory acidosis. The HCO3 is elevated (31), showing substantial renal (metabolic) compensation that has developed over years — this is chronic, not acute. Because the pH has not fully normalised to 7.40 it is best described as partially compensated, and this near-baseline gas is his stable "normal".',
+    diagnosisOptions:[
+      {id:'a', label:'Chronic type 2 respiratory failure in COPD (a stable CO2 retainer)'},
+      {id:'b', label:'Acute opioid overdose'},
+      {id:'c', label:'Diabetic ketoacidosis'},
+      {id:'d', label:'Acute pulmonary embolism'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'A comfortable COPD patient at his baseline with a chronically elevated bicarbonate compensating a high PaCO2 is a stable chronic CO2 retainer (chronic type 2 respiratory failure). An acute cause like opioid overdose would show a normal bicarbonate (no time to compensate), and DKA/PE produce a low PaCO2, the opposite pattern.',
+    treatmentOptions:[
+      {id:'a', label:'Continue his usual management; use controlled (target-range) oxygen and avoid over-oxygenation'},
+      {id:'b', label:'Intubate and hyperventilate to normalise the PaCO2'},
+      {id:'c', label:'Give IV sodium bicarbonate'},
+      {id:'d', label:'Start an insulin infusion'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:"This is his compensated baseline, so the priority is to leave the chronic picture alone and simply use controlled oxygen to a target saturation (typically 88–92% in a known retainer) — driving the PaCO2 down to \"normal\" or over-oxygenating can be harmful. Aggressive ventilation, bicarbonate, and insulin all treat problems this patient does not have."
+  },
+  lactic_acidosis:{
+    id:'lactic_acidosis', label:'High anion-gap metabolic acidosis — lactic', tag:'Metabolic acidosis',
+    vignette:'58F with septic shock from pneumonia. She is hypotensive and mottled with a lactate of 7.2 mmol/L. Na 138, Cl 100 (a high anion gap).',
+    values:{ph:7.25,paco2:26,hco3:11,pao2:88},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'met_acidosis', compensationApplicable:true, correctCompensation:'partial',
+    interpretExplain:"Low pH (7.25) with a low HCO3 (11) is a primary metabolic acidosis, and the raised anion gap points to an added acid — here, lactate. Winter's formula predicts an expected PaCO2 of about 1.5×11+8=24.5 (±2); the measured 26 is appropriate, so respiratory compensation is present but partial (pH not yet normalised).",
+    diagnosisOptions:[
+      {id:'a', label:'Type A lactic acidosis from septic shock (tissue hypoperfusion)'},
+      {id:'b', label:'Diabetic ketoacidosis'},
+      {id:'c', label:'Chronic kidney disease'},
+      {id:'d', label:'Prolonged vomiting'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Hypotension, mottling, and a lactate of 7.2 in septic shock is a type A (hypoperfusion) lactic acidosis — a raised anion-gap metabolic acidosis. There is no history of missed insulin/ketosis (DKA), the acidosis is acute rather than the chronic picture of CKD, and vomiting causes an alkalosis.',
+    treatmentOptions:[
+      {id:'a', label:'Treat the shock: fluid resuscitation, early antibiotics, and vasopressors to restore perfusion'},
+      {id:'b', label:'Give IV sodium bicarbonate to correct the pH'},
+      {id:'c', label:'Start an insulin infusion'},
+      {id:'d', label:'Urinary alkalinisation'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'The lactate is a marker of hypoperfusion, so the treatment is to fix the shock — fluids, prompt antibiotics, source control, and vasopressors — and the lactic acidosis clears as perfusion is restored. Bicarbonate does not treat the underlying problem and is not routinely recommended, and insulin/urinary alkalinisation address different diagnoses.'
+  },
+  toxic_alcohol:{
+    id:'toxic_alcohol', label:'High anion-gap metabolic acidosis — toxic alcohol', tag:'Metabolic acidosis',
+    vignette:'42M brought in confused after drinking from an unlabelled bottle in his garage. Severe acidosis with a high anion gap and a raised osmolar gap; visual disturbance reported.',
+    values:{ph:7.18,paco2:22,hco3:8,pao2:96},
+    primaryOptions:['resp_acidosis','resp_alkalosis','met_acidosis','met_alkalosis','mixed','normal'],
+    correctPrimary:'met_acidosis', compensationApplicable:true, correctCompensation:'partial',
+    interpretExplain:"A very low pH (7.18) with a very low HCO3 (8) is a severe primary metabolic acidosis. Winter's formula predicts an expected PaCO2 of about 1.5×8+8=20 (±2); the measured 22 is appropriate partial respiratory compensation. The combination of a high anion gap AND a raised osmolar gap is the fingerprint of a toxic alcohol ingestion.",
+    diagnosisOptions:[
+      {id:'a', label:'Toxic alcohol poisoning (methanol or ethylene glycol)'},
+      {id:'b', label:'Diabetic ketoacidosis'},
+      {id:'c', label:'Lactic acidosis from exercise'},
+      {id:'d', label:'Normal anion-gap acidosis from diarrhoea'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Confusion and visual disturbance after drinking an unknown garage liquid, with a high anion-gap metabolic acidosis AND a raised osmolar gap, is classic for a toxic alcohol (methanol causes the visual symptoms; ethylene glycol causes renal injury). DKA and exertional lactic acidosis do not fit the history or the osmolar gap, and this is a raised- (not normal-) anion-gap acidosis.',
+    treatmentOptions:[
+      {id:'a', label:'Block metabolism with fomepizole (or ethanol), give the relevant cofactors, and arrange urgent haemodialysis'},
+      {id:'b', label:'IV insulin and fluids'},
+      {id:'c', label:'Reassure and observe'},
+      {id:'d', label:'IV normal saline with potassium for gastric losses'}
+    ],
+    correctTreatmentId:'a',
+    treatmentExplain:'Toxic alcohols are lethal because they are metabolised to toxic acids, so treatment blocks alcohol dehydrogenase with fomepizole (or ethanol), gives cofactors, and removes the toxin and corrects the acidosis with urgent haemodialysis. Insulin, observation, and gastric-loss replacement all miss a time-critical poisoning.'
   }
 };
 let abgCURRENT = null, abgS = null;
@@ -7263,6 +7359,79 @@ const PROC_PRESETS = {
         {id:'b', label:'Leave the foreskin retracted and record nothing', correct:false, severity:'serious', vitalsEffect:{}, feedback:'A foreskin left retracted can swell into a paraphimosis — a painful urological emergency — and undocumented residual volumes miss important post-obstructive diuresis.'}
       ]}
     ]
+  },
+  io_access:{
+    id:'io_access', label:'Intraosseous (IO) Access', tag:'Emergency access',
+    vignette:'A peri-arrest 6-year-old in septic shock. Two attempts at peripheral IV access have failed and drugs/fluids are needed now.',
+    initVitals:{hr:170, sbp:66, spo2:90, gcs:11},
+    steps:[
+      {id:'indication', title:'Deciding to go intraosseous', options:[
+        {id:'a', label:'After failed/ difficult IV access in an emergency, move to IO access promptly rather than making repeated cannulation attempts', correct:true, feedback:'Correct — in a peri-arrest patient, prolonged attempts at difficult IV access waste critical time; IO access is fast, reliable, and delivers drugs/fluids just as effectively.'},
+        {id:'b', label:'Keep attempting peripheral IV access repeatedly until you succeed', correct:false, severity:'serious', vitalsEffect:{sbp:-8}, feedback:'Repeated failed IV attempts delay resuscitation drugs and fluids while the patient deteriorates — escalate to IO (or central) access early in an emergency.'}
+      ]},
+      {id:'site', title:'Site selection', options:[
+        {id:'a', label:'Choose a site away from any fracture or previous IO attempt (e.g. the proximal tibia), avoiding infected or injured skin', correct:true, feedback:'Correct — a fractured bone or a previously punctured one will leak infusate out of the cortex, so pick an intact site with landmarks you can identify.'},
+        {id:'b', label:'Insert into a limb with an obvious fracture proximal to the site', correct:false, severity:'serious', vitalsEffect:{}, feedback:'Placing an IO in a fractured bone lets fluid extravasate through the fracture instead of reaching the circulation, and risks a compartment syndrome — always use an uninjured bone.'}
+      ]},
+      {id:'insert', title:'Insertion & confirmation', options:[
+        {id:'a', label:'Insert perpendicular to the bone until a give is felt, confirm it stands unsupported, then aspirate marrow and/or flush to confirm placement', correct:true, feedback:'Correct — a needle that stands unsupported plus a successful flush (without swelling) confirms an intramedullary position before you use it.'},
+        {id:'b', label:'Assume it is correctly placed and give a rapid drug bolus without any flush or check', correct:false, severity:'serious', vitalsEffect:{}, feedback:'Using an unconfirmed IO risks infusing into the soft tissues — causing extravasation and a compartment syndrome and delivering no drug. Confirm with a flush first.'}
+      ]},
+      {id:'use', title:'Using the IO', options:[
+        {id:'a', label:'Give a pressurised flush/infusion (IO flow needs pressure), and provide analgesia for the pain of infusion in a conscious patient', correct:true, feedback:'Correct — marrow resists flow, so IO fluids need a pressure bag or syringe pushes, and the infusion is painful in an awake patient.'},
+        {id:'b', label:'Rely on gravity alone and expect a free-flowing infusion like a peripheral vein', correct:false, severity:'minor', feedback:'IO infusions rarely run under gravity alone — without pressure the flow is inadequate for resuscitation.'}
+      ]},
+      {id:'plan', title:'Ongoing plan', options:[
+        {id:'a', label:'Use the IO to deliver immediate resuscitation, then obtain definitive vascular access and remove the IO within about 24 hours', correct:true, feedback:'Correct — the IO is a bridge; secure definitive access when the patient is stabilised and remove the IO within roughly 24 hours to limit infection/osteomyelitis risk.'},
+        {id:'b', label:'Leave the IO in place for several days as the definitive line', correct:false, severity:'minor', feedback:'Leaving an IO in beyond ~24 hours raises the risk of osteomyelitis — it is a temporary bridge, not a definitive line.'}
+      ]}
+    ]
+  },
+  cricothyroidotomy:{
+    id:'cricothyroidotomy', label:'Emergency Surgical Cricothyroidotomy', tag:'Airway of last resort',
+    vignette:'A "can\'t intubate, can\'t oxygenate" emergency: a patient with facial trauma cannot be intubated or bag-mask ventilated, and the SpO2 is falling fast despite maximal efforts.',
+    initVitals:{hr:130, sbp:140, spo2:72, gcs:6},
+    steps:[
+      {id:'declare', title:'Recognising the emergency', options:[
+        {id:'a', label:'Declare the "can\'t intubate, can\'t oxygenate" (CICO) emergency and move immediately to a front-of-neck airway', correct:true, feedback:'Correct — once oxygenation cannot be achieved by any other means, declaring CICO and proceeding without delay to a surgical airway is the only thing that will save the patient.'},
+        {id:'b', label:'Make several more attempts at oral intubation first', correct:false, severity:'fatal-risk', vitalsEffect:{spo2:-10}, feedback:'Repeated intubation attempts in a CICO situation waste the seconds the patient has left — the SpO2 is falling further. This is the moment to cut the neck, not to try again from above.'}
+      ]},
+      {id:'landmark', title:'Landmarking', options:[
+        {id:'a', label:'Identify the cricothyroid membrane (the soft gap between the thyroid and cricoid cartilages), extending the neck if safe', correct:true, feedback:'Correct — the cricothyroid membrane is the target: superficial, relatively avascular, and clear of the thyroid gland and major vessels.'},
+        {id:'b', label:'Make the incision lower down, over the tracheal rings or the thyroid gland', correct:false, severity:'serious', vitalsEffect:{sbp:-15, hr:15}, feedback:'Cutting over the thyroid gland or lower trachea hits a vascular, deeper structure — causing heavy bleeding that obscures the field. Stay at the cricothyroid membrane.'}
+      ]},
+      {id:'incision', title:'Incision & tube', options:[
+        {id:'a', label:'Make a vertical skin incision then a horizontal stab through the membrane, hold the tract open (bougie/hook), and pass a small tube', correct:true, feedback:'Correct — a vertical skin incision lets you find the membrane by palpation in a bloody field, and keeping the tract open guides a small tube into the trachea.'},
+        {id:'b', label:'Make a large horizontal skin incision straight across without palpating the membrane first', correct:false, severity:'serious', vitalsEffect:{sbp:-10}, feedback:'A blind transverse skin cut without palpation risks lateral structures and heavy bleeding — the vertical skin incision is safer for locating the membrane by feel.'}
+      ]},
+      {id:'confirm', title:'Confirm & secure', options:[
+        {id:'a', label:'Confirm tracheal placement with waveform capnography and chest rise, then secure the tube', correct:true, feedback:'Correct — even in a surgical airway, waveform capnography is the definitive confirmation that the tube is in the trachea.'},
+        {id:'b', label:'Assume placement is correct and stop monitoring', correct:false, severity:'fatal-risk', vitalsEffect:{spo2:-12}, feedback:'A false passage into the tissues gives no ventilation — an unconfirmed surgical airway is still an unsecured airway, and the SpO2 keeps falling until it is recognised.'}
+      ]}
+    ]
+  },
+  cardioversion:{
+    id:'cardioversion', label:'Synchronised DC Cardioversion', tag:'Cardiac',
+    vignette:'A patient in a fast, regular tachyarrhythmia with a pulse but who is haemodynamically unstable (hypotensive and clammy). You are performing synchronised electrical cardioversion.',
+    initVitals:{hr:184, sbp:84, spo2:95, gcs:14},
+    steps:[
+      {id:'prep', title:'Preparation', options:[
+        {id:'a', label:'Give procedural sedation/analgesia to the conscious patient, ensure monitoring, oxygen, and resuscitation equipment are ready', correct:true, feedback:'Correct — a conscious patient must be sedated for a shock, and full monitoring plus resus backup is essential before delivering energy.'},
+        {id:'b', label:'Shock the awake patient immediately without any sedation', correct:false, severity:'minor', feedback:'Cardioverting a conscious patient without sedation is painful and distressing and should be avoided unless they are peri-arrest — take the moment to sedate.'}
+      ]},
+      {id:'sync', title:'Setting up the shock', options:[
+        {id:'a', label:'Engage the SYNC mode so the shock is timed to the R wave, and confirm the sync markers are tracking the QRS complexes', correct:true, feedback:'Correct — synchronising the shock to the R wave avoids delivering energy during the vulnerable T-wave period.'},
+        {id:'b', label:'Deliver an unsynchronised shock for this organised rhythm with a pulse', correct:false, severity:'fatal-risk', vitalsEffect:{sbp:-30, hr:-40}, feedback:'A shock delivered on the T wave ("R-on-T") in an organised rhythm can precipitate ventricular fibrillation — exactly what has now happened, and the patient has arrested. Always synchronise for a perfusing organised tachyarrhythmia.'}
+      ]},
+      {id:'deliver', title:'Delivering the shock', options:[
+        {id:'a', label:'Confirm everyone is clear, deliver the synchronised shock at an appropriate energy, and immediately reassess the rhythm and pulse', correct:true, feedback:'Correct — a clear-and-shock safety call, an appropriate energy level, and immediate reassessment complete the shock safely.'},
+        {id:'b', label:'Deliver the shock without checking that the team is clear of the patient', correct:false, severity:'serious', vitalsEffect:{}, feedback:'Failing to ensure everyone is clear risks shocking a team member — the "oxygen away, all clear" check is mandatory before every shock.'}
+      ]},
+      {id:'post', title:'After cardioversion', options:[
+        {id:'a', label:'Reassess rhythm, obs, and conscious level; if still unstable and in the same rhythm, re-sync and repeat at a higher energy', correct:true, feedback:'Correct — reassess after each shock, and if it fails re-engage SYNC (many defibrillators drop out of sync after a shock) before escalating the energy.'},
+        {id:'b', label:'Assume success and walk away without reassessing the rhythm', correct:false, severity:'minor', feedback:'Not reassessing misses both a failed cardioversion and any new complication — always re-check the rhythm, pulse, and patient after the shock.'}
+      ]}
+    ]
   }
 };
 let procCURRENT = null, procS = null;
@@ -7586,6 +7755,93 @@ const ECG_PRESETS = {
     ],
     correctManagementId:'a',
     managementExplain:'Symptomatic bradycardia is treated with atropine first, escalating to transcutaneous pacing (or an isoprenaline/adrenaline infusion) as a bridge to definitive transvenous or permanent pacing. A beta-blocker would slow the rate further and could be fatal; the patient is too symptomatic to discharge; and defibrillation is not a treatment for bradycardia.'
+  },
+  svt:{
+    id:'svt', label:'Supraventricular tachycardia (SVT)', tag:'Regular narrow-complex tachycardia',
+    pattern:'normal', rate:186,
+    vignette:'26F with sudden-onset palpitations that started abruptly at rest. She feels her heart "racing" but is alert with a BP of 116/72. The rhythm is fast, regular, and narrow.',
+    rhythmOptions:[
+      {id:'a', label:'Supraventricular tachycardia'},
+      {id:'b', label:'Sinus tachycardia'},
+      {id:'c', label:'Atrial fibrillation'},
+      {id:'d', label:'Ventricular tachycardia'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'A regular, narrow-complex tachycardia at ~180–190/min with no clearly visible P waves and an abrupt onset is a supraventricular tachycardia (typically AVNRT). Sinus tachycardia is usually slower with visible P waves and a gradual onset; AF is irregular; and VT is a broad-complex rhythm.',
+    diagnosisOptions:[
+      {id:'a', label:'Paroxysmal SVT, currently haemodynamically stable'},
+      {id:'b', label:'Unstable ventricular tachycardia'},
+      {id:'c', label:'Sinus tachycardia from sepsis'},
+      {id:'d', label:'Complete heart block'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'The narrow QRS confirms a supraventricular origin, the rate and abrupt onset fit a paroxysmal re-entrant SVT, and a normal blood pressure with an alert patient means she is haemodynamically stable — which determines the management pathway.',
+    managementOptions:[
+      {id:'a', label:'Try vagal manoeuvres first (e.g. modified Valsalva), then IV adenosine if they fail'},
+      {id:'b', label:'Immediate unsynchronised defibrillation'},
+      {id:'c', label:'IV fluids and antibiotics for sepsis'},
+      {id:'d', label:'Atropine and transcutaneous pacing'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'For stable, regular narrow-complex SVT, start with vagal manoeuvres (the modified Valsalva is most effective) and escalate to IV adenosine if they fail, reserving synchronised cardioversion for haemodynamic instability. Defibrillation and pacing treat entirely different rhythms, and there is nothing here to suggest sepsis.'
+  },
+  asystole:{
+    id:'asystole', label:'Asystole', tag:'Non-shockable arrest rhythm',
+    pattern:'flatline', rate:0,
+    vignette:'An 80M in cardiac arrest, now several minutes into resuscitation. CPR is paused for a rhythm check and this is what the monitor shows — a flat line with no organised electrical activity. No pulse.',
+    rhythmOptions:[
+      {id:'a', label:'Asystole'},
+      {id:'b', label:'Fine ventricular fibrillation'},
+      {id:'c', label:'Sinus bradycardia'},
+      {id:'d', label:'Complete heart block'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'A flat line with no discernible electrical activity (no P waves, QRS complexes, or fibrillatory waveform) in a pulseless patient is asystole. Fine VF still shows a low-amplitude undulating waveform; sinus bradycardia and heart block both have organised QRS complexes.',
+    diagnosisOptions:[
+      {id:'a', label:'Cardiac arrest in a non-shockable rhythm'},
+      {id:'b', label:'Cardiac arrest in a shockable rhythm'},
+      {id:'c', label:'Symptomatic bradycardia with a pulse'},
+      {id:'d', label:'A loose ECG lead (artefact)'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Asystole (and PEA) are the two non-shockable cardiac-arrest rhythms — defibrillation has no role because there is no organised or fibrillatory electrical activity to convert. It is always worth quickly excluding a technical cause (a disconnected lead), but a genuinely pulseless flat trace is asystole.',
+    managementOptions:[
+      {id:'a', label:'High-quality CPR and adrenaline every 3–5 minutes, while actively treating reversible causes (the 4 Hs and 4 Ts)'},
+      {id:'b', label:'Immediate defibrillation'},
+      {id:'c', label:'Synchronised cardioversion'},
+      {id:'d', label:'IV adenosine'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Asystole is treated with uninterrupted high-quality CPR and adrenaline every 3–5 minutes, with an urgent search for and treatment of reversible causes (the 4 Hs and 4 Ts) — this is where the chance of recovery lies. Defibrillation, cardioversion, and adenosine are all inappropriate for a non-shockable arrest.'
+  },
+  nstemi_ischaemia:{
+    id:'nstemi_ischaemia', label:'Myocardial ischaemia — ST depression', tag:'ST depression',
+    pattern:'st_depression', rate:96,
+    vignette:'64F with 30 minutes of chest tightness and breathlessness. She is stable. The rhythm is regular; the concerning feature is horizontal ST-segment depression, not ST elevation.',
+    rhythmOptions:[
+      {id:'a', label:'Sinus rhythm'},
+      {id:'b', label:'Atrial fibrillation'},
+      {id:'c', label:'Ventricular tachycardia'},
+      {id:'d', label:'Complete heart block'}
+    ],
+    correctRhythmId:'a',
+    rhythmExplain:'There is a regular narrow QRS with a consistent rate — an underlying sinus rhythm. As with a STEMI, the critical abnormality here is in the ST segments rather than the rhythm itself.',
+    diagnosisOptions:[
+      {id:'a', label:'Myocardial ischaemia / NSTEMI (ST depression)'},
+      {id:'b', label:'Acute STEMI requiring immediate reperfusion'},
+      {id:'c', label:'Hyperkalaemia'},
+      {id:'d', label:'Normal ECG'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Horizontal or down-sloping ST depression with ischaemic symptoms indicates myocardial ischaemia — a non-ST-elevation acute coronary syndrome (NSTEMI if troponin rises). It is not STEMI (no ST elevation), not the tented T waves of hyperkalaemia, and certainly not normal.',
+    managementOptions:[
+      {id:'a', label:'Antiplatelet therapy and anticoagulation, serial troponins, and risk-stratify for early inpatient angiography'},
+      {id:'b', label:'Immediate thrombolysis'},
+      {id:'c', label:'Reassure and discharge'},
+      {id:'d', label:'IV calcium and insulin-dextrose'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'A non-ST-elevation ACS is managed with antiplatelets, anticoagulation, anti-anginal therapy, and serial troponins, with risk stratification guiding the timing of inpatient coronary angiography — emergency reperfusion/thrombolysis is reserved for STEMI, not NSTEMI. Discharge would be unsafe, and calcium/insulin treats hyperkalaemia, a different diagnosis.'
   }
 };
 let ecgCURRENT = null, ecgS = null;
