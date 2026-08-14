@@ -8714,7 +8714,18 @@ function showCondition(key){
   revealScreen('conditionScreen');
 }
 
-function showLibraryScreen(){ revealScreen('libraryScreen'); }
+function showLibraryScreen(){
+  // Reset the filter and search on entry, the same way the case picker does.
+  // Otherwise a category chosen earlier is still applied on the next visit and
+  // the library looks broken (two cards, no obvious reason why).
+  condCat = 'All';
+  condQuery = '';
+  const box = document.getElementById('condSearch');
+  if (box) box.value = '';
+  buildCondCatFilter();
+  buildConditionGrid();
+  revealScreen('libraryScreen');
+}
 document.getElementById('condBackBtn').addEventListener('click', showLibraryScreen);
 document.getElementById('frontLibraryBtn').addEventListener('click', showLibraryScreen);
 document.getElementById('condSearch').addEventListener('input', (e)=>{ condQuery = e.target.value; buildConditionGrid(); });
