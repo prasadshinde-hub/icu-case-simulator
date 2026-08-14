@@ -30,7 +30,10 @@
    =================================================================== */
 body.shell{
   --bg:#fbf9f5; --panel:#ffffff; --panel-2:#f4f0e9; --border:#e3dbcf;
-  --text:#16130f; --text-dim:#5c544a; --text-faint:#968c7e;
+  /* --text-faint is darker than it looks like it wants to be: it carries small
+     11–12px labels (field labels, eyebrows, "Coming soon"), so it has to clear
+     4.5:1 on paper rather than the 3.1:1 a prettier grey would give. */
+  --text:#16130f; --text-dim:#5c544a; --text-faint:#776d5f;
   --accent:#0e6b63; --clay:#b4532a;
   --good:#1f7a4d; --warn:#95630f; --crit:#a83a2c;
   --rule:#e3dbcf;
@@ -41,7 +44,7 @@ body.shell{
 }
 :root[data-theme="dark"] body.shell{
   --bg:#14120f; --panel:#1c1916; --panel-2:#241f1b; --border:#362f28;
-  --text:#f2ede4; --text-dim:#a99e90; --text-faint:#756b5f;
+  --text:#f2ede4; --text-dim:#a99e90; --text-faint:#8b8073;   /* 4.8:1 on the ink ground */
   --accent:#4fbfaf; --clay:#e0885f;
   --good:#4caf6d; --warn:#e0a940; --crit:#e5544f;
   --rule:#362f28;
