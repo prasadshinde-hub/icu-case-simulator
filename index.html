@@ -474,8 +474,9 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   <p class="tagline">Practical, scenario-based critical care training. Work up real patients from presentation to disposition — no diagnosis handed to you, sign in to save your progress across devices.</p>
   <div class="front-actions">
     <button class="btn primary large" id="enterBtn">Enter simulator</button>
+    <button class="btn large" id="frontLibraryBtn">Conditions library</button>
   </div>
-  <p class="front-note">Diagnoses are hidden by design — build your differential from history, exam, and investigations, the same as a real handover.</p>
+  <p class="front-note">Six modules: hidden-diagnosis ICU cases, ventilator lab, ABG and ECG trainers, bedside procedures, and a conditions reference. Diagnoses are hidden by design — build your differential the same way you would on a real handover.</p>
 </div>
 
 <div class="specialty" id="authScreen" style="display:none;">
@@ -8614,6 +8615,7 @@ function showCondition(key){
 
 function showLibraryScreen(){ revealScreen('libraryScreen'); }
 document.getElementById('condBackBtn').addEventListener('click', showLibraryScreen);
+document.getElementById('frontLibraryBtn').addEventListener('click', showLibraryScreen);
 document.getElementById('condSearch').addEventListener('input', (e)=>{ condQuery = e.target.value; buildConditionGrid(); });
 
 buildFrontIcons();
