@@ -286,7 +286,32 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   0%,100%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent); }
   50%{ box-shadow:0 0 0 6px color-mix(in srgb, var(--crit) 0%, transparent); }
 }
-@media (prefers-reduced-motion: reduce){ .tile .flag.crit{animation:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent);} }
+/* Alarm states. An out-of-range number has to LOOK out of range: the 8px flag dot was
+   carrying this alone, and a dot never wins an attention contest against a 26px numeral
+   sitting right beside it. A systolic of 71 has to read differently from a systolic of 120
+   at a glance, or the sim is teaching people to miss deterioration. */
+.tile.alarm-warn{border-color:var(--warn);}
+.tile.alarm-crit{border-color:var(--crit);background:color-mix(in srgb, var(--crit) 9%, var(--panel));
+  animation:critPulse 1.6s ease-in-out infinite;}
+/* (0,3,1) so it beats the per-parameter hues in .tile.hr .value etc. */
+.tile.alarm-warn .value{color:var(--warn);}
+.tile.alarm-crit .value{color:var(--crit);}
+
+.alarm-bar{grid-column:1/-1;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;
+  border:1px solid var(--warn);border-radius:10px;padding:8px 12px;
+  background:color-mix(in srgb, var(--warn) 10%, var(--panel));}
+.alarm-bar.crit{border-color:var(--crit);background:color-mix(in srgb, var(--crit) 12%, var(--panel));
+  animation:critPulse 1.6s ease-in-out infinite;}
+.alarm-bar .alarm-ico{font-size:13px;line-height:1;color:var(--warn);}
+.alarm-bar.crit .alarm-ico{color:var(--crit);}
+.alarm-bar .alarm-item{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+  font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--warn);}
+.alarm-bar .alarm-item.crit{color:var(--crit);}
+
+@media (prefers-reduced-motion: reduce){
+  .tile .flag.crit{animation:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent);}
+  .tile.alarm-crit, .alarm-bar.crit{animation:none;}
+}
 
 /* ---------- console ---------- */
 .console{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start;}
@@ -5321,21 +5346,63 @@ function formatTemp(celsiusStr){
   return `${celsiusStr}<span class="unit"> °C</span>`;
 }
 
+// map a parameter status onto the tile alarm class. 'ok' contributes nothing so the
+// tile keeps its normal border and its per-parameter hue.
+function alarmClass(st){ return st==='crit' ? ' alarm-crit' : st==='warn' ? ' alarm-warn' : ''; }
+
+function tempText(celsiusStr){
+  const c = parseFloat(celsiusStr);
+  return tempUnit==='F' ? `${(c*9/5+32).toFixed(1)}°F` : `${celsiusStr}°C`;
+}
+
+// Build the alarm banner list: every out-of-range parameter, criticals first.
+// Ordering matters — a banner that lists a borderline temp above a systolic of 71
+// is worse than no banner, because it trains the eye to skim past the first item.
+function alarmsFor(v){
+  const out = [];
+  const add = (st, txt) => { if (st !== 'ok') out.push({ st, txt }); };
+  // sbp/spo2 only ever alarm on the low side, so the direction word is fixed.
+  add(statusOf(v.sbp,'sbp'),   `BP LOW ${v.sbp}/${v.dbp}`);
+  add(statusOf(v.spo2,'spo2'), `SPO2 LOW ${v.spo2}%`);
+  add(statusOf(v.hr,'hr'),     `HR ${v.hr>115?'HIGH':'LOW'} ${v.hr}`);
+  add(statusOf(v.rr,'rr'),     `RR ${v.rr>24?'HIGH':'LOW'} ${v.rr}`);
+  add(statusOf(v.gcs,'gcs'),   `GCS ${v.gcs}`);
+  const t = parseFloat(v.temp);
+  add(statusOf(t,'temp'),      `TEMP ${t>=38.5?'HIGH':'LOW'} ${tempText(v.temp)}`);
+  // Array.prototype.sort is stable, so criticals rise to the top while each group
+  // keeps the clinical priority order above (circulation, then oxygenation, ...).
+  return out.sort((a,b)=> (a.st==='crit'?0:1) - (b.st==='crit'?0:1));
+}
+
+function alarmBarHTML(v){
+  // The arrest screen already has a pulsing red header and its own alarm language —
+  // stacking a second banner under it is noise, not signal.
+  if (S.arrested || S.dead) return '';
+  const list = alarmsFor(v);
+  if (!list.length) return '';
+  const worst = list.some(a=>a.st==='crit') ? 'crit' : 'warn';
+  return `<div class="alarm-bar ${worst}" role="status" aria-live="polite">
+    <span class="alarm-ico" aria-hidden="true">&#9888;</span>
+    ${list.map(a=>`<span class="alarm-item ${a.st}">${a.txt}</span>`).join('')}
+  </div>`;
+}
+
 function renderMonitor(){
   const v = vitals();
   const m = document.getElementById('monitor');
   m.innerHTML = `
-    <div class="tile hr"><span class="flag ${statusOf(v.hr,'hr')}"></span><span class="label">Heart rate</span>
+    ${alarmBarHTML(v)}
+    <div class="tile hr${alarmClass(statusOf(v.hr,'hr'))}"><span class="flag ${statusOf(v.hr,'hr')}"></span><span class="label">Heart rate</span>
       <span class="value">${v.hr}<span class="unit"> bpm</span></span><canvas id="wf-hr" width="200" height="40"></canvas></div>
-    <div class="tile bp"><span class="flag ${statusOf(v.sbp,'sbp')}"></span><span class="label">Arterial BP</span>
+    <div class="tile bp${alarmClass(statusOf(v.sbp,'sbp'))}"><span class="flag ${statusOf(v.sbp,'sbp')}"></span><span class="label">Arterial BP</span>
       <span class="value">${v.sbp}/${v.dbp}<span class="unit"> mmHg</span></span><canvas id="wf-bp" width="200" height="40"></canvas></div>
-    <div class="tile"><span class="flag ${statusOf(v.rr,'rr')}"></span><span class="label">Resp. rate</span>
+    <div class="tile rr${alarmClass(statusOf(v.rr,'rr'))}"><span class="flag ${statusOf(v.rr,'rr')}"></span><span class="label">Resp. rate</span>
       <span class="value">${v.rr}<span class="unit"> /min</span></span><canvas id="wf-rr" width="200" height="40"></canvas></div>
-    <div class="tile spo2"><span class="flag ${statusOf(v.spo2,'spo2')}"></span><span class="label">SpO2</span>
+    <div class="tile spo2${alarmClass(statusOf(v.spo2,'spo2'))}"><span class="flag ${statusOf(v.spo2,'spo2')}"></span><span class="label">SpO2</span>
       <span class="value">${v.spo2}<span class="unit"> %</span></span><canvas id="wf-spo2" width="200" height="40"></canvas></div>
-    <div class="tile"><span class="flag ${statusOf(parseFloat(v.temp),'temp')}"></span><span class="label">Temp</span>
+    <div class="tile${alarmClass(statusOf(parseFloat(v.temp),'temp'))}"><span class="flag ${statusOf(parseFloat(v.temp),'temp')}"></span><span class="label">Temp</span>
       <span class="value">${formatTemp(v.temp)}</span></div>
-    <div class="tile"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
+    <div class="tile${alarmClass(statusOf(v.gcs,'gcs'))}"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
       <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
   `;
   {
