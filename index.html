@@ -61,15 +61,10 @@ body.shell{
   --good:#4caf6d; --warn:#e0a940; --crit:#e5544f;
   --rule:#362f28;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) body.shell{
-    --bg:#14120f; --panel:#1c1916; --panel-2:#241f1b; --border:#362f28;
-    --text:#f2ede4; --text-dim:#a99e90; --text-faint:#756b5f;
-    --accent:#4fbfaf; --clay:#e0885f;
-    --good:#4caf6d; --warn:#e0a940; --crit:#e5544f;
-    --rule:#362f28;
-  }
-}
+/* The paper shell is a deliberate brand choice, so it is the default even when
+   the OS prefers dark — otherwise almost nobody would ever see it. Choosing
+   Dark in Settings still switches it to the warm-ink variant above, and the
+   bedside screens are dark either way. */
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
