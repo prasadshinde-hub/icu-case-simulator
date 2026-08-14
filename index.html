@@ -13,26 +13,11 @@
      silently falls back: New York on Apple, Palatino/Georgia elsewhere. */
   --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
 }
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#f2f4f7; --panel:#ffffff; --panel-2:#eef1f5; --border:#d7dde5;
-    --text:#161b22; --text-dim:#57606f; --text-faint:#8a97a8;
-    --cyan:#0891a8; --lime:#1a9e5c; --violet:#7c4dbd; --amber:#b8790a;
-    --good:#1a8f52; --warn:#b8790a; --crit:#c73835; --accent:#0891a8;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0a0e13; --panel:#121821; --panel-2:#1a2230; --border:#2a3340;
-  --text:#e6edf3; --text-dim:#8a97a8; --text-faint:#5b6675;
-  --cyan:#4fd1e8; --lime:#8ee686; --violet:#c792ea; --amber:#f2d675;
-  --good:#4caf6d; --warn:#e0a940; --crit:#e5544f; --accent:#4fd1e8;
-}
-:root[data-theme="light"]{
-  --bg:#f2f4f7; --panel:#ffffff; --panel-2:#eef1f5; --border:#d7dde5;
-  --text:#161b22; --text-dim:#57606f; --text-faint:#8a97a8;
-  --cyan:#0891a8; --lime:#1a9e5c; --violet:#7c4dbd; --amber:#b8790a;
-  --good:#1a8f52; --warn:#b8790a; --crit:#c73835; --accent:#0891a8;
-}
+/* :root deliberately has no light variant any more. Bedside screens are always
+   the dark instrument palette — a monitor does not turn beige because the phone
+   is in light mode — and the canvas renderers read these trace colours straight
+   off document.documentElement. Light/dark is now a property of the shell only
+   (see body.shell below), which is what the Settings toggle switches. */
 /* ===================================================================
    ATELIER — the app is split in two.
    "Shell" screens (landing, pickers, library, dashboard, debrief) are
@@ -6517,7 +6502,10 @@ document.querySelectorAll('[data-instr]').forEach(b=>b.addEventListener('click',
 
 // ---------- settings panel ----------
 function currentTheme(){
-  return document.documentElement.dataset.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  // The shell is paper unless the user explicitly chooses dark, so an unset
+  // preference is "light" — otherwise the toggle would read Dark while the
+  // page is plainly showing paper.
+  return document.documentElement.dataset.theme || 'light';
 }
 function applyThemeButton(){
   document.getElementById('themeToggleBtn').textContent = currentTheme()==='dark' ? 'Dark' : 'Light';
