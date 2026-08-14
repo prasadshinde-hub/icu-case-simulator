@@ -9,6 +9,9 @@
   --good:#4caf6d; --warn:#e0a940; --crit:#e5544f; --accent:#4fd1e8;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* system serif stack — no webfont, so the app stays offline-capable and never
+     silently falls back: New York on Apple, Palatino/Georgia elsewhere. */
+  --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
 }
 @media (prefers-color-scheme: light){
   :root{
@@ -30,9 +33,80 @@
   --cyan:#0891a8; --lime:#1a9e5c; --violet:#7c4dbd; --amber:#b8790a;
   --good:#1a8f52; --warn:#b8790a; --crit:#c73835; --accent:#0891a8;
 }
+/* ===================================================================
+   ATELIER — the app is split in two.
+   "Shell" screens (landing, pickers, library, dashboard, debrief) are
+   editorial: paper ground, display serif, generous air.
+   "Bedside" screens (live case, arrest, ventilator, ECG strip) keep the
+   dark monitor palette, because that is what real equipment looks like.
+   Shell tokens live on <body> so that :root keeps the canvas trace
+   colours (--cyan/--lime/--violet/--amber), which the waveform
+   renderers read from document.documentElement.
+   =================================================================== */
+body.shell{
+  --bg:#fbf9f5; --panel:#ffffff; --panel-2:#f4f0e9; --border:#e3dbcf;
+  --text:#16130f; --text-dim:#5c544a; --text-faint:#968c7e;
+  --accent:#0e6b63; --clay:#b4532a;
+  --good:#1f7a4d; --warn:#95630f; --crit:#a83a2c;
+  --rule:#e3dbcf;
+  /* the neon monitor hues are illegible on paper — these are the ink-on-paper
+     equivalents, used only for module identity in the shell. The originals stay
+     on :root for the canvas traces. */
+  --cyan:#0b6270; --lime:#2c6e34; --violet:#61399b; --amber:#8a5a06;
+}
+:root[data-theme="dark"] body.shell{
+  --bg:#14120f; --panel:#1c1916; --panel-2:#241f1b; --border:#362f28;
+  --text:#f2ede4; --text-dim:#a99e90; --text-faint:#756b5f;
+  --accent:#4fbfaf; --clay:#e0885f;
+  --good:#4caf6d; --warn:#e0a940; --crit:#e5544f;
+  --rule:#362f28;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) body.shell{
+    --bg:#14120f; --panel:#1c1916; --panel-2:#241f1b; --border:#362f28;
+    --text:#f2ede4; --text-dim:#a99e90; --text-faint:#756b5f;
+    --accent:#4fbfaf; --clay:#e0885f;
+    --good:#4caf6d; --warn:#e0a940; --crit:#e5544f;
+    --rule:#362f28;
+  }
+}
+
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
-body{padding:18px; min-height:100vh;}
+body{padding:18px; min-height:100vh; transition:background-color .25s ease;}
+
+/* ---------- editorial typography (shell only) ---------- */
+body.shell h1{
+  font-family:var(--serif); font-weight:600; letter-spacing:-.015em;
+  line-height:1.12; text-wrap:balance;
+}
+body.shell .specialty-hdr h1, body.shell .menu-hdr h1{ font-size:clamp(30px,4.4vw,44px); margin:2px 0 0; }
+body.shell .specialty-hdr .eyebrow, body.shell .menu-hdr .eyebrow{
+  font-size:10.5px; letter-spacing:.18em; color:var(--clay); font-weight:700;
+}
+body.shell .specialty-hdr p, body.shell .menu-hdr p{
+  font-size:15px; line-height:1.7; max-width:58ch; color:var(--text-dim);
+}
+body.shell .specialty, body.shell .menu{ gap:26px; margin-top:56px; }
+body.shell .specialty-hdr, body.shell .menu-hdr{ gap:10px; }
+/* a hairline under the page header, the way a printed page rules its masthead */
+body.shell .specialty-hdr::after, body.shell .menu-hdr::after{
+  content:''; display:block; width:46px; height:2px; background:var(--clay);
+  margin:16px auto 0; opacity:.85;
+}
+body.shell .specialty-card{ background:var(--panel); box-shadow:0 1px 2px rgba(60,45,25,.05); }
+body.shell .specialty-card .sc-name{ font-family:var(--serif); font-size:17px; font-weight:600; letter-spacing:-.01em; }
+body.shell .case-card{ background:var(--panel); box-shadow:0 1px 2px rgba(60,45,25,.05); }
+body.shell .case-card .cc{ font-family:var(--serif); font-size:16px; font-weight:600; letter-spacing:-.01em; }
+body.shell .case-card:hover, body.shell .specialty-card:not(.empty):hover{
+  box-shadow:0 10px 26px rgba(60,45,25,.10), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+body.shell .cond-lead{ font-family:var(--serif); font-size:18px; line-height:1.6; color:var(--text); }
+body.shell .cond-sec h3, body.shell .progress-section-h{ color:var(--clay); letter-spacing:.14em; }
+body.shell .hdr-title h1{ font-family:var(--serif); font-size:24px; font-weight:600; }
+body.shell .debrief-card h1{ font-size:30px; }
+body.shell .stat-tile .st-val{ font-family:var(--serif); font-weight:600; }
+body.shell .quiz-score{ font-family:var(--serif); font-weight:600; }
 .app{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
 
 /* ---------- menu screen ---------- */
@@ -71,6 +145,35 @@ body{padding:18px; min-height:100vh;}
 .front .front-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
 .btn.large{padding:14px 26px;font-size:15px;border-radius:8px;}
 .front-note{font-size:12px;color:var(--text-faint);max-width:48ch;line-height:1.6;}
+
+/* ---------- Atelier landing hero ---------- */
+body.shell .front{ gap:0; max-width:680px; }
+body.shell .front-icons{ gap:18px; margin-bottom:30px; opacity:.55; }
+body.shell .front-icons svg{ width:26px; height:26px; }
+body.shell .front .eyebrow{
+  font-size:10.5px; letter-spacing:.24em; color:var(--clay); font-weight:700; margin-bottom:18px;
+}
+body.shell .front h1{
+  font-family:var(--serif); font-weight:600; letter-spacing:-.02em;
+  font-size:clamp(38px,7.2vw,66px); line-height:1.04; margin:0;
+}
+/* a thin rule between the title and the promise, like a title page */
+body.shell .front h1::after{
+  content:''; display:block; width:54px; height:2px; background:var(--clay);
+  margin:26px auto 24px; opacity:.9;
+}
+body.shell .front p.tagline{
+  font-family:var(--serif); font-size:19px; line-height:1.62; color:var(--text-dim); max-width:44ch;
+}
+body.shell .front .front-actions{ margin-top:34px; gap:12px; }
+body.shell .front-note{
+  margin-top:34px; padding-top:22px; border-top:1px solid var(--rule);
+  font-size:12.5px; line-height:1.75; max-width:52ch; color:var(--text-faint);
+}
+body.shell .btn.large{ padding:15px 30px; border-radius:4px; letter-spacing:.01em; }
+body.shell .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+body.shell #frontLibraryBtn{ background:transparent; border-color:var(--text-faint); color:var(--text); }
+body.shell #frontLibraryBtn:hover{ border-color:var(--accent); color:var(--accent); }
 
 /* ---------- settings panel (front screen) ---------- */
 .settings-btn{position:fixed;top:16px;right:16px;z-index:40;}
@@ -5968,7 +6071,15 @@ const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','simulatorsScree
   'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen',
   'libraryScreen','conditionScreen'];
 
+// Screens that show live monitor output stay on the dark bedside palette.
+// Everything else is "shell" and gets the editorial paper treatment.
+const BEDSIDE_SCREENS = ['appScreen','arrestScreen','ventLabScreen','ecgLabScreen','procLabScreen'];
+function applyShellMode(id){
+  document.body.classList.toggle('shell', BEDSIDE_SCREENS.indexOf(id) === -1);
+}
+
 function revealScreen(id){
+  applyShellMode(id);
   ALL_SCREENS.forEach(sid=>{
     if (sid===id) return;
     const el = document.getElementById(sid);
@@ -6041,6 +6152,7 @@ function restoreSession(){
       document.getElementById('specialtyScreen').style.display='none';
       document.getElementById('menuScreen').style.display='none';
       document.getElementById('appScreen').style.display='';
+      applyShellMode('appScreen');
       renderAll();
       return true;
     } else if (data.screen==='menu' && data.specialty && SPECIALTIES[data.specialty]){
@@ -8628,6 +8740,12 @@ buildEcgPresetGrid();
 buildCondCatFilter();
 buildConditionGrid();
 if (!restoreSession()) { applyAllSettingsButtons(); }
+// the front screen is visible by default in the markup, so set the palette for
+// whichever screen we actually ended up on after restore
+applyShellMode((ALL_SCREENS.find(id=>{
+  const el = document.getElementById(id);
+  return el && el.style.display !== 'none';
+})) || 'frontScreen');
 renderAccountChip();
 refreshAuthState();
 if (sb){
