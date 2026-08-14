@@ -399,6 +399,32 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
 .modbar-row .mb-fill{height:100%;border-radius:6px;background:var(--accent);}
 .modbar-row .mb-val{width:78px;flex-shrink:0;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text-dim);}
 .modbar-empty{color:var(--text-faint);font-size:11.5px;}
+
+/* ---------- conditions library ---------- */
+#libraryScreen, #conditionScreen{ --accent: var(--good); }
+.cat-filter{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:4px;}
+.cat-chip{background:var(--panel-2);border:1px solid var(--border);border-radius:20px;padding:6px 13px;
+  font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--text-dim);font-family:var(--sans);cursor:pointer;transition:border-color .12s,color .12s;}
+.cat-chip:hover{border-color:var(--accent);}
+.cat-chip.on{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.cond-card .cc-cat{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
+.cond-sec{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;}
+.cond-sec h3{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);margin:0 0 10px;}
+.cond-sec p{font-size:13.5px;line-height:1.65;color:var(--text-dim);margin:0;}
+.cond-sec ul{margin:0;padding-left:18px;}
+.cond-sec li{font-size:13.5px;line-height:1.65;color:var(--text-dim);margin-bottom:5px;}
+.cond-sec li b{color:var(--text);}
+.cond-lead{font-size:14.5px;line-height:1.6;color:var(--text);margin:0 0 14px;}
+.cond-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media (max-width:700px){.cond-grid2{grid-template-columns:1fr;}}
+.cond-sec.pitfalls{border-left:3px solid var(--crit);}
+.cond-sec.pitfalls li{color:var(--text-dim);}
+.cond-sec.pitfalls li::marker{color:var(--crit);}
+.cond-sec.practice{border-left:3px solid var(--accent);}
+.practice-row{display:flex;flex-wrap:wrap;gap:8px;}
+.readup-box{background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--good);
+  border-radius:0 8px 8px 0;padding:12px 14px;margin:18px 0 4px;font-size:13px;color:var(--text-dim);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 </style>
 
 <div class="front" id="frontScreen">
@@ -791,8 +817,35 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <h3>Cautions <span id="debriefWarnCount"></span></h3>
     <div class="debrief-section warn" id="debriefWarn"></div>
 
+    <div id="debriefReadUp"></div>
+
     <div class="debrief-actions" id="debriefActions"></div>
   </div>
+</div>
+
+<div class="specialty" id="libraryScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" data-back-to-sims>&larr; Back</button></div>
+    <span class="eyebrow">Reference</span>
+    <h1>Conditions library</h1>
+    <p>Quick-reference cards for the conditions behind the cases — definition, presentation, key investigations, management, and the classic pitfalls. Each one links straight to the scenarios that train it.</p>
+  </div>
+  <div class="randomize-row">
+    <input type="search" id="condSearch" placeholder="Search conditions, e.g. sepsis, potassium…">
+  </div>
+  <div class="cat-filter" id="condCatFilter"></div>
+  <div class="specialty-grid" id="conditionGrid"></div>
+</div>
+
+<div class="app" id="conditionScreen" style="display:none;">
+  <div class="hdr">
+    <div class="hdr-title">
+      <div class="top-row" style="margin-bottom:4px;"><button class="btn ghost small" id="condBackBtn">&larr; Library</button></div>
+      <span class="eyebrow" id="condEyebrow">Conditions library</span>
+      <h1 id="condTitle">Condition</h1>
+    </div>
+  </div>
+  <div id="condBody"></div>
 </div>
 
 <div class="app" id="arrestScreen" style="display:none;">
@@ -5636,6 +5689,19 @@ function showDebrief(final){
   document.getElementById('debriefCrit').innerHTML = renderEntries(crits, 'None — no critical errors identified.');
   document.getElementById('debriefWarn').innerHTML = renderEntries(warns, 'None.');
 
+  // point the learner at the reference card for this case's underlying condition
+  const readUp = document.getElementById('debriefReadUp');
+  const condKey = CASE_TO_CONDITION[CURRENT.id];
+  if (condKey){
+    readUp.innerHTML = `<div class="readup-box">
+      <span>Read up on <b style="color:var(--text);">${CONDITIONS[condKey].name}</b> — definition, investigations, management, and the classic pitfalls.</span>
+      <button class="btn small" id="debriefReadUpBtn">Open reference</button>
+    </div>`;
+    document.getElementById('debriefReadUpBtn').addEventListener('click', ()=>showCondition(condKey));
+  } else {
+    readUp.innerHTML = '';
+  }
+
   const actions = document.getElementById('debriefActions');
   actions.innerHTML = final
     ? `<button class="btn primary" id="debriefRestartBtn">Try this case again</button>
@@ -5868,6 +5934,7 @@ const SIM_ICONS = {
   abg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8 7 13a7 7 0 0 1-14 0c0-5 7-13 7-13z"/></svg>',
   proc: ICONS.surg,
   ecg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2 6 4-16 2 10h8"/></svg>',
+  library: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M8 7h8M8 11h6"/></svg>',
   cxr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M16 3v18M4 9h16M4 15h16"/></svg>'
 };
 const SIMULATORS = {
@@ -5876,6 +5943,7 @@ const SIMULATORS = {
   abg: {label:'ABG Interpretation Trainer', desc:'Interpret, diagnose, and treat standalone blood-gas cases with graded feedback.', color:'var(--amber)', action:()=>showAbgPresetScreen()},
   proc: {label:'Procedure Simulator', desc:'Step-by-step bedside procedures — wrong steps cause real, modeled complications.', color:'var(--crit)', action:()=>showProcPresetScreen()},
   ecg: {label:'ECG Interpretation', desc:'Read a live rhythm strip, then identify, interpret, and manage it with graded feedback.', color:'var(--lime)', action:()=>showEcgPresetScreen()},
+  library: {label:'Conditions Library', desc:'Quick-reference cards for every condition behind the cases — presentation, investigations, management, and the classic pitfalls.', color:'var(--good)', badge:'Reference', action:()=>showLibraryScreen()},
   cxr: {label:'Chest X-Ray Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true}
 };
 function buildSimulatorsGrid(){
@@ -5888,7 +5956,7 @@ function buildSimulatorsGrid(){
     card.style.setProperty('--spec-color', sim.color);
     card.innerHTML = `<span style="color:${sim.color}">${SIM_ICONS[key]}</span>
       <p class="sc-name">${sim.label}</p>
-      <span class="sc-count">${sim.disabled ? 'Coming soon' : 'Available'}</span>
+      <span class="sc-count">${sim.disabled ? 'Coming soon' : (sim.badge || 'Available')}</span>
       <p class="sc-desc">${sim.desc}</p>`;
     if (!sim.disabled) card.addEventListener('click', sim.action);
     grid.appendChild(card);
@@ -5896,7 +5964,8 @@ function buildSimulatorsGrid(){
 }
 
 const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
-  'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen'];
+  'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen',
+  'libraryScreen','conditionScreen'];
 
 function revealScreen(id){
   ALL_SCREENS.forEach(sid=>{
@@ -8227,6 +8296,326 @@ function buildEcgPresetGrid(){
 function showEcgPresetScreen(){ ecgCURRENT = null; revealScreen('ecgPresetScreen'); }
 document.getElementById('ecgBackBtn').addEventListener('click', showEcgPresetScreen);
 
+// ================= Conditions Library =================
+const CONDITIONS = {
+  stemi:{
+    name:'ST-Elevation Myocardial Infarction (STEMI)', cat:'Cardiac',
+    lead:'Complete occlusion of a coronary artery causing full-thickness myocardial necrosis — the clock starts at symptom onset, and every minute of delay to reperfusion costs myocardium.',
+    definition:'Acute coronary syndrome in which a thrombus completely occludes a coronary artery, producing transmural ischaemia and ST elevation on the ECG in a territorial (not widespread) pattern.',
+    causes:['Atherosclerotic plaque rupture with occlusive thrombus (the great majority)','Coronary spasm, embolism, or spontaneous coronary artery dissection','Demand ischaemia is NOT a STEMI — that is type 2 MI'],
+    presentation:['Crushing, heavy central chest pain, often radiating to jaw or left arm','Diaphoresis, nausea, and a sense of impending doom','Pain at rest, lasting more than 20 minutes and not relieved by GTN','Beware silent/atypical presentations in diabetics, the elderly, and post-operative patients'],
+    ix:[{t:'12-lead ECG', f:'ST elevation in ≥2 contiguous leads with reciprocal depression. Repeat serially if the first is non-diagnostic.'},{t:'Troponin', f:'Rising — but never wait for it to act on a STEMI ECG.'},{t:'Bedside echo', f:'Regional wall-motion abnormality matching the territory.'},{t:'Renal function', f:'Before contrast angiography.'}],
+    immediate:['Aspirin 300mg plus a second antiplatelet (e.g. ticagrelor) loading dose','Anticoagulation','Oxygen ONLY if hypoxic — routine oxygen in a normoxic patient causes harm','Analgesia (opioid) with an antiemetic'],
+    definitive:['Primary PCI is first-line if deliverable promptly','Thrombolysis if PCI is not available in time and there is no contraindication','Post-reperfusion: dual antiplatelet therapy, statin, beta-blocker, ACE inhibitor, cardiac rehab'],
+    pitfalls:['Giving an IV beta-blocker to a patient who is hypotensive or in evolving heart failure — this can precipitate cardiogenic shock','Waiting for troponin before activating reperfusion','Missing a silent perioperative or diabetic MI because there is no chest pain','Mistaking widespread saddle-shaped ST elevation with PR depression (pericarditis) for a territorial STEMI'],
+    practice:[{m:'icu', id:'stemi', label:'ICU case — crushing central chest pain'},{m:'ecg', id:'anterior_stemi', label:'ECG — anterior STEMI'},{m:'icu', id:'perioperative_mi', label:'ICU case — silent perioperative MI'},{m:'icu', id:'nstemi', label:'ICU case — NSTEMI'}]
+  },
+  pe:{
+    name:'Pulmonary Embolism', cat:'Cardiac',
+    lead:'Thrombus obstructing the pulmonary arteries — a dead-space and obstructive-shock problem, where the lungs may look mechanically normal while gas exchange and cardiac output fail.',
+    definition:'Obstruction of pulmonary arterial flow, usually by thrombus embolised from a deep vein, causing ventilation-perfusion mismatch, raised dead space, and — when large — acute right ventricular failure.',
+    causes:['Recent surgery, immobility, or long-haul travel','Malignancy, pregnancy, oestrogen therapy','Inherited thrombophilia','Previous VTE'],
+    presentation:['Sudden pleuritic chest pain and breathlessness','Tachycardia and tachypnoea, often with a clear chest on auscultation','Hypoxaemia with a low PaCO2 (hyperventilation)','Massive PE: hypotension, raised JVP, syncope, or cardiac arrest (often PEA)'],
+    ix:[{t:'ABG', f:'Respiratory alkalosis with hypoxaemia — acute and uncompensated.'},{t:'CTPA', f:'Filling defects; the definitive test in a stable patient.'},{t:'Bedside echo', f:'RV dilatation and strain in massive PE — enough to justify thrombolysis in arrest.'},{t:'D-dimer', f:'Useful only to rule out in low-probability patients; not a rule-in test.'}],
+    immediate:['Oxygen and careful fluid resuscitation — the failing RV is preload-sensitive but easily overfilled','Therapeutic anticoagulation once suspicion is high','Vasopressor support for obstructive shock'],
+    definitive:['Systemic thrombolysis for massive (haemodynamically unstable) PE','Catheter-directed therapy or embolectomy in selected patients','Anticoagulation for 3 months or longer depending on provocation'],
+    pitfalls:['Over-filling a failing right ventricle with aggressive fluid — this worsens RV distension and drops cardiac output further','Positive-pressure ventilation dropping preload catastrophically at induction','Treating the raised PaCO2 of massive PE as a ventilator-settings problem — it is a vascular occlusion; more PEEP will not fix it','Discharging on a negative D-dimer when clinical probability is high'],
+    practice:[{m:'icu', id:'pe', label:'ICU case — post-op dyspnoea'},{m:'abg', id:'pe', label:'ABG — respiratory alkalosis with hypoxaemia'},{m:'vent', id:'massive_pe_vent', label:'Ventilator — massive PE, high dead space'}]
+  },
+  septic_shock:{
+    name:'Sepsis & Septic Shock', cat:'Infection',
+    lead:'Life-threatening organ dysfunction from a dysregulated host response to infection — the two things that change outcome are early antibiotics and source control.',
+    definition:'Sepsis is life-threatening organ dysfunction caused by a dysregulated response to infection. Septic shock is sepsis with persisting hypotension requiring vasopressors to maintain MAP ≥65 mmHg plus a lactate >2 mmol/L despite adequate fluid resuscitation.',
+    causes:['Respiratory, urinary, intra-abdominal, skin/soft tissue, and line-related infections most commonly','Post-operative anastomotic leak or collection','Immunosuppression, extremes of age, indwelling devices increase risk'],
+    presentation:['Fever or hypothermia, tachycardia, tachypnoea','New confusion — often the earliest sign in the elderly','Warm, vasodilated peripheries with bounding pulses in early "warm" shock','Oliguria, mottling, and rising lactate as perfusion fails'],
+    ix:[{t:'Lactate', f:'Marker of hypoperfusion and a resuscitation target — trend it.'},{t:'Blood cultures', f:'Before antibiotics if it does not delay them.'},{t:'ABG/VBG', f:'High anion-gap metabolic acidosis from lactate.'},{t:'Source imaging', f:'CT, ultrasound, or CXR to find what must be drained or removed.'}],
+    immediate:['Broad-spectrum IV antibiotics within the first hour — do not wait for cultures or imaging','Fluid resuscitation (~30 mL/kg crystalloid), reassessing responsiveness','Vasopressors (noradrenaline first-line) if MAP remains low after fluid','Measure and re-measure lactate'],
+    definitive:['SOURCE CONTROL — drain the collection, remove the infected line, resect the dead bowel','De-escalate antibiotics once cultures return','Organ support in ICU as required'],
+    pitfalls:['Antibiotics without source control — an undrained collection will not respond, and mortality climbs with every hour of delay','Delaying antibiotics to complete imaging or await cultures','Giving a penicillin to a documented penicillin-allergic patient','Using NSAIDs in septic AKI'],
+    practice:[{m:'icu', id:'sepsis', label:'ICU case — fever and new confusion'},{m:'icu', id:'anastomotic_leak', label:'ICU case — post-op anastomotic leak'},{m:'abg', id:'lactic_acidosis', label:'ABG — septic lactic acidosis'},{m:'abg', id:'copd_sepsis', label:'ABG — mixed respiratory and metabolic acidosis'}]
+  },
+  dka:{
+    name:'Diabetic Ketoacidosis (DKA)', cat:'Metabolic',
+    lead:'Insulin deficiency driving hyperglycaemia, ketogenesis, and a high anion-gap acidosis — fluids first, then insulin, and never forget potassium.',
+    definition:'The triad of hyperglycaemia (usually >11 mmol/L), ketonaemia (≥3 mmol/L), and metabolic acidosis (pH <7.3 or bicarbonate <15), caused by absolute or relative insulin deficiency.',
+    causes:['Missed or insufficient insulin (the commonest precipitant)','Infection or other acute illness','New-onset type 1 diabetes','Myocardial infarction, pancreatitis, some drugs'],
+    presentation:['Polyuria, polydipsia, vomiting, and abdominal pain','Kussmaul breathing — deep, sighing respirations blowing off CO2','Ketotic (fruity) breath','Dehydration, tachycardia, and altered consciousness in severe cases'],
+    ix:[{t:'Blood ketones', f:'≥3 mmol/L confirms significant ketosis and is the best monitoring test.'},{t:'VBG', f:'High anion-gap metabolic acidosis with respiratory compensation.'},{t:'Potassium', f:'May look normal or high initially despite a large total-body deficit — it falls fast once insulin starts.'},{t:'Glucose', f:'Elevated, but euglycaemic DKA exists (notably with SGLT2 inhibitors).'}],
+    immediate:['IV isotonic fluid resuscitation FIRST — this alone improves acidosis and perfusion','Fixed-rate IV insulin infusion (typically 0.1 units/kg/hr)','Potassium replacement once K+ is known and urine is flowing','Hourly ketones, glucose, and potassium monitoring'],
+    definitive:['Add dextrose-containing fluid once glucose falls below ~14 mmol/L so the insulin can continue clearing ketones','Continue insulin until the ketosis and anion gap resolve — not merely until glucose normalises','Identify and treat the precipitant; convert to subcutaneous insulin with an overlap'],
+    pitfalls:['Starting insulin before checking potassium, or continuing it without replacement — insulin drives K+ intracellularly and can cause fatal hypokalaemia','Stopping insulin when glucose normalises but ketosis persists','Failing to switch to dextrose-containing fluid, causing hypoglycaemia','Routine bicarbonate — not recommended except in extreme acidosis'],
+    practice:[{m:'icu', id:'dka', label:'ICU case — vomiting and rapid breathing'},{m:'abg', id:'dka', label:'ABG — metabolic acidosis with compensation'},{m:'icu', id:'hhs', label:'ICU case — HHS (the hyperosmolar cousin)'}]
+  },
+  hyperkalaemia:{
+    name:'Hyperkalaemia', cat:'Metabolic',
+    lead:'A silent electrolyte emergency — the ECG, not the number, tells you how close the heart is to arrest.',
+    definition:'Serum potassium above the normal range; severe (>6.5 mmol/L) or ECG-positive hyperkalaemia is a medical emergency because of the risk of malignant arrhythmia and asystole.',
+    causes:['Renal failure or missed dialysis (the commonest cause)','Potassium-sparing drugs: ACE inhibitors, ARBs, spironolactone, NSAIDs','Tissue breakdown: rhabdomyolysis, tumour lysis, crush injury, burns','Addisonian crisis; spurious (haemolysed sample)'],
+    presentation:['Often asymptomatic until it is dangerous','Generalised weakness, fatigue, paraesthesiae','Palpitations, bradycardia, or cardiac arrest as the first presentation'],
+    ix:[{t:'12-lead ECG', f:'Tall, tented T waves first; then flattened P waves, PR prolongation, QRS widening, and finally a sine wave pre-arrest.'},{t:'Serum potassium', f:'Confirm and exclude a haemolysed sample — but treat the ECG, not the wait.'},{t:'Renal function and bicarbonate', f:'Identifies the driver.'},{t:'Creatine kinase', f:'If rhabdomyolysis suspected.'}],
+    immediate:['IV calcium (chloride or gluconate) to stabilise the myocardium — does not lower potassium but buys time','Insulin with dextrose to shift potassium intracellularly','Nebulised salbutamol as an additional shifting agent','Continuous cardiac monitoring'],
+    definitive:['Remove potassium from the body: dialysis is definitive, especially in renal failure or missed dialysis','Potassium binders for less acute cases','Stop the offending drugs and treat the underlying cause'],
+    pitfalls:['Treating the number and ignoring the ECG — or vice versa','Giving only shifting agents (insulin/salbutamol) and forgetting that potassium must still be removed — the level rebounds','Not recognising a sine-wave ECG as pre-terminal','Giving potassium-containing fluid to an anuric patient'],
+    practice:[{m:'icu', id:'hyperkalemia_symptomatic', label:'ICU case — symptomatic hyperkalaemia'},{m:'ecg', id:'hyperkalaemia', label:'ECG — peaked T waves'},{m:'icu', id:'arrest_hyperk', label:'ICU case — cardiac arrest from hyperkalaemia'}]
+  },
+  ards:{
+    name:'Acute Respiratory Distress Syndrome (ARDS)', cat:'Respiratory',
+    lead:'Diffuse inflammatory lung injury with stiff, collapsed, shunting lungs — the treatment is a ventilator strategy that does no further harm.',
+    definition:'Acute-onset (within 1 week) hypoxaemic respiratory failure with bilateral infiltrates not fully explained by cardiac failure or fluid overload, with a P/F ratio ≤300 despite PEEP ≥5.',
+    causes:['Direct lung injury: pneumonia, aspiration, inhalation, contusion','Indirect: sepsis, pancreatitis, massive transfusion, trauma'],
+    presentation:['Rapidly worsening hypoxaemia refractory to oxygen','Bilateral infiltrates on chest imaging','Low compliance — stiff lungs, high plateau pressures for modest tidal volumes','Large shunt fraction: oxygen alone does not correct the hypoxaemia'],
+    ix:[{t:'P/F ratio', f:'Grades severity: <300 mild, <200 moderate, <100 severe.'},{t:'Chest imaging', f:'Bilateral infiltrates.'},{t:'Echo', f:'To exclude a purely cardiogenic cause.'},{t:'Plateau pressure', f:'The number that matters for lung protection — keep <30 cmH2O.'}],
+    immediate:['Lung-protective ventilation: tidal volume ~6 mL/kg predicted body weight','Plateau pressure <30 cmH2O','Titrate PEEP and FiO2 together to recruit collapsed alveoli and reduce shunt','Accept permissive hypercapnia'],
+    definitive:['Prone positioning for moderate-severe ARDS','Conservative fluid strategy once shock has resolved','Neuromuscular blockade in selected severe cases; ECMO in refractory hypoxaemia','Treat the underlying precipitant'],
+    pitfalls:['Ventilating with "comfortable" 500 mL tidal volumes — this causes ventilator-induced lung injury and worsening compliance','Chasing a normal PaCO2 at the cost of high pressures','Adding PEEP without watching blood pressure as intrathoracic pressure rises','Confusing ARDS with fibrosis — in fibrosis the lung is scarred, not collapsed, so PEEP recruits very little'],
+    practice:[{m:'icu', id:'ards', label:'ICU case — refractory hypoxaemia'},{m:'vent', id:'ards', label:'Ventilator — moderate-severe ARDS'},{m:'vent', id:'pulm_fibrosis', label:'Ventilator — fibrosis (the contrast case)'}]
+  },
+  copd_exac:{
+    name:'COPD Exacerbation', cat:'Respiratory',
+    lead:'An obstructive, air-trapping lung with a chronically compensated CO2 — the traps are uncontrolled oxygen and squeezing the expiratory time.',
+    definition:'Acute worsening of respiratory symptoms in chronic obstructive pulmonary disease, with increased airflow obstruction, hyperinflation, and often hypercapnic respiratory failure on a background of chronic compensation.',
+    causes:['Viral or bacterial respiratory infection','Air pollution or smoking','Non-adherence to inhaled therapy','Concurrent pneumonia, PE, or heart failure'],
+    presentation:['Increased breathlessness, wheeze, cough, and sputum purulence','Prolonged expiratory phase, accessory muscle use, pursed-lip breathing','Drowsiness, flap, and headache suggest CO2 narcosis','Chronically elevated bicarbonate reflects long-standing compensation'],
+    ix:[{t:'ABG', f:'Respiratory acidosis with a raised bicarbonate = chronic, compensated. A normal bicarbonate with high CO2 means it is acute.'},{t:'Chest X-ray', f:'Hyperinflation; look for pneumonia or pneumothorax.'},{t:'ECG and BNP', f:'To assess for co-existing cardiac disease.'}],
+    immediate:['Controlled oxygen — target 88–92% saturation, not 94–98%','Nebulised bronchodilators (salbutamol and ipratropium)','Systemic corticosteroids','Antibiotics if sputum is purulent or there is consolidation'],
+    definitive:['Non-invasive ventilation for persistent respiratory acidosis — the key intervention that avoids intubation','Intubation if NIV fails or the patient cannot protect their airway','Treat the precipitant; smoking cessation and pulmonary rehab afterwards'],
+    pitfalls:['High-flow uncontrolled oxygen worsening hypercapnia and causing CO2 narcosis','Chasing a "normal" PaCO2 in a chronic retainer — their baseline is high; the pH tells you what is acute','On the ventilator, setting a fast rate that squeezes expiratory time and creates auto-PEEP, breath stacking, and hypotension','Missing a pneumothorax as the cause of the deterioration'],
+    practice:[{m:'icu', id:'copd', label:'ICU case — COPD exacerbation'},{m:'vent', id:'copd', label:'Ventilator — obstructive, air trapping'},{m:'abg', id:'copd_chronic', label:'ABG — chronic CO2 retainer'}]
+  },
+  asthma:{
+    name:'Acute Severe Asthma', cat:'Respiratory',
+    lead:'Severe bronchospasm where a normalising CO2 is an ominous sign of exhaustion, not improvement.',
+    definition:'An acute exacerbation of asthma with features of severe or life-threatening attack: inability to complete sentences, peak flow <50% predicted, silent chest, cyanosis, exhaustion, or a rising PaCO2.',
+    causes:['Viral infection, allergen or irritant exposure','Non-adherence to inhaled corticosteroids','NSAIDs or beta-blockers in susceptible patients'],
+    presentation:['Severe breathlessness and wheeze; inability to speak in full sentences','Tachypnoea and tachycardia','LIFE-THREATENING signs: silent chest, cyanosis, exhaustion, bradycardia, hypotension, altered consciousness','A normal or rising PaCO2 in an asthmatic attack means the patient is tiring — a pre-arrest sign'],
+    ix:[{t:'Peak expiratory flow', f:'Objective severity grading; <33% predicted is life-threatening.'},{t:'ABG', f:'Initially low PaCO2 from hyperventilation. A normal or rising PaCO2 signals exhaustion.'},{t:'Chest X-ray', f:'Only if pneumothorax or consolidation is suspected.'}],
+    immediate:['High-flow oxygen to maintain saturations 94–98%','Back-to-back nebulised salbutamol and ipratropium (oxygen-driven)','Systemic corticosteroids early','IV magnesium sulfate in severe or refractory cases'],
+    definitive:['Escalate to ICU for consideration of IV bronchodilators or intubation','If intubated: low rate, high inspiratory flow, prolonged expiratory time, permissive hypercapnia','Treat the trigger; review inhaler technique and adherence on recovery'],
+    pitfalls:['Reading a normalising PaCO2 as improvement when it actually signals exhaustion','Ventilating with a fast rate after intubation — this causes breath stacking, dynamic hyperinflation, sudden hypotension, and arrest','Underestimating a silent chest — no wheeze can mean no air movement','Discharging too early without steroids or follow-up'],
+    practice:[{m:'icu', id:'severe_asthma', label:'ICU case — acute severe asthma'},{m:'vent', id:'asthma', label:'Ventilator — status asthmaticus'}]
+  },
+  af:{
+    name:'Atrial Fibrillation', cat:'Cardiac',
+    lead:'An irregularly irregular rhythm with two separate jobs: control the rate or rhythm, and assess the stroke risk.',
+    definition:'A supraventricular tachyarrhythmia with uncoordinated atrial activity, producing an irregularly irregular ventricular response with absent P waves.',
+    causes:['Hypertension, ischaemic heart disease, valvular disease, heart failure','Sepsis, thyrotoxicosis, electrolyte disturbance (low K+ or Mg2+)','Post-operative — especially after thoracic and cardiac surgery','Alcohol, PE, and hypoxia'],
+    presentation:['Palpitations, breathlessness, chest discomfort, or fatigue','Irregularly irregular pulse','May be entirely asymptomatic and found incidentally','Haemodynamic instability with a very rapid ventricular response'],
+    ix:[{t:'12-lead ECG', f:'Irregularly irregular rhythm, absent P waves, fibrillatory baseline.'},{t:'Electrolytes (K+, Mg2+)', f:'Correctable precipitants and perpetuators.'},{t:'TSH', f:'Exclude thyrotoxicosis.'},{t:'Echo', f:'Structural heart disease and valve assessment.'}],
+    immediate:['If haemodynamically unstable: synchronised DC cardioversion','If stable: rate control with a beta-blocker or rate-limiting calcium-channel blocker','Correct potassium and magnesium','Treat the precipitant (sepsis, PE, thyrotoxicosis)'],
+    definitive:['Formal stroke-risk assessment (CHA₂DS₂-VASc) to guide anticoagulation, balanced against bleeding risk','Rhythm control with cardioversion or antiarrhythmics in selected patients','Consider ablation for symptomatic recurrent AF'],
+    pitfalls:['Rate-controlling the AF and forgetting the stroke-risk assessment — the anticoagulation decision is the one that prevents disability','Cardioverting without considering thromboembolic risk in AF of uncertain duration','Giving adenosine expecting it to terminate AF — it will not','Missing the underlying driver and treating only the rhythm'],
+    practice:[{m:'ecg', id:'afib_rvr', label:'ECG — AF with rapid ventricular response'},{m:'icu', id:'postop_af', label:'ICU case — post-operative AF'},{m:'proc', id:'cardioversion', label:'Procedure — synchronised cardioversion'}]
+  },
+  cardiac_arrest:{
+    name:'Cardiac Arrest & ACLS', cat:'Cardiac',
+    lead:'High-quality compressions and early defibrillation are the only two interventions with strong survival evidence — everything else is secondary.',
+    definition:'Cessation of effective cardiac output. Rhythms divide into shockable (VF, pulseless VT) and non-shockable (PEA, asystole), which determines the algorithm.',
+    causes:['Shockable: ischaemia and primary arrhythmia most commonly','Non-shockable: the reversible causes — the 4 Hs and 4 Ts','Hypoxia, Hypovolaemia, Hypo/hyperkalaemia and metabolic, Hypothermia','Thrombosis (coronary or pulmonary), Tension pneumothorax, Tamponade, Toxins'],
+    presentation:['Unresponsive, not breathing normally, no palpable central pulse','Agonal gasping is NOT normal breathing — start CPR'],
+    ix:[{t:'Rhythm check', f:'Every 2 minutes — determines shockable vs non-shockable.'},{t:'Point-of-care ultrasound', f:'Can identify tamponade, RV strain, or hypovolaemia without interrupting compressions.'},{t:'Blood gas and potassium', f:'For reversible metabolic causes.'}],
+    immediate:['High-quality CPR: 100–120/min, adequate depth, full recoil, minimal interruptions','Shockable rhythm: defibrillate immediately, then resume CPR at once','Adrenaline 1mg IV every 3–5 minutes (immediately in non-shockable rhythms)','Amiodarone 300mg after the 3rd shock in refractory shockable rhythms'],
+    definitive:['Systematically treat the 4 Hs and 4 Ts — a rhythm that will not convert usually has an untreated reversible cause','Post-ROSC: targeted temperature management, controlled oxygenation and ventilation, coronary angiography where indicated','Empiric thrombolysis if massive PE is the suspected cause'],
+    pitfalls:['Continuing CPR and adrenaline without ever treating a reversible cause','Pausing compressions too long for rhythm checks, intubation, or line placement','Attempting synchronised cardioversion in VF — there is no QRS to synchronise to','Hyperventilating post-ROSC, which drops cerebral blood flow'],
+    practice:[{m:'ecg', id:'vfib', label:'ECG — ventricular fibrillation'},{m:'ecg', id:'asystole', label:'ECG — asystole'},{m:'ecg', id:'vtach', label:'ECG — VT with a pulse'},{m:'icu', id:'arrest_hyperk', label:'ICU case — arrest with a reversible cause'},{m:'vent', id:'post_arrest_vent', label:'Ventilator — post-arrest'}]
+  },
+  cardiogenic_shock:{
+    name:'Cardiogenic Shock', cat:'Cardiac',
+    lead:'Pump failure — the one shock state where more fluid usually makes things worse.',
+    definition:'End-organ hypoperfusion caused by primary cardiac pump failure, with hypotension despite adequate or elevated filling pressures.',
+    causes:['Acute myocardial infarction with extensive LV damage (commonest)','Decompensated chronic heart failure','Acute valvular failure, myocarditis, arrhythmia','Mechanical complications of MI (septal or papillary muscle rupture)'],
+    presentation:['Hypotension with cool, mottled, clammy peripheries — "cold" shock','Raised JVP, pulmonary oedema, crackles','Oliguria, confusion, rising lactate','Narrow pulse pressure'],
+    ix:[{t:'Echo', f:'The key test — quantifies LV function and finds mechanical complications.'},{t:'ECG and troponin', f:'Identify an ischaemic cause requiring revascularisation.'},{t:'Lactate', f:'Perfusion marker and resuscitation target.'},{t:'Chest X-ray', f:'Pulmonary oedema and cardiomegaly.'}],
+    immediate:['Cautious or no fluid — assess filling status before giving any','Inotropic support (e.g. dobutamine) to improve contractility','Vasopressor if MAP is critically low','Oxygen and non-invasive ventilation for pulmonary oedema'],
+    definitive:['Urgent revascularisation if ischaemic','Mechanical circulatory support (IABP, Impella, VA-ECMO) in selected patients','Surgical repair of mechanical complications','Treat arrhythmia and optimise heart failure therapy'],
+    pitfalls:['Giving standard 30 mL/kg sepsis-style fluid resuscitation — this floods a failing ventricle and causes pulmonary oedema','Beta-blockade during acute decompensation','Confusing "cold" cardiogenic shock with "warm" septic shock and treating them the same way','Missing an acute mechanical complication that needs surgery, not drugs'],
+    practice:[{m:'icu', id:'cardiogenic', label:'ICU case — cardiogenic shock'},{m:'vent', id:'cardiogenic_oedema', label:'Ventilator — cardiogenic pulmonary oedema'},{m:'icu', id:'flash_ope', label:'ICU case — flash pulmonary oedema'}]
+  },
+  tension_pneumothorax:{
+    name:'Tension Pneumothorax', cat:'Trauma',
+    lead:'A clinical diagnosis, not a radiological one — if you are waiting for the chest X-ray, you have waited too long.',
+    definition:'Progressive accumulation of air in the pleural space under positive pressure, collapsing the lung, shifting the mediastinum, and obstructing venous return — causing obstructive shock and arrest if untreated.',
+    causes:['Penetrating or blunt chest trauma','Positive-pressure ventilation converting a simple pneumothorax','Central line insertion complication','Spontaneous, in bullous lung disease'],
+    presentation:['Severe respiratory distress and hypoxaemia','Absent breath sounds and hyper-resonance on the affected side','Distended neck veins and hypotension','Tracheal deviation away from the side — a late and unreliable sign'],
+    ix:[{t:'Clinical assessment', f:'This is the diagnosis. Do not delay decompression for imaging in an unstable patient.'},{t:'eFAST ultrasound', f:'Absent lung sliding — fast and bedside.'},{t:'Chest X-ray', f:'Only once the patient is stable or already decompressed.'}],
+    immediate:['Immediate needle decompression (2nd intercostal space mid-clavicular, or 4th–5th anterior axillary)','High-flow oxygen','This must happen BEFORE or immediately alongside intubation'],
+    definitive:['Formal chest tube (tube thoracostomy) in the triangle of safety','Connect to an underwater seal and confirm re-expansion radiographically','Treat the underlying injury'],
+    pitfalls:['Starting positive-pressure ventilation before decompressing — this rapidly worsens the tension and precipitates collapse','Waiting for a chest X-ray to confirm before treating','Relying on tracheal deviation, which appears late','Placing a chest tube too low and injuring the diaphragm or abdominal organs'],
+    practice:[{m:'icu', id:'tension_pneumo', label:'ICU case — tension pneumothorax'},{m:'proc', id:'chest_tube', label:'Procedure — chest tube insertion'}]
+  },
+  tamponade:{
+    name:'Cardiac Tamponade', cat:'Cardiac',
+    lead:'Fluid in the pericardium compressing the heart — obstructive shock where positive-pressure ventilation can be the final insult.',
+    definition:'Accumulation of pericardial fluid at a pressure sufficient to impair diastolic filling, reducing stroke volume and causing obstructive shock. Speed of accumulation matters more than volume.',
+    causes:['Penetrating chest trauma or cardiac injury','Malignant pericardial effusion','Uraemia, infection, post-MI free wall rupture','Post-cardiac surgery or post-procedural'],
+    presentation:["Beck's triad: hypotension, distended neck veins, muffled heart sounds",'Tachycardia with a narrow pulse pressure','Pulsus paradoxus','Breathlessness and shock in a patient with a compatible mechanism'],
+    ix:[{t:'Bedside echo', f:'Diagnostic — pericardial effusion with diastolic right ventricular collapse.'},{t:'ECG', f:'Sinus tachycardia, low-voltage QRS, electrical alternans (insensitive).'},{t:'eFAST', f:'Rapid identification in trauma.'}],
+    immediate:['Cautious IV fluid as a temporising bridge to increase preload','Urgent pericardial drainage — do not let fluids delay it','Avoid intubation before drainage if the patient can be temporised'],
+    definitive:['Ultrasound-guided pericardiocentesis with a retained pigtail catheter','Emergency thoracotomy for peri-arrest penetrating chest trauma','Treat the underlying cause; pericardial window for recurrent malignant effusions'],
+    pitfalls:['Positive-pressure ventilation before drainage — it reduces the already-impaired venous return and can precipitate arrest','Advancing the needle despite new ectopy, risking ventricular puncture','Assuming any blood return confirms success — true pericardial blood in tamponade is usually defibrinated and does not clot','Removing the needle without leaving a catheter when the effusion will re-accumulate'],
+    practice:[{m:'icu', id:'tamponade_trauma', label:'ICU case — penetrating chest trauma'},{m:'proc', id:'pericardiocentesis', label:'Procedure — pericardiocentesis'}]
+  },
+  stroke:{
+    name:'Acute Ischaemic Stroke', cat:'Neuro',
+    lead:'Time is brain — the whole pathway exists to shorten the interval from onset to reperfusion.',
+    definition:'Acute neurological deficit caused by focal cerebral infarction from arterial occlusion. Distinguishing ischaemic from haemorrhagic stroke by urgent imaging is the decision point for treatment.',
+    causes:['Large-artery atherosclerosis','Cardioembolism — especially from atrial fibrillation','Small-vessel (lacunar) disease','Dissection in younger patients'],
+    presentation:['Sudden focal deficit: unilateral weakness, facial droop, slurred speech, visual field loss','Established time of onset — or time last known well','Reduced consciousness in large strokes or haemorrhage','Stroke mimics: hypoglycaemia, seizure with Todd’s paresis, migraine'],
+    ix:[{t:'Urgent non-contrast CT head', f:'Primarily to exclude haemorrhage before thrombolysis.'},{t:'Blood glucose', f:'Check immediately — hypoglycaemia is the classic mimic.'},{t:'CT angiography', f:'Identifies large-vessel occlusion amenable to thrombectomy.'},{t:'ECG', f:'Looking for AF as an embolic source.'}],
+    immediate:['Activate the stroke pathway and confirm the onset time','Check glucose immediately','Urgent CT to exclude haemorrhage','Assess for thrombolysis eligibility within the window'],
+    definitive:['IV thrombolysis if within the time window and no contraindication','Mechanical thrombectomy for large-vessel occlusion','Antiplatelet therapy after haemorrhage is excluded (and after thrombolysis interval)','Swallow screen before any oral intake; secondary prevention including anticoagulation for AF'],
+    pitfalls:['Missing hypoglycaemia as a stroke mimic','Aggressively lowering blood pressure and reducing penumbral perfusion','Giving antiplatelets or anticoagulants before imaging excludes haemorrhage','Feeding before a swallow assessment, risking aspiration'],
+    practice:[{m:'icu', id:'stroke', label:'ICU case — sudden focal weakness'},{m:'ecg', id:'afib_rvr', label:'ECG — AF, the embolic source'}]
+  },
+  hyponatraemia:{
+    name:'Hyponatraemia', cat:'Metabolic',
+    lead:'Correct it too slowly and the patient seizes; correct it too fast and you cause irreversible brain injury.',
+    definition:'Serum sodium below the normal range. Management is driven by symptoms, chronicity, and volume status — and above all by the rate of correction.',
+    causes:['Thiazide diuretics','SIADH: malignancy, chest and CNS disease, drugs','Hypovolaemia: vomiting, diarrhoea, diuretics','Excessive water intake; heart failure, cirrhosis, renal failure (hypervolaemic)'],
+    presentation:['Mild: nausea, headache, lethargy','Severe: confusion, seizures, reduced consciousness, coma','Symptom severity depends more on the speed of the fall than the absolute number','Chronic hyponatraemia may be strikingly asymptomatic'],
+    ix:[{t:'Serum and urine osmolality', f:'Confirms true hypotonic hyponatraemia and helps classify it.'},{t:'Urine sodium', f:'Distinguishes renal from extra-renal loss and supports SIADH.'},{t:'Volume status assessment', f:'Clinical — drives whether saline or restriction is right.'},{t:'TSH and cortisol', f:'Exclude hypothyroidism and adrenal insufficiency.'}],
+    immediate:['If actively seizing or severely symptomatic: hypertonic (3%) saline in small boluses','Stop the offending drug (commonly a thiazide)','Restrict free water where appropriate','Monitor sodium every 1–2 hours during active correction'],
+    definitive:['Treat the underlying cause: fluid restriction for SIADH, isotonic saline for hypovolaemia','Correct no faster than ~8–10 mmol/L in 24 hours','Involve nephrology in complex or refractory cases'],
+    pitfalls:['Overcorrecting faster than ~10 mmol/L in 24 hours — this risks osmotic demyelination, causing delayed and often irreversible neurological injury','Treating seizures with benzodiazepines alone while ignoring the sodium — they will recur','Giving isotonic saline in SIADH, which can worsen the sodium','Failing to recheck sodium frequently during active correction'],
+    practice:[{m:'icu', id:'hyponatremia', label:'ICU case — seizure from hyponatraemia'}]
+  },
+  paracetamol:{
+    name:'Paracetamol (Acetaminophen) Overdose', cat:'Toxicology',
+    lead:'A deceptively well patient in the first hours — the antidote works best exactly when they look fine.',
+    definition:'Overdose causing saturation of normal conjugation pathways and accumulation of the toxic metabolite NAPQI, which depletes glutathione and causes centrilobular hepatic necrosis.',
+    causes:['Intentional single or staggered overdose','Therapeutic excess, especially with malnutrition, chronic alcohol use, or enzyme-inducing drugs'],
+    presentation:['First 24 hours: often asymptomatic or just nausea and vomiting — deceptively well','24–72 hours: right upper quadrant pain, rising transaminases','72–96 hours: jaundice, coagulopathy, encephalopathy, acute liver failure','Late: hepatic failure, renal failure, death'],
+    ix:[{t:'Timed paracetamol level', f:'Plotted on the treatment nomogram at 4 hours or later post-ingestion.'},{t:'LFTs and INR', f:'INR is the most useful early marker of hepatic synthetic failure.'},{t:'Renal function and ABG', f:'Acidosis and renal impairment are poor prognostic markers.'},{t:'Blood glucose', f:'Hypoglycaemia in established liver failure.'}],
+    immediate:['N-acetylcysteine — start without waiting for levels if the ingestion was large, staggered, or the timing is uncertain','Activated charcoal if presenting within 1 hour of a significant ingestion','Supportive care and repeated bloods'],
+    definitive:['Continue NAC until the criteria for stopping are met (INR, transaminases, and clinical status)','Apply liver transplant criteria (e.g. King’s College) in established failure','Psychiatric assessment for all intentional overdoses'],
+    pitfalls:['Being reassured by a well-looking patient and normal early bloods — the damage is silent at first','Delaying NAC to wait for a level in a large, staggered, or unclear-timing ingestion','Using the nomogram for staggered overdoses, where it does not apply','Missing an anaphylactoid reaction to NAC and stopping the antidote permanently rather than pausing and restarting'],
+    practice:[{m:'icu', id:'paracetamol', label:'ICU case — paracetamol overdose'},{m:'icu', id:'salicylate', label:'ICU case — salicylate overdose (the contrast)'},{m:'abg', id:'salicylate', label:'ABG — salicylate mixed disorder'}]
+  },
+  nec_fasc:{
+    name:'Necrotising Fasciitis', cat:'Infection',
+    lead:'Pain out of all proportion to the appearance — and the only treatment that works is a scalpel, urgently.',
+    definition:'A rapidly progressive necrotising soft tissue infection tracking along fascial planes, causing tissue necrosis, systemic toxicity, and high mortality without immediate surgical debridement.',
+    causes:['Polymicrobial (type I) — often post-operative, diabetic, or perineal','Group A streptococcal (type II) — can occur in healthy adults','Entry via surgical wounds, trauma, injection sites, or occasionally no visible portal','Risk: diabetes, immunosuppression, obesity, peripheral vascular disease'],
+    presentation:['PAIN OUT OF PROPORTION to the visible findings — the cardinal early clue','Rapidly advancing erythema, dusky or purplish skin, bullae','Crepitus from subcutaneous gas','Systemic toxicity: fever, tachycardia, hypotension, confusion'],
+    ix:[{t:'Clinical suspicion', f:'This is a clinical diagnosis — imaging must never delay theatre.'},{t:'LRINEC score', f:'Supportive (CRP, WBC, Hb, Na, creatinine, glucose) but cannot rule it out.'},{t:'CT/MRI', f:'Fascial gas and thickening — only if it does not delay surgery.'},{t:'Creatine kinase', f:'Elevated with deep muscle involvement.'}],
+    immediate:['Emergency surgical referral — this goes to theatre now','Broad-spectrum IV antibiotics WITH clindamycin (reduces exotoxin production)','Aggressive fluid resuscitation and vasopressor support','IV immunoglobulin may be considered in streptococcal toxic shock'],
+    definitive:['Radical surgical debridement to healthy bleeding tissue, with planned re-look debridements','ICU support for septic shock and organ failure','Reconstruction once the infection is controlled'],
+    pitfalls:['Treating with antibiotics alone and observing overnight — the infection advances by the hour and mortality climbs with every hour of delay to debridement','Being reassured by unremarkable overlying skin early on','Waiting for imaging to confirm before calling the surgeon','Inadequate first debridement — it must reach healthy, bleeding margins'],
+    practice:[{m:'icu', id:'necrotising_fasciitis', label:'ICU case — necrotising fasciitis'}]
+  },
+  raised_icp:{
+    name:'Raised Intracranial Pressure & Traumatic Brain Injury', cat:'Neuro',
+    lead:'The primary injury is done — everything you do afterwards is about preventing secondary brain injury.',
+    definition:'Elevated pressure within the closed cranial vault reducing cerebral perfusion pressure and risking herniation. In trauma, an expanding extradural or subdural haematoma is a time-critical surgical lesion.',
+    causes:['Traumatic haematoma: extradural (classically a lucid interval), subdural, intracerebral','Cerebral oedema after trauma, hypoxia, or infarction','Intracranial haemorrhage or mass lesion','Hydrocephalus'],
+    presentation:['Declining GCS — the single most important sign to track','Classic extradural pattern: lucid interval then rapid deterioration','Unilateral fixed dilated pupil from uncal herniation','Cushing’s triad (hypertension, bradycardia, irregular breathing) — a late, ominous sign'],
+    ix:[{t:'Urgent CT head', f:'Identifies the surgical lesion, midline shift, and effacement.'},{t:'Serial GCS and pupils', f:'The core monitoring — trend matters more than any single value.'},{t:'Blood glucose and coagulation', f:'Correctable contributors.'},{t:'ABG', f:'Avoid both hypoxia and inadvertent hyperventilation.'}],
+    immediate:['Prevent secondary injury: avoid hypoxia and hypotension above all','Head-up 30 degrees with the neck midline to optimise venous drainage','Osmotherapy — mannitol or hypertonic saline — as a bridge to surgery','Airway protection if GCS is falling, avoiding hypoxia and hypotension at induction'],
+    definitive:['Emergency neurosurgical evacuation of the haematoma — the definitive treatment','ICP monitoring and neuro-ICU care','Maintain cerebral perfusion pressure; treat seizures'],
+    pitfalls:['Heavy sedation that masks the neurological examination you need to detect deterioration','Prolonged or prophylactic hyperventilation causing cerebral vasoconstriction and ischaemia — use it only briefly for active herniation','Allowing even a single episode of hypotension or hypoxia, both of which markedly worsen outcome','Delaying transfer to neurosurgery for further imaging'],
+    practice:[{m:'icu', id:'tbi_epidural', label:'ICU case — extradural haematoma'},{m:'proc', id:'intubation', label:'Procedure — rapid sequence intubation'}]
+  }
+};
+
+let condCat = 'All';
+let condQuery = '';
+let condCURRENT = null;
+
+const PRACTICE_MODULES = {
+  icu:  { label:'ICU Case',   go:(id)=>{ const c=CASES[id]; if(!c) return; currentSpecialty=c.specialty; loadCase(id); } },
+  ecg:  { label:'ECG',        go:(id)=>ecgLoadCase(id) },
+  abg:  { label:'ABG',        go:(id)=>abgLoadCase(id) },
+  vent: { label:'Ventilator', go:(id)=>loadVentPreset(id) },
+  proc: { label:'Procedure',  go:(id)=>procLoadCase(id) }
+};
+
+// reverse index: which condition should a finished ICU case point back to?
+const CASE_TO_CONDITION = {};
+Object.keys(CONDITIONS).forEach(cid=>{
+  (CONDITIONS[cid].practice||[]).forEach(p=>{
+    if (p.m==='icu' && !CASE_TO_CONDITION[p.id]) CASE_TO_CONDITION[p.id] = cid;
+  });
+});
+
+function launchPractice(m, id){
+  const mod = PRACTICE_MODULES[m];
+  if (mod) mod.go(id);
+}
+
+function buildCondCatFilter(){
+  const box = document.getElementById('condCatFilter');
+  const cats = ['All'].concat(Array.from(new Set(Object.keys(CONDITIONS).map(k=>CONDITIONS[k].cat))).sort());
+  box.innerHTML = cats.map(c=>`<button class="cat-chip${c===condCat?' on':''}" data-cat="${c}">${c}</button>`).join('');
+  box.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click', ()=>{ condCat=b.dataset.cat; buildCondCatFilter(); buildConditionGrid(); }));
+}
+
+function buildConditionGrid(){
+  const grid = document.getElementById('conditionGrid');
+  const q = condQuery.trim().toLowerCase();
+  const keys = Object.keys(CONDITIONS).filter(k=>{
+    const c = CONDITIONS[k];
+    if (condCat!=='All' && c.cat!==condCat) return false;
+    if (!q) return true;
+    return (c.name+' '+c.cat+' '+c.lead+' '+(c.causes||[]).join(' ')+' '+(c.presentation||[]).join(' ')).toLowerCase().includes(q);
+  });
+  if (!keys.length){
+    grid.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'case-grid-empty';
+    p.textContent = `No conditions match "${condQuery}".`;
+    grid.appendChild(p);
+    return;
+  }
+  grid.innerHTML = '';
+  keys.forEach(k=>{
+    const c = CONDITIONS[k];
+    const card = document.createElement('button');
+    card.className = 'specialty-card cond-card';
+    card.style.setProperty('--spec-color','var(--good)');
+    card.innerHTML = `<span class="sc-count cc-cat">${c.cat}</span>
+      <p class="sc-name">${c.name}</p>
+      <p class="sc-desc">${c.lead}</p>`;
+    card.addEventListener('click', ()=>showCondition(k));
+    grid.appendChild(card);
+  });
+}
+
+function showCondition(key){
+  condCURRENT = key;
+  const c = CONDITIONS[key];
+  document.getElementById('condEyebrow').textContent = `Conditions library · ${c.cat}`;
+  document.getElementById('condTitle').textContent = c.name;
+  const li = arr => (arr||[]).map(x=>`<li>${x}</li>`).join('');
+  const ixList = (c.ix||[]).map(x=>`<li><b>${x.t}:</b> ${x.f}</li>`).join('');
+  const practiceBtns = (c.practice||[]).map(p=>{
+    const mod = PRACTICE_MODULES[p.m];
+    if (!mod) return '';
+    return `<button class="btn small" data-practice="${p.m}" data-pid="${p.id}">${mod.label} · ${p.label.replace(/^.*?— /,'')}</button>`;
+  }).join('');
+  document.getElementById('condBody').innerHTML = `
+    <p class="cond-lead">${c.lead}</p>
+    <div class="cond-sec"><h3>Definition</h3><p>${c.definition}</p></div>
+    <div class="cond-grid2">
+      <div class="cond-sec"><h3>Causes &amp; risk factors</h3><ul>${li(c.causes)}</ul></div>
+      <div class="cond-sec"><h3>Presentation</h3><ul>${li(c.presentation)}</ul></div>
+    </div>
+    <div class="cond-sec"><h3>Key investigations</h3><ul>${ixList}</ul></div>
+    <div class="cond-grid2">
+      <div class="cond-sec"><h3>Immediate management</h3><ul>${li(c.immediate)}</ul></div>
+      <div class="cond-sec"><h3>Definitive management</h3><ul>${li(c.definitive)}</ul></div>
+    </div>
+    <div class="cond-sec pitfalls"><h3>Classic pitfalls</h3><ul>${li(c.pitfalls)}</ul></div>
+    ${practiceBtns ? `<div class="cond-sec practice"><h3>Practice this</h3><div class="practice-row">${practiceBtns}</div></div>` : ''}
+  `;
+  document.getElementById('condBody').querySelectorAll('[data-practice]').forEach(b=>{
+    b.addEventListener('click', ()=>launchPractice(b.dataset.practice, b.dataset.pid));
+  });
+  revealScreen('conditionScreen');
+}
+
+function showLibraryScreen(){ revealScreen('libraryScreen'); }
+document.getElementById('condBackBtn').addEventListener('click', showLibraryScreen);
+document.getElementById('condSearch').addEventListener('input', (e)=>{ condQuery = e.target.value; buildConditionGrid(); });
+
 buildFrontIcons();
 buildSpecialtyGrid();
 buildSimulatorsGrid();
@@ -8234,6 +8623,8 @@ buildVentPresetGrid();
 buildAbgPresetGrid();
 buildProcPresetGrid();
 buildEcgPresetGrid();
+buildCondCatFilter();
+buildConditionGrid();
 if (!restoreSession()) { applyAllSettingsButtons(); }
 renderAccountChip();
 refreshAuthState();
