@@ -68,7 +68,10 @@ body.shell{
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
-body{padding:18px; min-height:100vh; transition:background-color .25s ease;}
+/* No background-color transition here: the shell/bedside swap changes --bg at the
+   same moment the class toggles, and the transition latches onto the outgoing
+   value and never lands — leaving bedside screens painted paper. */
+body{padding:18px; min-height:100vh;}
 
 /* ---------- editorial typography (shell only) ---------- */
 body.shell h1{
