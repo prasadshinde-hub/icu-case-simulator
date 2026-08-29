@@ -344,6 +344,62 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   .tile.alarm-crit, .alarm-bar.crit{animation:none;}
 }
 
+/* ---------- monitor: continuous waveform lanes ---------- */
+/* The ICU monitor only (.lanes). #ventMonitor and #procMonitor keep the tile grid above —
+   they show per-breath numbers, not continuous traces, so lanes would be the wrong shape.
+   Real bedside kit runs each trace the full width with its numeric blocked at the right,
+   which is also why the traces are ordered ECG / ABP / pleth / resp. */
+.monitor.lanes{display:flex;flex-direction:column;gap:0;padding:0;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.monitor.lanes .alarm-bar{border-radius:0;border-width:0 0 1px 0;background:color-mix(in srgb, var(--warn) 10%, transparent);}
+.monitor.lanes .alarm-bar.crit{background:color-mix(in srgb, var(--crit) 12%, transparent);}
+
+.lane{display:grid;grid-template-columns:1fr 138px;align-items:stretch;position:relative;
+  border-bottom:1px solid var(--border);min-height:58px;}
+.lane-wave{position:relative;overflow:hidden;padding:3px 0 3px 12px;min-width:0;}
+.lane-wave canvas{display:block;width:100%;height:100%;}
+.lane-tag{position:absolute;top:4px;left:14px;z-index:1;pointer-events:none;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--text-faint);}
+.lane-num{display:flex;flex-direction:column;justify-content:center;gap:2px;
+  padding:6px 14px;border-left:1px solid var(--border);}
+.lane-lbl{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);}
+.lane .value{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;line-height:1;}
+.lane .unit,.lane-foot .unit{font-size:10px;color:var(--text-faint);font-weight:500;margin-left:2px;}
+.lane.hr .value{color:var(--cyan);}  .lane.bp .value{color:var(--violet);}
+.lane.spo2 .value{color:var(--lime);} .lane.rr .value{color:var(--amber);}
+
+/* alarm treatment carries over from the tiles: coloured numeral, tinted lane, and a solid
+   edge bar down the left — the way a real monitor marks which channel is alarming. */
+.lane.alarm-warn{background:color-mix(in srgb, var(--warn) 7%, transparent);}
+.lane.alarm-crit{background:color-mix(in srgb, var(--crit) 11%, transparent);}
+.lane.alarm-warn .value{color:var(--warn);}
+.lane.alarm-crit .value{color:var(--crit);}
+.lane.alarm-warn::before,.lane.alarm-crit::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.lane.alarm-warn::before{background:var(--warn);}
+.lane.alarm-crit::before{background:var(--crit);}
+.lane.alarm-crit .lane-num{border-left-color:color-mix(in srgb, var(--crit) 45%, var(--border));}
+
+/* temp and GCS have no trace, so they sit in a footer strip rather than eating a lane */
+.lane-foot{display:flex;border-top:1px solid var(--border);}
+.foot-cell{flex:1;display:flex;align-items:baseline;gap:10px;padding:10px 14px;
+  border-right:1px solid var(--border);position:relative;min-width:0;}
+.foot-cell:last-child{border-right:none;}
+.foot-cell .value{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;line-height:1;}
+.foot-cell.alarm-warn .value{color:var(--warn);}
+.foot-cell.alarm-crit .value{color:var(--crit);}
+.foot-cell.alarm-warn{background:color-mix(in srgb, var(--warn) 7%, transparent);}
+.foot-cell.alarm-crit{background:color-mix(in srgb, var(--crit) 11%, transparent);}
+
+@media (max-width:560px){
+  .lane{grid-template-columns:1fr 96px;min-height:52px;}
+  .lane .value{font-size:21px;}
+  .lane-num{padding:6px 10px;}
+  .lane-wave{padding-left:8px;}
+  .lane-tag{left:10px;}
+  .foot-cell{padding:9px 11px;gap:7px;}
+  .foot-cell .value{font-size:17px;}
+}
+
 /* ---------- console ---------- */
 .console{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start;}
 @media (max-width:840px){.console{grid-template-columns:1fr;}}
@@ -920,7 +976,7 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <div class="brief-body" id="briefBody"></div>
   </details>
 
-  <div id="monitorSlotApp"><div class="monitor" id="monitor"></div></div>
+  <div id="monitorSlotApp"><div class="monitor lanes" id="monitor"></div></div>
 
   <div class="timebar" id="timeBar">
     <span class="timebar-label">Advance time</span>
@@ -5462,24 +5518,39 @@ function alarmBarHTML(v){
   </div>`;
 }
 
+function sizeMonitorCanvases(){
+  ['wf-hr','wf-bp','wf-spo2','wf-rr'].forEach(id=>{
+    const c = document.getElementById(id);
+    if (!c || !c.parentElement) return;
+    const r = c.getBoundingClientRect();
+    // the monitor can be re-rendered while its screen is hidden, where everything measures 0
+    const w = Math.round(r.width)  || 600;
+    const h = Math.round(r.height) || 46;
+    if (c.width !== w) c.width = w;
+    if (c.height !== h) c.height = h;
+  });
+}
+
 function renderMonitor(){
   const v = vitals();
   const m = document.getElementById('monitor');
-  m.innerHTML = `
-    ${alarmBarHTML(v)}
-    <div class="tile hr${alarmClass(statusOf(v.hr,'hr'))}"><span class="flag ${statusOf(v.hr,'hr')}"></span><span class="label">Heart rate</span>
-      <span class="value">${v.hr}<span class="unit"> bpm</span></span><canvas id="wf-hr" width="200" height="40"></canvas></div>
-    <div class="tile bp${alarmClass(statusOf(v.sbp,'sbp'))}"><span class="flag ${statusOf(v.sbp,'sbp')}"></span><span class="label">Arterial BP</span>
-      <span class="value">${v.sbp}/${v.dbp}<span class="unit"> mmHg</span></span><canvas id="wf-bp" width="200" height="40"></canvas></div>
-    <div class="tile rr${alarmClass(statusOf(v.rr,'rr'))}"><span class="flag ${statusOf(v.rr,'rr')}"></span><span class="label">Resp. rate</span>
-      <span class="value">${v.rr}<span class="unit"> /min</span></span><canvas id="wf-rr" width="200" height="40"></canvas></div>
-    <div class="tile spo2${alarmClass(statusOf(v.spo2,'spo2'))}"><span class="flag ${statusOf(v.spo2,'spo2')}"></span><span class="label">SpO2</span>
-      <span class="value">${v.spo2}<span class="unit"> %</span></span><canvas id="wf-spo2" width="200" height="40"></canvas></div>
-    <div class="tile${alarmClass(statusOf(parseFloat(v.temp),'temp'))}"><span class="flag ${statusOf(parseFloat(v.temp),'temp')}"></span><span class="label">Temp</span>
-      <span class="value">${formatTemp(v.temp)}</span></div>
-    <div class="tile${alarmClass(statusOf(v.gcs,'gcs'))}"><span class="flag ${statusOf(v.gcs,'gcs')}"></span><span class="label">GCS</span>
-      <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
-  `;
+  const lane = (cls, tag, canvasId, label, valueHtml, st) =>
+    `<div class="lane ${cls}${alarmClass(st)}">
+      <div class="lane-wave"><span class="lane-tag">${tag}</span><canvas id="${canvasId}"></canvas></div>
+      <div class="lane-num"><span class="lane-lbl">${label}</span><span class="value">${valueHtml}</span></div>
+    </div>`;
+  m.innerHTML = alarmBarHTML(v)
+    + lane('hr','ECG','wf-hr','Heart rate', `${v.hr}<span class="unit">bpm</span>`, statusOf(v.hr,'hr'))
+    + lane('bp','ABP','wf-bp','Arterial BP', `${v.sbp}/${v.dbp}<span class="unit">mmHg</span>`, statusOf(v.sbp,'sbp'))
+    + lane('spo2','PLETH','wf-spo2','SpO2', `${v.spo2}<span class="unit">%</span>`, statusOf(v.spo2,'spo2'))
+    + lane('rr','RESP','wf-rr','Resp. rate', `${v.rr}<span class="unit">/min</span>`, statusOf(v.rr,'rr'))
+    + `<div class="lane-foot">
+        <div class="foot-cell${alarmClass(statusOf(parseFloat(v.temp),'temp'))}">
+          <span class="lane-lbl">Temp</span><span class="value">${formatTemp(v.temp)}</span></div>
+        <div class="foot-cell${alarmClass(statusOf(v.gcs,'gcs'))}">
+          <span class="lane-lbl">GCS</span><span class="value">${v.gcs}<span class="unit">/15</span></span></div>
+      </div>`;
+  sizeMonitorCanvases();
   {
     const pattern = ecgPatternFor();
     const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
@@ -6828,6 +6899,12 @@ document.getElementById('backToSpecialtyBtn').addEventListener('click', showSpec
 document.getElementById('authBackBtn').addEventListener('click', showFront);
 document.getElementById('historyBackBtn').addEventListener('click', showSimulatorsScreen);
 document.getElementById('instrDashBackBtn').addEventListener('click', showSimulatorsScreen);
+
+let monitorResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(monitorResizeTimer);
+  monitorResizeTimer = setTimeout(()=>{ if (S) sizeMonitorCanvases(); }, 150);
+});
 document.getElementById('authTabLogin').addEventListener('click', ()=>setAuthMode('login'));
 document.getElementById('authTabSignup').addEventListener('click', ()=>setAuthMode('signup'));
 document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
