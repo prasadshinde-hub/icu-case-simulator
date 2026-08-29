@@ -356,7 +356,8 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 
 .lane{display:grid;grid-template-columns:1fr 138px;align-items:stretch;position:relative;
   border-bottom:1px solid var(--border);min-height:58px;}
-.lane-wave{position:relative;overflow:hidden;padding:3px 0 3px 12px;min-width:0;}
+.lane-wave{position:relative;overflow:hidden;padding:3px 0 3px 12px;min-width:0;
+  display:flex;align-items:center;}
 .lane-wave canvas{display:block;width:100%;height:46px;}
 .lane-tag{position:absolute;top:4px;left:14px;z-index:1;pointer-events:none;
   font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--text-faint);
@@ -5484,6 +5485,14 @@ function formatTemp(celsiusStr){
 // tile keeps its normal border and its per-parameter hue.
 function alarmClass(st){ return st==='crit' ? ' alarm-crit' : st==='warn' ? ' alarm-warn' : ''; }
 
+// Tile for the ventilator and procedure monitors. They keep the grid layout (per-breath and
+// per-step numbers, not continuous traces) but get the ICU monitor's alarm treatment, so a
+// critical plateau pressure reads as critical rather than as an 8px dot.
+function ventTile(cls, st, label, valueHtml){
+  return `<div class="tile ${cls}${alarmClass(st)}"><span class="flag ${st}"></span>` +
+         `<span class="label">${label}</span><span class="value">${valueHtml}</span></div>`;
+}
+
 function tempText(celsiusStr){
   const c = parseFloat(celsiusStr);
   return tempUnit==='F' ? `${(c*9/5+32).toFixed(1)}°F` : `${celsiusStr}°C`;
@@ -7388,18 +7397,12 @@ function renderVentMonitor(){
   const d = ventDerived();
   const m = document.getElementById('ventMonitor');
   m.innerHTML = `
-    <div class="tile spo2"><span class="flag ${d.spo2<88?'crit':d.spo2<94?'warn':'ok'}"></span><span class="label">SpO2</span>
-      <span class="value">${Math.round(d.spo2)}<span class="unit"> %</span></span></div>
-    <div class="tile bp"><span class="flag ${d.sbp<90?'crit':d.sbp<100?'warn':'ok'}"></span><span class="label">Blood pressure</span>
-      <span class="value">${d.sbp}/${d.dbp}<span class="unit"> mmHg</span></span></div>
-    <div class="tile"><span class="flag ${d.pplat>30?'crit':d.pplat>28?'warn':'ok'}"></span><span class="label">Plateau pressure</span>
-      <span class="value">${d.pplat.toFixed(1)}<span class="unit"> cmH2O</span></span></div>
-    <div class="tile"><span class="flag ${d.ppeak>35?'crit':'ok'}"></span><span class="label">Peak pressure</span>
-      <span class="value">${d.ppeak.toFixed(1)}<span class="unit"> cmH2O</span></span></div>
-    <div class="tile"><span class="flag ${d.ph<7.3||d.ph>7.5?'crit':(d.ph<7.35||d.ph>7.45)?'warn':'ok'}"></span><span class="label">pH</span>
-      <span class="value">${d.ph.toFixed(2)}</span></div>
-    <div class="tile"><span class="flag ${d.paco2>55?'crit':(d.paco2>45||d.paco2<35)?'warn':'ok'}"></span><span class="label">PaCO2</span>
-      <span class="value">${Math.round(d.paco2)}<span class="unit"> mmHg</span></span></div>
+    ${ventTile('spo2', d.spo2<88?'crit':d.spo2<94?'warn':'ok', 'SpO2', `${Math.round(d.spo2)}<span class="unit"> %</span>`)}
+    ${ventTile('bp', d.sbp<90?'crit':d.sbp<100?'warn':'ok', 'Blood pressure', `${d.sbp}/${d.dbp}<span class="unit"> mmHg</span>`)}
+    ${ventTile('', d.pplat>30?'crit':d.pplat>28?'warn':'ok', 'Plateau pressure', `${d.pplat.toFixed(1)}<span class="unit"> cmH2O</span>`)}
+    ${ventTile('', d.ppeak>35?'crit':'ok', 'Peak pressure', `${d.ppeak.toFixed(1)}<span class="unit"> cmH2O</span>`)}
+    ${ventTile('', d.ph<7.3||d.ph>7.5?'crit':(d.ph<7.35||d.ph>7.45)?'warn':'ok', 'pH', `${d.ph.toFixed(2)}`)}
+    ${ventTile('', d.paco2>55?'crit':(d.paco2>45||d.paco2<35)?'warn':'ok', 'PaCO2', `${Math.round(d.paco2)}<span class="unit"> mmHg</span>`)}
   `;
 }
 
@@ -8338,14 +8341,10 @@ function procNextStep(){
 function renderProcMonitor(){
   const v = procS.vitals;
   document.getElementById('procMonitor').innerHTML = `
-    <div class="tile hr"><span class="flag ${(v.hr>140||v.hr<50)?'crit':(v.hr>115||v.hr<55)?'warn':'ok'}"></span><span class="label">Heart rate</span>
-      <span class="value">${v.hr}<span class="unit"> bpm</span></span></div>
-    <div class="tile bp"><span class="flag ${v.sbp<80?'crit':v.sbp<95?'warn':'ok'}"></span><span class="label">SBP</span>
-      <span class="value">${v.sbp}<span class="unit"> mmHg</span></span></div>
-    <div class="tile spo2"><span class="flag ${v.spo2<88?'crit':v.spo2<94?'warn':'ok'}"></span><span class="label">SpO2</span>
-      <span class="value">${v.spo2}<span class="unit"> %</span></span></div>
-    <div class="tile"><span class="flag ${v.gcs<=8?'crit':v.gcs<=13?'warn':'ok'}"></span><span class="label">GCS</span>
-      <span class="value">${v.gcs}<span class="unit"> /15</span></span></div>
+    ${ventTile('hr', statusOf(v.hr,'hr'), 'Heart rate', `${v.hr}<span class="unit"> bpm</span>`)}
+    ${ventTile('bp', statusOf(v.sbp,'sbp'), 'SBP', `${v.sbp}<span class="unit"> mmHg</span>`)}
+    ${ventTile('spo2', statusOf(v.spo2,'spo2'), 'SpO2', `${v.spo2}<span class="unit"> %</span>`)}
+    ${ventTile('', statusOf(v.gcs,'gcs'), 'GCS', `${v.gcs}<span class="unit"> /15</span>`)}
   `;
 }
 
