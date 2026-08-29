@@ -228,6 +228,37 @@ body.shell #frontLibraryBtn:hover{ border-color:var(--accent); color:var(--accen
 .hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;color:var(--text-dim);
   background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;}
+
+/* Overflow menu for the case admin actions. These used to sit in the header as five
+   equal-weight buttons, which on a phone pushed the first vital 575px down the page —
+   most of the viewport spent on Restart/Export before you could see the patient. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+.hdr-menu{position:relative;}
+.hdr-menu-btn{font-size:17px;line-height:1;min-width:38px;padding:6px 10px;}
+.hdr-menu-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:40;min-width:190px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:5px;
+  display:flex;flex-direction:column;gap:2px;box-shadow:0 10px 28px rgba(0,0,0,.32);}
+.hdr-menu-pop[hidden]{display:none;}
+.hdr-menu-item{appearance:none;background:transparent;border:none;border-radius:7px;
+  font-family:var(--sans);font-size:13px;color:var(--text);text-align:left;
+  padding:9px 11px;min-height:40px;cursor:pointer;}
+.hdr-menu-item:hover,.hdr-menu-item:focus-visible{background:var(--panel-2);color:var(--text);}
+
+/* Persistent time control. Advancing time is the core loop — assess, intervene, advance,
+   reassess — and it was the 4th tab, so you could not intervene and advance without
+   switching tabs, and on mobile it sat two screens below the monitor. */
+.timebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+.timebar-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-faint);}
+.timebar-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.timebar-note{font-size:12px;color:var(--text-dim);line-height:1.5;flex:1 1 240px;min-width:0;}
+@media (max-width:600px){
+  /* the note is context, not instruction — on a phone it costs a row the vitals need more */
+  .timebar-note{display:none;}
+  .timebar{gap:10px;}
+}
 .status-pill{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   padding:6px 12px;border-radius:20px;border:1px solid var(--border);}
 .status-pill.ok{color:var(--good);border-color:var(--good);}
@@ -829,10 +860,16 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
       <span class="clock" id="clock">00:00 &nbsp;·&nbsp; T+0:00</span>
       <span class="status-pill crit" id="statusPill">UNSTABLE</span>
       <button class="btn ghost small" id="reviewBtn" title="See a debrief of your decisions so far, without ending the case">Review progress</button>
-      <button class="btn ghost small" id="menuBtn" title="Back to case picker">Change case</button>
-      <button class="btn ghost small" id="restartBtn" title="Restart this case from the beginning">Restart</button>
-      <button class="btn ghost small" id="instructorToggleBtn" title="Toggle instructor tools (pause, force arrest/ROSC)">Instructor: Off</button>
-      <button class="btn small" id="exportBtn" title="Download the full decision/event log as text">Export Log</button>
+      <div class="hdr-menu">
+        <button class="btn ghost small hdr-menu-btn" id="caseMenuBtn" aria-haspopup="true" aria-expanded="false"
+                aria-controls="caseMenuPop" title="More case actions">&#8943;<span class="sr-only"> More case actions</span></button>
+        <div class="hdr-menu-pop" id="caseMenuPop" role="menu" hidden>
+          <button class="hdr-menu-item" role="menuitem" id="menuBtn">Change case</button>
+          <button class="hdr-menu-item" role="menuitem" id="restartBtn">Restart case</button>
+          <button class="hdr-menu-item" role="menuitem" id="instructorToggleBtn">Instructor: Off</button>
+          <button class="hdr-menu-item" role="menuitem" id="exportBtn">Export log</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -842,6 +879,16 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   </details>
 
   <div id="monitorSlotApp"><div class="monitor" id="monitor"></div></div>
+
+  <div class="timebar" id="timeBar">
+    <span class="timebar-label">Advance time</span>
+    <div class="timebar-btns">
+      <button class="btn small" data-adv="15">+15 min</button>
+      <button class="btn small" data-adv="30">+30 min</button>
+      <button class="btn small" data-adv="60">+60 min</button>
+    </div>
+    <span class="timebar-note">Nothing changes until you advance — tests resolve and physiology evolves from your interventions so far.</span>
+  </div>
 
   <details class="brief trends-panel" id="trendsPanel">
     <summary>Trends <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0;">— how the patient is trajectory-tracking over time</span></summary>
@@ -861,7 +908,6 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
         <button class="tab active" data-tab="assess">Assessment</button>
         <button class="tab" data-tab="invest">Investigations</button>
         <button class="tab" data-tab="interv">Interventions</button>
-        <button class="tab" data-tab="time">Time</button>
       </div>
 
       <div class="tabpanel active" id="tab-assess">
@@ -889,20 +935,6 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
 
       <div class="tabpanel" id="tab-interv"></div>
 
-      <div class="tabpanel" id="tab-time">
-        <div class="group">
-          <h3>Advance simulation time</h3>
-          <div class="rowbtns">
-            <button class="btn" data-adv="15">+15 min</button>
-            <button class="btn" data-adv="30">+30 min</button>
-            <button class="btn" data-adv="60">+60 min</button>
-          </div>
-          <p class="time-helper-note" style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-top:10px;">
-            Time only advances when you press one of these — ordered tests resolve and the patient's
-            physiology evolves based on your interventions so far. Reassess before and after each jump.
-          </p>
-        </div>
-      </div>
     </div>
 
     <div id="logSlotApp">
@@ -6133,6 +6165,7 @@ function applyShellMode(id){
 
 function revealScreen(id){
   applyShellMode(id);
+  closeCaseMenu();
   ALL_SCREENS.forEach(sid=>{
     if (sid===id) return;
     const el = document.getElementById(sid);
@@ -6563,6 +6596,26 @@ document.getElementById('backDuringArrestBtn').addEventListener('click', async (
   if (ok) showMenu();
 });
 document.getElementById('reviewBtn').addEventListener('click', ()=>showDebrief(false));
+
+// ---------- case actions overflow menu ----------
+// Declared as a function so revealScreen() can call it before this runs at load.
+function closeCaseMenu(){
+  const pop = document.getElementById('caseMenuPop');
+  const btn = document.getElementById('caseMenuBtn');
+  if (pop) pop.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded','false');
+}
+(function(){
+  const btn = document.getElementById('caseMenuBtn');
+  const pop = document.getElementById('caseMenuPop');
+  function setOpen(open){ pop.hidden = !open; btn.setAttribute('aria-expanded', open?'true':'false'); }
+  btn.addEventListener('click', e=>{ e.stopPropagation(); setOpen(pop.hidden); });
+  // every item here either navigates away or completes an action, so the menu is done either way.
+  // the item's own handler still runs — this listener only dismisses the popover.
+  pop.addEventListener('click', e=>{ if (e.target.closest('.hdr-menu-item')) setOpen(false); });
+  document.addEventListener('click', e=>{ if (!pop.hidden && !e.target.closest('.hdr-menu')) setOpen(false); });
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !pop.hidden){ setOpen(false); btn.focus(); } });
+})();
 document.getElementById('instructorToggleBtn').addEventListener('click', ()=>{
   instructorMode = !instructorMode;
   renderInstructorBar();
