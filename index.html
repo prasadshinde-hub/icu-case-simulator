@@ -538,6 +538,29 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
 .stat-tile .st-val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;line-height:1.05;}
 .stat-tile .st-lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:4px;}
 .stat-tile .st-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+
+/* ---------- instructor cohort dashboard ---------- */
+.cohort-table{width:100%;border-collapse:collapse;font-size:13px;}
+.cohort-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--panel);}
+.cohort-table th{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-faint);text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.cohort-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.cohort-table tr:last-child td{border-bottom:none;}
+.cohort-table td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cohort-name{font-weight:600;color:var(--text);}
+.cohort-sub{font-size:11.5px;color:var(--text-faint);}
+/* score bands: the point of the table is spotting who is struggling, so the number carries it */
+.score-good{color:var(--good);font-weight:700;}
+.score-mid{color:var(--warn);font-weight:700;}
+.score-bad{color:var(--crit);font-weight:700;}
+.cohort-note{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin:0 0 14px;}
+.cohort-setup{border:1px solid var(--warn);border-radius:10px;padding:14px 16px;margin-bottom:16px;
+  background:color-mix(in srgb, var(--warn) 8%, var(--panel));}
+.cohort-setup h4{margin:0 0 6px;font-size:13px;color:var(--warn);}
+.cohort-setup p{margin:0 0 8px;font-size:12.5px;color:var(--text-dim);line-height:1.6;}
+.cohort-setup pre{margin:0;padding:11px 13px;background:var(--panel-2);border:1px solid var(--border);
+  border-radius:8px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);}
+.cohort-actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px;}
 .modbar-row{display:flex;align-items:center;gap:12px;margin-bottom:9px;}
 .modbar-row .mb-name{width:120px;flex-shrink:0;font-size:12.5px;color:var(--text-dim);}
 .modbar-row .mb-track{flex:1;height:10px;background:var(--panel-2);border-radius:6px;overflow:hidden;}
@@ -661,6 +684,16 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     </form>
     <button class="btn ghost small" id="authGuestBtn" style="margin-top:10px;width:100%;">Continue as guest (progress saved on this device only)</button>
   </div>
+</div>
+
+<div class="specialty" id="instructorScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" id="instrDashBackBtn">&larr; Back</button></div>
+    <span class="eyebrow">Instructor</span>
+    <h1>Cohort dashboard</h1>
+    <p id="cohortSourceNote">Where your students are, and which scenarios the cohort is failing.</p>
+  </div>
+  <div id="cohortBody"></div>
 </div>
 
 <div class="specialty" id="historyScreen" style="display:none;">
@@ -6152,7 +6185,7 @@ function buildSimulatorsGrid(){
   });
 }
 
-const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
+const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','instructorScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
   'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen',
   'libraryScreen','conditionScreen'];
 
@@ -6262,10 +6295,13 @@ function renderAccountChip(){
   if (authUser){
     const name = (authProfile && authProfile.display_name) || authUser.email;
     const role = authProfile && authProfile.role === 'instructor' ? '<span class="role-badge">Instructor</span>' : '';
+    const isInstructor = !!(authProfile && authProfile.role === 'instructor');
     chip.innerHTML = `<span class="who">Signed in as <b>${escapeHtml(name)}</b></span>${role}
       <button class="btn ghost small" id="historyBtn">Progress</button>
+      ${isInstructor ? '<button class="btn ghost small" id="cohortBtn">Cohort</button>' : ''}
       <button class="btn ghost small" id="logoutBtn">Log out</button>`;
     document.getElementById('historyBtn').addEventListener('click', showHistoryScreen);
+    if (isInstructor) document.getElementById('cohortBtn').addEventListener('click', showInstructorScreen);
     document.getElementById('logoutBtn').addEventListener('click', doLogout);
   } else {
     chip.innerHTML = `<button class="btn ghost small" id="historyBtn">Progress</button>
@@ -6456,6 +6492,202 @@ async function showHistoryScreen(){
   }).join('');
 }
 
+// ---------- instructor cohort dashboard ----------
+// Reading other people's attempts depends entirely on the Supabase RLS policies. With the
+// default "own rows only" policy an instructor sees exactly their own data and nothing else,
+// which looks like an empty cohort rather than a permissions problem — hence the setup panel.
+const COHORT_SETUP_SQL = `-- allow instructors to read every attempt and profile
+create policy "instructors read all attempts" on attempts
+  for select using (
+    exists (select 1 from profiles p
+            where p.id = auth.uid() and p.role = 'instructor')
+  );
+
+create policy "instructors read all profiles" on profiles
+  for select using (
+    exists (select 1 from profiles p
+            where p.id = auth.uid() and p.role = 'instructor')
+  );`;
+
+function scoreBand(pct){ return pct>=80 ? 'score-good' : pct>=50 ? 'score-mid' : 'score-bad'; }
+function pctCell(scoreN, scoreSum){
+  if (!scoreN) return '<span class="cohort-sub">—</span>';
+  const pct = Math.round(scoreSum/scoreN*100);
+  return `<span class="${scoreBand(pct)}">${pct}%</span>`;
+}
+
+async function fetchCohort(){
+  if (!sb || !authUser) return { error:'You need to be signed in to load cohort data.' };
+  try {
+    const [aRes, pRes] = await Promise.all([
+      sb.from('attempts').select('*').order('created_at', { ascending:false }).limit(5000),
+      sb.from('profiles').select('id, display_name, role')
+    ]);
+    if (aRes.error) throw aRes.error;
+    return { rows: aRes.data || [], profiles: pRes.data || [] };
+  } catch(e){ return { error: (e && e.message) ? e.message : String(e) }; }
+}
+
+async function showInstructorScreen(){
+  revealScreen('instructorScreen');
+  const body = document.getElementById('cohortBody');
+  body.innerHTML = '<p class="history-empty">Loading cohort…</p>';
+
+  if (!(authProfile && authProfile.role === 'instructor')){
+    body.innerHTML = '<p class="history-empty">This dashboard is only available to instructor accounts.</p>';
+    return;
+  }
+
+  const res = await fetchCohort();
+  if (res.error){
+    body.innerHTML = `<div class="cohort-setup"><h4>Could not load cohort data</h4>
+      <p>${escapeHtml(res.error)}</p>
+      <p>If this mentions permissions or row-level security, run the following in the Supabase SQL editor:</p>
+      <pre>${escapeHtml(COHORT_SETUP_SQL)}</pre></div>`;
+    return;
+  }
+
+  const rows = res.rows;
+  const nameById = {};
+  res.profiles.forEach(pr=>{ nameById[pr.id] = pr.display_name || '(unnamed)'; });
+
+  if (!rows.length){
+    body.innerHTML = `<p class="history-empty">No attempts recorded yet. Once students complete cases they appear here.</p>`;
+    return;
+  }
+
+  // per-student and per-scenario aggregation
+  const byStudent = {}, byScenario = {}, byMod = {};
+  let scoreSum = 0, scoreN = 0;
+  const weekAgo = Date.now() - 7*24*3600*1000;
+  let activeThisWeek = 0;
+  rows.forEach(r=>{
+    const uid = r.user_id || 'local';
+    const st = byStudent[uid] || (byStudent[uid] = { n:0, scoreSum:0, scoreN:0, last:0, crits:0 });
+    st.n++; st.crits += (r.critical_errors||0);
+    const t = new Date(r.created_at).getTime();
+    if (t > st.last) st.last = t;
+    const key = r.module + '|' + (r.scenario_id||'');
+    const sc = byScenario[key] || (byScenario[key] = { n:0, scoreSum:0, scoreN:0,
+                                                       label: r.scenario_label || r.scenario_id || '(unknown)', module:r.module });
+    sc.n++;
+    const m = byMod[r.module] || (byMod[r.module] = { n:0, scoreSum:0, scoreN:0 });
+    m.n++;
+    if (typeof r.score === 'number'){
+      st.scoreSum += r.score; st.scoreN++;
+      sc.scoreSum += r.score; sc.scoreN++;
+      m.scoreSum  += r.score; m.scoreN++;
+      scoreSum += r.score; scoreN++;
+    }
+  });
+  Object.keys(byStudent).forEach(uid=>{ if (byStudent[uid].last > weekAgo) activeThisWeek++; });
+
+  const studentIds = Object.keys(byStudent);
+  const cohortAvg = scoreN ? Math.round(scoreSum/scoreN*100) : null;
+
+  // Only one user in the data almost always means the RLS policy was never added, so the
+  // instructor is still seeing just their own rows. Shown as a hint, since a one-student
+  // cohort is legitimate — the data below is still rendered either way.
+  const looksUnscoped = studentIds.length <= 1;
+
+  const hardest = Object.keys(byScenario).map(k=>Object.assign({ key:k }, byScenario[k]))
+    .filter(x=>x.scoreN >= 2)
+    .sort((a,b)=> (a.scoreSum/a.scoreN) - (b.scoreSum/b.scoreN))
+    .slice(0,8);
+
+  const students = studentIds.map(uid=>Object.assign({ uid }, byStudent[uid]))
+    .sort((a,b)=>{
+      // strugglers first — that is what the dashboard is for
+      const av = a.scoreN ? a.scoreSum/a.scoreN : 2;
+      const bv = b.scoreN ? b.scoreSum/b.scoreN : 2;
+      return av - bv;
+    });
+
+  const mods = MOD_ORDER.filter(m=>byMod[m]).concat(Object.keys(byMod).filter(m=>!MOD_ORDER.includes(m)));
+
+  body.innerHTML = `
+    ${looksUnscoped ? `<div class="cohort-setup"><h4>Only your own attempts are visible</h4>
+      <p>The data below covers one account. If you expected to see your students, the instructor
+      read policy has not been added yet — run this once in the Supabase SQL editor:</p>
+      <pre>${escapeHtml(COHORT_SETUP_SQL)}</pre></div>` : ''}
+
+    <div class="stat-row">
+      <div class="stat-tile"><div class="st-val">${studentIds.length}</div><div class="st-lbl">Students</div><div class="st-sub">with recorded attempts</div></div>
+      <div class="stat-tile"><div class="st-val">${rows.length}</div><div class="st-lbl">Attempts</div><div class="st-sub">across all modules</div></div>
+      <div class="stat-tile"><div class="st-val">${cohortAvg!=null?cohortAvg+'%':'—'}</div><div class="st-lbl">Cohort average</div><div class="st-sub">${scoreN} scored attempt${scoreN===1?'':'s'}</div></div>
+    </div>
+    <div class="stat-row" style="grid-template-columns:1fr;">
+      <div class="stat-tile" style="border-left-color:var(--good);"><div class="st-val">${activeThisWeek}</div><div class="st-lbl">Active this week</div><div class="st-sub">students who trained in the last 7 days</div></div>
+    </div>
+
+    <h3 class="progress-section-h">Where the cohort is struggling</h3>
+    <p class="cohort-note">Scenarios with the lowest average score, counting only those attempted at least twice.</p>
+    ${hardest.length ? `<div class="cohort-wrap"><table class="cohort-table">
+      <thead><tr><th>Scenario</th><th>Module</th><th>Attempts</th><th>Average</th></tr></thead>
+      <tbody>${hardest.map(x=>`<tr>
+        <td><span class="cohort-name">${escapeHtml(x.label)}</span></td>
+        <td><span class="cohort-sub">${escapeHtml(MOD_LABEL[x.module]||x.module||'—')}</span></td>
+        <td class="num">${x.n}</td>
+        <td class="num">${pctCell(x.scoreN, x.scoreSum)}</td>
+      </tr>`).join('')}</tbody></table></div>`
+      : '<p class="history-empty">Not enough repeat attempts yet to rank scenarios.</p>'}
+
+    <h3 class="progress-section-h">By module</h3>
+    <div id="cohortModBars"></div>
+
+    <h3 class="progress-section-h">Students</h3>
+    <p class="cohort-note">Lowest average first, so the students who need attention are at the top.</p>
+    <div class="cohort-wrap"><table class="cohort-table">
+      <thead><tr><th>Student</th><th>Attempts</th><th>Average</th><th>Critical errors</th><th>Last active</th></tr></thead>
+      <tbody>${students.map(st=>`<tr>
+        <td><span class="cohort-name">${escapeHtml(nameById[st.uid] || 'Unknown student')}</span></td>
+        <td class="num">${st.n}</td>
+        <td class="num">${pctCell(st.scoreN, st.scoreSum)}</td>
+        <td class="num">${st.crits || 0}</td>
+        <td class="num"><span class="cohort-sub">${st.last ? new Date(st.last).toLocaleDateString() : '—'}</span></td>
+      </tr>`).join('')}</tbody></table></div>
+
+    <div class="cohort-actions"><button class="btn small" id="cohortCsvBtn">Export cohort CSV</button></div>`;
+
+  const bars = document.getElementById('cohortModBars');
+  bars.innerHTML = mods.map(m=>{
+    const info = byMod[m];
+    const avg = info.scoreN ? Math.round(info.scoreSum/info.scoreN*100) : null;
+    return `<div class="modbar-row">
+      <span class="mb-name">${MOD_LABEL[m]||m}</span>
+      <div class="mb-track"><div class="mb-fill" style="width:${avg!=null?avg:0}%;"></div></div>
+      <span class="mb-val">${avg!=null?avg+'%':'—'} · ${info.n}&times;</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('cohortCsvBtn').addEventListener('click', ()=>exportCohortCsv(rows, nameById));
+}
+
+function csvCell(v){
+  const t = (v==null) ? '' : String(v);
+  return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t;
+}
+function exportCohortCsv(rows, nameById){
+  const head = ['student','module','scenario','outcome','score_pct','critical_errors','cautions','mode','date'];
+  const lines = [head.join(',')].concat(rows.map(r=>[
+    nameById[r.user_id] || r.user_id || '',
+    r.module || '',
+    r.scenario_label || r.scenario_id || '',
+    r.outcome || '',
+    (typeof r.score === 'number') ? Math.round(r.score*100) : '',
+    r.critical_errors || 0,
+    r.cautions || 0,
+    r.mode || '',
+    r.created_at || ''
+  ].map(csvCell).join(',')));
+  const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `cohort-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
 const ATTEMPTS_KEY = 'icuSimAttempts_v1';
 function localAttempts(){
   try { return JSON.parse(localStorage.getItem(ATTEMPTS_KEY) || '[]'); } catch(e){ return []; }
@@ -6565,6 +6797,7 @@ document.getElementById('backToSpecialtyBtn').addEventListener('click', showSpec
 // auth screen wiring
 document.getElementById('authBackBtn').addEventListener('click', showFront);
 document.getElementById('historyBackBtn').addEventListener('click', showSimulatorsScreen);
+document.getElementById('instrDashBackBtn').addEventListener('click', showSimulatorsScreen);
 document.getElementById('authTabLogin').addEventListener('click', ()=>setAuthMode('login'));
 document.getElementById('authTabSignup').addEventListener('click', ()=>setAuthMode('signup'));
 document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
