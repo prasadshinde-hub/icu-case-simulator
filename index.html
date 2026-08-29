@@ -353,6 +353,15 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   text-transform:uppercase;color:var(--text-faint);background:transparent;border:none;border-bottom:2px solid transparent;white-space:nowrap;
   min-height:44px;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+/* Tab state badges. The console gave no sign of its own contents, so the only way to learn
+   whether bloods were pending or had come back was to open the tab and look. Hollow amber
+   count = waiting on a result; solid accent count = results are back and unread. */
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  margin-left:6px;padding:0 5px;border-radius:9px;vertical-align:middle;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;line-height:1;}
+.tab-badge[hidden]{display:none;}
+.tab-badge.ready{background:var(--accent);color:var(--bg);}
+.tab-badge.waiting{background:transparent;border:1px solid var(--warn);color:var(--warn);}
 @media (max-width:480px){
   .tab{padding:8px 2px;font-size:10px;letter-spacing:.01em;white-space:normal;line-height:1.25;word-break:break-word;}
 }
@@ -939,7 +948,7 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <div class="panel">
       <div class="tabs">
         <button class="tab active" data-tab="assess">Assessment</button>
-        <button class="tab" data-tab="invest">Investigations</button>
+        <button class="tab" data-tab="invest">Investigations<span class="tab-badge" id="investBadge" hidden></span></button>
         <button class="tab" data-tab="interv">Interventions</button>
       </div>
 
@@ -5115,7 +5124,7 @@ function freshState(caseDef){
     device:caseDef.initDevice, hb:caseDef.initHb, lactate:caseDef.initLactate, gcs:caseDef.initGcs,
     arrested:false, arrestCycles:0, dead:false, rosc:false, shockable:false, rhythmChecked:false, justShocked:false,
     stableStreak:0, ended:false, endReason:null, debriefShown:false,
-    pending:[], done:{}, doneCount:{}, log:[], histTaken:false,
+    pending:[], done:{}, doneCount:{}, newResults:0, log:[], histTaken:false,
     examDone:{A:false,B:false,C:false,D:false,E:false},
     shockCount:0, epiCount:0, lastEpiCycleGiven:-99, amioGiven:false, amioDose2:false,
     causesChecked:{hypovolemia:false,hypoxia:false,acidosis:false,hyperkalemia:false,hypothermia:false,
@@ -5244,6 +5253,7 @@ function revealTest(name){
   S.doneCount[name] = nth;
   const label = t.label + (nth>1 ? ` (repeat #${nth})` : '');
   log(`${label} result: ${text}`,'result');
+  S.newResults = (S.newResults||0) + 1;   // cleared by renderTabBadges if the tab is already open
   renderInvest();
 }
 
@@ -5667,6 +5677,25 @@ function refRangeHtml(label){
   return key ? ` <span class="ref-range">[normal: ${LAB_RANGES[key]}]</span>` : '';
 }
 
+function renderTabBadges(){
+  const el = document.getElementById('investBadge');
+  const tab = document.querySelector('.tab[data-tab="invest"]');
+  if (!el || !tab || !S) return;
+  // if you are already looking at the tab, nothing on it is unread
+  if (tab.classList.contains('active')) S.newResults = 0;
+  const fresh = S.newResults || 0;
+  const pending = (S.pending || []).length;
+  if (fresh){
+    el.hidden = false; el.className = 'tab-badge ready'; el.textContent = fresh;
+    el.title = `${fresh} new result${fresh>1?'s':''}`;
+  } else if (pending){
+    el.hidden = false; el.className = 'tab-badge waiting'; el.textContent = pending;
+    el.title = `${pending} investigation${pending>1?'s':''} pending`;
+  } else {
+    el.hidden = true; el.textContent = ''; el.title = '';
+  }
+}
+
 function renderInvest(){
   const out = document.getElementById('invest-out');
   if (!out) return;
@@ -5691,6 +5720,7 @@ function renderInvest(){
     const doneNotRepeatable = !!S.done[k] && !t.repeatable;
     b.disabled = pending || doneNotRepeatable;
   });
+  renderTabBadges();
 }
 
 function renderPressor(){
@@ -6941,6 +6971,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tabpanel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+    if (S) renderTabBadges();
   });
 });
 document.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click', async ()=>{
