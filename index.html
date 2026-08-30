@@ -8933,183 +8933,217 @@ function showEcgPresetScreen(){ ecgCURRENT = null; revealScreen('ecgPresetScreen
 let cxrCURRENT = null, cxrS = null, cxrShowAnnotations = false;
 
 // Image-left is the patient's RIGHT side, as on a real PA film. side = -1 is image-left.
+// Everything is drawn in radiographic order: soft tissue first, then the air-filled lungs
+// punched dark on top of it, then the structures that sit within them. Getting that order
+// right is what makes the lungs read as the darkest thing on the film, as they should.
+
 function cxrLungPath(ctx, w, h, side){
   const cx = w/2;
-  const inner = cx + side*w*0.065;
-  const outer = cx + side*w*0.415;
-  const top = h*0.155, bot = h*0.735;
+  const inner = cx + side*w*0.075;   // mediastinal border
+  const outer = cx + side*w*0.400;   // chest wall
+  const apex  = h*0.180, base = h*0.700;
   ctx.beginPath();
-  ctx.moveTo(inner, top + h*0.05);
-  ctx.quadraticCurveTo(cx + side*w*0.17, top - h*0.028, outer, top + h*0.155);
-  ctx.quadraticCurveTo(outer + side*w*0.028, h*0.55, cx + side*w*0.345, bot);
-  ctx.quadraticCurveTo(cx + side*w*0.17, bot + h*0.030, inner, bot - h*0.085);
-  ctx.closePath();
-}
-
-function cxrThoraxPath(ctx, w, h){
-  const cx = w/2;
-  ctx.beginPath();
-  ctx.moveTo(w*0.10, h*0.16);
-  ctx.quadraticCurveTo(cx, h*0.055, w*0.90, h*0.16);
-  ctx.lineTo(w*0.92, h*0.80);
-  ctx.quadraticCurveTo(cx, h*0.88, w*0.08, h*0.80);
+  ctx.moveTo(inner, apex + h*0.030);
+  // apex arches up and over towards the chest wall
+  ctx.bezierCurveTo(cx + side*w*0.135, apex - h*0.048,
+                    cx + side*w*0.330, apex - h*0.010,
+                    outer, apex + h*0.120);
+  // lateral chest wall, bulging slightly outward
+  ctx.bezierCurveTo(outer + side*w*0.030, h*0.400,
+                    outer + side*w*0.020, h*0.560,
+                    cx + side*w*0.330, base);
+  // costophrenic angle sweeping in to the diaphragm
+  ctx.quadraticCurveTo(cx + side*w*0.190, base + h*0.026, inner, base - h*0.070);
   ctx.closePath();
 }
 
 // soft radial opacity — the workhorse for consolidation, oedema and infiltrates
 function cxrBlob(ctx, x, y, rx, ry, alpha, tint){
-  const g = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
   const c = tint || '235,240,250';
+  const R = Math.max(rx, ry);
+  const g = ctx.createRadialGradient(x, y, 0, x, y, R);
   g.addColorStop(0,   `rgba(${c},${alpha})`);
   g.addColorStop(0.55,`rgba(${c},${alpha*0.55})`);
   g.addColorStop(1,   `rgba(${c},0)`);
-  ctx.save(); ctx.translate(x,y); ctx.scale(1, ry/Math.max(rx,ry)); ctx.translate(-x,-y);
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(1, ry/R); ctx.translate(-x, -y);
   ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, Math.max(rx,ry), 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
-function cxrVascularMarkings(ctx, w, h, side, density){
-  // branching pulmonary vessels, fanning out from the hilum. Their ABSENCE is the finding
-  // in a pneumothorax, so they are drawn per-side rather than globally.
+function cxrTorso(ctx, w, h){
   const cx = w/2;
-  const hx = cx + side*w*0.115, hy = h*0.44;
+  // soft tissue envelope — sloping shoulders and curved lateral chest wall, not a box
+  const g = ctx.createLinearGradient(0,0,w,0);
+  g.addColorStop(0,   'rgba(163,170,186,0.42)');
+  g.addColorStop(0.16,'rgba(126,133,149,0.24)');
+  g.addColorStop(0.5, 'rgba(108,115,131,0.13)');
+  g.addColorStop(0.84,'rgba(126,133,149,0.24)');
+  g.addColorStop(1,   'rgba(163,170,186,0.42)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(cx - w*0.075, h*0.045);
+  ctx.bezierCurveTo(cx - w*0.245, h*0.060, cx - w*0.395, h*0.130, cx - w*0.455, h*0.255);
+  ctx.bezierCurveTo(cx - w*0.487, h*0.430, cx - w*0.480, h*0.660, cx - w*0.452, h*0.905);
+  ctx.lineTo(cx + w*0.452, h*0.905);
+  ctx.bezierCurveTo(cx + w*0.480, h*0.660, cx + w*0.487, h*0.430, cx + w*0.455, h*0.255);
+  ctx.bezierCurveTo(cx + w*0.395, h*0.130, cx + w*0.245, h*0.060, cx + w*0.075, h*0.045);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// The abdomen is drawn as one shape whose TOP edge is the two diaphragmatic domes, so the
+// domes get a crisp outline for free instead of being cut out afterwards.
+function cxrSubDiaphragm(ctx, w, h, o){
+  o = o || {};
+  const cx = w/2;
+  const rTop = h*0.700 + (o.rightDomeDy || 0);   // image-left dome, normally the higher one
+  const lTop = h*0.728 + (o.leftDomeDy  || 0);
+  ctx.save();
+  ctx.fillStyle = 'rgba(158,165,180,0.50)';
+  ctx.beginPath();
+  ctx.moveTo(cx - w*0.470, h*0.800);
+  ctx.quadraticCurveTo(cx - w*0.250, rTop - h*0.052, cx - w*0.020, h*0.782);
+  ctx.quadraticCurveTo(cx + w*0.010, h*0.786, cx + w*0.030, h*0.780);
+  ctx.quadraticCurveTo(cx + w*0.250, lTop - h*0.040, cx + w*0.470, h*0.815);
+  ctx.lineTo(cx + w*0.470, h);
+  ctx.lineTo(cx - w*0.470, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  if (!o.noGastric){
+    ctx.save();
+    ctx.fillStyle = 'rgba(9,10,15,0.80)';
+    ctx.beginPath(); ctx.ellipse(cx + w*0.185, h*0.822, w*0.070, h*0.028, -0.10, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function cxrVascularMarkings(ctx, w, h, side, density){
+  // Vessels branch from the hilum outward and downward, tapering as they go. Their absence
+  // at the periphery is the finding in a pneumothorax, so they are drawn per side.
+  const cx = w/2;
+  const hx = cx + side*w*0.125, hy = h*0.430;
   ctx.save();
   cxrLungPath(ctx, w, h, side); ctx.clip();
   ctx.lineCap = 'round';
-  for (let i=0;i<14;i++){
-    const ang = (-0.75 + i*0.115) * Math.PI * (side<0 ? 1 : 1);
-    const len = w*(0.10 + (i%4)*0.045);
-    const x2 = hx + Math.cos(ang)*len*side*-1;
-    const y2 = hy + Math.sin(ang)*len*0.9;
-    ctx.strokeStyle = `rgba(178,188,206,${0.30*density})`;
-    ctx.lineWidth = 2.1;
-    ctx.beginPath(); ctx.moveTo(hx, hy);
-    ctx.quadraticCurveTo((hx+x2)/2 + side*w*0.02, (hy+y2)/2, x2, y2);
+  const branches = [
+    {ang:-0.62, len:0.30}, {ang:-0.30, len:0.36}, {ang:-0.05, len:0.40},
+    {ang: 0.26, len:0.40}, {ang: 0.55, len:0.34}, {ang: 0.85, len:0.26}, {ang: 1.15, len:0.20}
+  ];
+  branches.forEach((b,i)=>{
+    const len = h*b.len;
+    const x2 = hx + side*Math.cos(b.ang)*len*0.62;
+    const y2 = hy + Math.sin(b.ang)*len*0.55 + len*0.30;
+    ctx.strokeStyle = `rgba(186,196,214,${0.34*density})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.quadraticCurveTo(hx + side*w*0.045, (hy+y2)/2, x2, y2);
     ctx.stroke();
-    // one order of branching
-    ctx.strokeStyle = `rgba(178,188,206,${0.18*density})`;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(x2, y2);
-    ctx.lineTo(x2 + side*-w*0.05, y2 + h*(i%2?0.035:-0.03));
-    ctx.stroke();
-  }
-  // hilum itself
-  cxrBlob(ctx, hx, hy, w*0.05, h*0.045, 0.30*density, '190,200,218');
+    // second-order branches, thinner and shorter
+    for (let k=0;k<2;k++){
+      const t = 0.55 + k*0.35;
+      const bx = hx + (x2-hx)*t, by = hy + (y2-hy)*t;
+      ctx.strokeStyle = `rgba(186,196,214,${0.20*density})`;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(bx, by);
+      ctx.lineTo(bx + side*w*0.045, by + h*(k? 0.030 : -0.024));
+      ctx.stroke();
+    }
+  });
+  // hilar vessels
+  cxrBlob(ctx, hx, hy, w*0.045, h*0.038, 0.26*density, '190,200,218');
   ctx.restore();
 }
 
 function cxrRibs(ctx, w, h, side){
   const cx = w/2;
   ctx.save();
-  cxrThoraxPath(ctx, w, h); ctx.clip();
+  cxrLungPath(ctx, w, h, side); ctx.clip();   // ribs stay inside the lung field for clarity
   ctx.lineCap = 'round';
-  for (let i=0;i<9;i++){
-    const y0 = h*0.185 + i*h*0.062;
-    ctx.strokeStyle = 'rgba(205,212,226,0.30)';
-    ctx.lineWidth = 3.4;
+  for (let i=0;i<8;i++){
+    const y0 = h*0.185 + i*h*0.063;
+    // posterior rib: sweeps down and OUT from the spine
+    ctx.strokeStyle = 'rgba(202,210,226,0.26)';
+    ctx.lineWidth = 3.6;
     ctx.beginPath();
-    ctx.moveTo(cx + side*w*0.045, y0);
-    ctx.quadraticCurveTo(cx + side*w*0.30, y0 + h*0.018, cx + side*w*0.47, y0 + h*0.085);
+    ctx.moveTo(cx + side*w*0.055, y0);
+    ctx.quadraticCurveTo(cx + side*w*0.270, y0 + h*0.038, cx + side*w*0.455, y0 + h*0.120);
     ctx.stroke();
-    // anterior rib, fainter and angled the other way
-    ctx.strokeStyle = 'rgba(205,212,226,0.13)';
-    ctx.lineWidth = 2.4;
+    // anterior rib: fainter, angled the opposite way
+    ctx.strokeStyle = 'rgba(202,210,226,0.11)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(cx + side*w*0.47, y0 + h*0.020);
-    ctx.quadraticCurveTo(cx + side*w*0.26, y0 + h*0.085, cx + side*w*0.075, y0 + h*0.075);
+    ctx.moveTo(cx + side*w*0.455, y0 - h*0.005);
+    ctx.quadraticCurveTo(cx + side*w*0.250, y0 + h*0.082, cx + side*w*0.080, y0 + h*0.100);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function cxrHeart(ctx, w, h, o){
-  o = o || {};
-  const cx = w/2 + (o.shift || 0);
-  const ratio = o.ratio || 0.44;              // cardiothoracic ratio
-  const heartW = w*0.80*ratio;
-  const x1 = cx - heartW*0.32, x2 = cx + heartW*0.68;
-  const top = h*0.435, bot = h*0.745;
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(x1, top + h*0.045);
-  ctx.quadraticCurveTo(x1 - w*0.012, bot - h*0.015, cx - w*0.01, bot);
-  ctx.quadraticCurveTo(x2 - w*0.02, bot + h*0.006, x2, top + h*0.10);
-  ctx.quadraticCurveTo(x2 - w*0.05, top - h*0.015, cx + w*0.012, top + h*0.03);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(214,221,234,0.80)';
-  ctx.fill();
-  ctx.restore();
-}
-
-function cxrMediastinum(ctx, w, h, o){
+// Mediastinum and heart as ONE continuous silhouette — on a real film they are a single
+// column of soft tissue, and drawing the heart as a separate blob was the main reason the
+// first version looked like a diagram rather than a radiograph.
+function cxrCardiomediastinum(ctx, w, h, o){
   o = o || {};
   const shift = o.shift || 0;
   const cx = w/2 + shift;
+  const r = o.ratio || 0.44;              // cardiothoracic ratio
+  const half = w*0.80*r/2;
+  const lEdge = cx - half*0.62;           // right heart border (image-left)
+  const rEdge = cx + half*1.38;           // LV border / apex (image-right)
+  const top = h*0.130, bot = h*0.735;
+
   ctx.save();
-  // spine
-  ctx.fillStyle = 'rgba(198,206,222,0.30)';
-  ctx.fillRect(w/2 - w*0.032, h*0.10, w*0.064, h*0.70);
-  ctx.strokeStyle = 'rgba(120,128,145,0.45)'; ctx.lineWidth = 1;
-  for (let y=h*0.12; y<h*0.78; y+=h*0.048){
-    ctx.beginPath(); ctx.moveTo(w/2 - w*0.032, y); ctx.lineTo(w/2 + w*0.032, y); ctx.stroke();
+  ctx.fillStyle = 'rgba(206,214,229,0.72)';
+  ctx.beginPath();
+  ctx.moveTo(cx - w*0.052, top);
+  // image-left: SVC straight down, then the right atrial border bulging gently
+  ctx.lineTo(cx - w*0.062, h*0.330);
+  ctx.bezierCurveTo(cx - w*0.080, h*0.420, lEdge, h*0.500, lEdge, h*0.640);
+  ctx.quadraticCurveTo(lEdge, bot - h*0.010, cx - w*0.020, bot);
+  // the apex
+  ctx.quadraticCurveTo(cx + half*0.70, bot + h*0.012, rEdge, h*0.660);
+  // image-right: LV border sweeping up to the pulmonary bay and aortic knuckle
+  ctx.bezierCurveTo(rEdge + w*0.012, h*0.560, cx + w*0.095, h*0.430, cx + w*0.080, h*0.360);
+  ctx.quadraticCurveTo(cx + w*0.086, h*0.285, cx + w*0.058, h*0.250);
+  ctx.quadraticCurveTo(cx + w*0.050, h*0.190, cx + w*0.046, top);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // spine, faintly visible through the mediastinum
+  ctx.save();
+  ctx.fillStyle = 'rgba(186,194,212,0.18)';
+  ctx.fillRect(w/2 - w*0.028, h*0.130, w*0.056, h*0.640);
+  ctx.strokeStyle = 'rgba(96,104,122,0.30)'; ctx.lineWidth = 1;
+  for (let y=h*0.155; y<h*0.760; y+=h*0.050){
+    ctx.beginPath(); ctx.moveTo(w/2 - w*0.028, y); ctx.lineTo(w/2 + w*0.028, y); ctx.stroke();
   }
-  // upper mediastinum / SVC + aortic knuckle
-  ctx.fillStyle = 'rgba(206,214,229,0.62)';
-  ctx.beginPath();
-  ctx.moveTo(cx - w*0.055, h*0.155);
-  ctx.lineTo(cx + w*0.050, h*0.155);
-  ctx.quadraticCurveTo(cx + w*0.085, h*0.30, cx + w*0.070, h*0.44);
-  ctx.lineTo(cx - w*0.075, h*0.44);
-  ctx.quadraticCurveTo(cx - w*0.070, h*0.28, cx - w*0.055, h*0.155);
-  ctx.closePath(); ctx.fill();
-  // trachea — a dark air column, deviated in tension pneumothorax
+  ctx.restore();
+
+  // tracheal air column — narrow and translucent, deviating in tension pneumothorax
   const td = o.trachealShift || 0;
-  ctx.strokeStyle = 'rgba(10,11,16,0.92)'; ctx.lineWidth = w*0.030;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(14,16,23,0.55)';
+  ctx.lineWidth = w*0.021;
   ctx.beginPath();
-  ctx.moveTo(w/2, h*0.095);
-  ctx.quadraticCurveTo(w/2 + td*0.6, h*0.24, w/2 + td, h*0.375);
+  ctx.moveTo(w/2, h*0.075);
+  ctx.quadraticCurveTo(w/2 + td*0.55, h*0.220, w/2 + td, h*0.352);
   ctx.stroke();
   ctx.restore();
-}
-
-function cxrDiaphragm(ctx, w, h, o){
-  o = o || {};
-  const cx = w/2;
-  // abdomen below
-  ctx.fillStyle = 'rgba(150,157,172,0.42)';
-  ctx.fillRect(0, h*0.72, w, h*0.28);
-  // re-cut the two domes out of it so the lung bases sit above sharp curves
-  [{side:-1, dy:o.rightDomeDy||0}, {side:1, dy:o.leftDomeDy||0}].forEach(d=>{
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    const x0 = cx + (d.side<0 ? -w*0.44 : w*0.02);
-    const x1 = cx + (d.side<0 ? -w*0.02 : w*0.44);
-    const peak = h*(d.side<0 ? 0.735 : 0.762) + d.dy;
-    ctx.moveTo(x0, h);
-    ctx.lineTo(x0, h*0.80);
-    ctx.quadraticCurveTo((x0+x1)/2, peak - h*0.055, x1, h*0.80);
-    ctx.lineTo(x1, h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  });
-  // gastric bubble under the left hemidiaphragm (image right)
-  if (!o.noGastric){
-    ctx.fillStyle = 'rgba(8,9,14,0.85)';
-    ctx.beginPath(); ctx.ellipse(cx + w*0.20, h*0.815, w*0.075, h*0.030, 0, 0, Math.PI*2); ctx.fill();
-  }
 }
 
 function cxrClavicles(ctx, w, h){
   const cx = w/2;
   ctx.save();
-  ctx.strokeStyle = 'rgba(212,219,232,0.42)'; ctx.lineWidth = 4.4; ctx.lineCap='round';
+  ctx.strokeStyle = 'rgba(210,218,232,0.38)'; ctx.lineWidth = 4.6; ctx.lineCap='round';
   [-1,1].forEach(side=>{
     ctx.beginPath();
-    ctx.moveTo(cx + side*w*0.045, h*0.150);
-    ctx.quadraticCurveTo(cx + side*w*0.22, h*0.120, cx + side*w*0.40, h*0.155);
+    ctx.moveTo(cx + side*w*0.040, h*0.168);
+    ctx.quadraticCurveTo(cx + side*w*0.200, h*0.128, cx + side*w*0.375, h*0.170);
     ctx.stroke();
   });
   ctx.restore();
@@ -9119,47 +9153,29 @@ function cxrGrain(ctx, w, h){
   // a little film grain stops the drawing reading as flat vector art
   const img = ctx.getImageData(0,0,w,h), d = img.data;
   for (let i=0;i<d.length;i+=4){
-    const n = (Math.random()-0.5)*13;
+    const n = (Math.random()-0.5)*12;
     d[i]+=n; d[i+1]+=n; d[i+2]+=n;
   }
   ctx.putImageData(img,0,0);
 }
 
-// Draws the normal film. Options let each case suppress or shift the parts it needs to.
 function cxrDrawBase(ctx, w, h, o){
   o = o || {};
-  const cx = w/2;
-  ctx.fillStyle = '#06070b'; ctx.fillRect(0,0,w,h);
-
-  const env = ctx.createLinearGradient(0,0,w,0);
-  env.addColorStop(0,   'rgba(150,156,170,0.32)');
-  env.addColorStop(0.22,'rgba(112,118,132,0.14)');
-  env.addColorStop(0.5, 'rgba(98,104,118,0.07)');
-  env.addColorStop(0.78,'rgba(112,118,132,0.14)');
-  env.addColorStop(1,   'rgba(150,156,170,0.32)');
-  ctx.fillStyle = env;
-  ctx.beginPath();
-  ctx.moveTo(w*0.075, h*0.135);
-  ctx.quadraticCurveTo(cx, h*0.020, w*0.925, h*0.135);
-  ctx.lineTo(w*0.955, h*0.90);
-  ctx.quadraticCurveTo(cx, h*0.985, w*0.045, h*0.90);
-  ctx.closePath(); ctx.fill();
-
+  ctx.fillStyle = '#05060a'; ctx.fillRect(0,0,w,h);
+  cxrTorso(ctx, w, h);
+  cxrSubDiaphragm(ctx, w, h, o);
+  // lungs punched dark ON TOP of the soft tissue — they must be the darkest thing here
   [-1,1].forEach(side=>{
     cxrLungPath(ctx, w, h, side);
-    ctx.fillStyle = '#090a0f'; ctx.fill();
+    ctx.fillStyle = '#080910'; ctx.fill();
   });
-
   [-1,1].forEach(side=>{
-    const dens = (o.vascular && o.vascular[side<0?'right':'left'] != null)
-      ? o.vascular[side<0?'right':'left'] : 1;
+    const key = side<0 ? 'right' : 'left';
+    const dens = (o.vascular && o.vascular[key] != null) ? o.vascular[key] : 1;
     if (dens > 0) cxrVascularMarkings(ctx, w, h, side, dens);
   });
-
   [-1,1].forEach(side=>cxrRibs(ctx, w, h, side));
-  cxrDiaphragm(ctx, w, h, o);
-  cxrMediastinum(ctx, w, h, o);
-  cxrHeart(ctx, w, h, o);
+  cxrCardiomediastinum(ctx, w, h, o);
   cxrClavicles(ctx, w, h);
 }
 
