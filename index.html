@@ -9107,20 +9107,20 @@ function cxrCardiomediastinum(ctx, w, h, o){
   ctx.save();
   ctx.fillStyle = 'rgba(203,211,227,0.74)';
   ctx.beginPath();
+  // Above the hila this is a NARROW mediastinal stripe; the cardiac borders begin abruptly
+  // below it and the mass sits mostly to the patient's left. Widening smoothly from neck to
+  // diaphragm is what made earlier versions read as a vase instead of a heart.
   ctx.moveTo(cx - w*0.048, top);
-  // image-right (the patient's LEFT): aortic knuckle, then a concave pulmonary bay,
-  // then the convex left ventricular border down to the apex. That S-curve is what
-  // makes a cardiac silhouette read as a heart rather than as a vase.
   ctx.lineTo(cx + w*0.040, top);
-  ctx.quadraticCurveTo(cx + w*0.086, h*0.255, cx + w*0.079, h*0.318);
-  ctx.quadraticCurveTo(cx + w*0.060, h*0.372, cx + w*0.072, h*0.410);
-  ctx.bezierCurveTo(cx + half*0.95, h*0.485, cx + half*1.30, h*0.575, cx + half*1.29, h*0.652);
-  ctx.quadraticCurveTo(cx + half*1.22, h*0.716, cx + half*0.72, bot);
-  // base of the heart
-  ctx.lineTo(cx - w*0.030, bot);
-  // image-left (the patient's RIGHT): right atrial border, then the SVC straight up
-  ctx.quadraticCurveTo(cx - half*0.74, h*0.716, cx - half*0.72, h*0.628);
-  ctx.bezierCurveTo(cx - half*0.70, h*0.540, cx - w*0.070, h*0.470, cx - w*0.062, h*0.398);
+  ctx.quadraticCurveTo(cx + w*0.088, h*0.245, cx + w*0.076, h*0.315);   // aortic knuckle
+  ctx.quadraticCurveTo(cx + w*0.056, h*0.362, cx + w*0.068, h*0.398);   // concave pulmonary bay
+  // left ventricular border sweeping out to the apex
+  ctx.bezierCurveTo(cx + half*1.00, h*0.458, cx + half*1.32, h*0.560, cx + half*1.30, h*0.648);
+  ctx.quadraticCurveTo(cx + half*1.17, h*0.714, cx + half*0.68, bot);
+  ctx.lineTo(cx - w*0.022, bot);
+  // right atrial border, then the SVC straight up
+  ctx.quadraticCurveTo(cx - half*0.76, h*0.726, cx - half*0.74, h*0.640);
+  ctx.bezierCurveTo(cx - half*0.73, h*0.548, cx - w*0.072, h*0.468, cx - w*0.062, h*0.398);
   ctx.lineTo(cx - w*0.048, top);
   ctx.closePath();
   ctx.fill();
