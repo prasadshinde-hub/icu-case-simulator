@@ -483,6 +483,15 @@ details.brief[open] summary::before{transform:rotate(90deg);}
 #abgPresetScreen, #abgLabScreen{ --accent: var(--amber); }
 #procPresetScreen, #procLabScreen{ --accent: var(--crit); }
 #ecgPresetScreen, #ecgLabScreen{ --accent: var(--lime); }
+#cxrPresetScreen, #cxrLabScreen{ --accent: #7fb2ff; }
+.cxr-film-wrap{display:flex;justify-content:center;background:#050508;border:1px solid var(--border);
+  border-radius:10px;padding:14px;overflow:hidden;}
+.cxr-film-wrap canvas{max-width:100%;height:auto;display:block;border-radius:4px;}
+.cxr-caption{font-size:11.5px;color:var(--text-faint);text-align:center;margin:8px 0 0;line-height:1.55;}
+.cxr-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0 0;}
+.cxr-syst{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:14px 0 0;}
+.cxr-syst h4{margin:0 0 6px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);}
+.cxr-syst ol{margin:0;padding-left:18px;font-size:12.5px;color:var(--text-dim);line-height:1.75;}
 .ecg-strip-wrap{background:#0a0d12;border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:6px;}
 .ecg-strip-wrap canvas{width:100%;height:140px;display:block;}
 .ecg-rate{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--text-dim);margin:0 0 14px;}
@@ -935,6 +944,50 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
   <p class="ecg-rate" id="ecgRate"></p>
 
   <div class="panel" id="ecgStepPanel" style="padding:20px;"></div>
+</div>
+
+<div class="specialty" id="cxrPresetScreen" style="display:none;">
+  <div class="specialty-hdr">
+    <div class="top-row"><button class="btn ghost small" data-back-to-sims>&larr; Back</button></div>
+    <span class="eyebrow">Chest X-Ray Interpretation</span>
+    <h1>Choose a film</h1>
+    <p>Read the film systematically, then state the abnormality, the diagnosis, and what you would do — with graded feedback at each step.</p>
+  </div>
+  <div class="specialty-grid" id="cxrPresetGrid"></div>
+</div>
+
+<div class="app" id="cxrLabScreen" style="display:none;">
+  <div class="hdr">
+    <div class="hdr-title">
+      <div class="top-row" style="margin-bottom:4px;"><button class="btn ghost small" id="cxrBackBtn">&larr; Back</button></div>
+      <span class="eyebrow" id="cxrEyebrow">Chest X-Ray Interpretation</span>
+      <h1 id="cxrTitle">Film</h1>
+    </div>
+  </div>
+
+  <details class="brief" open>
+    <summary>Clinical context</summary>
+    <div class="brief-body" id="cxrVignette"></div>
+  </details>
+
+  <div class="cxr-film-wrap"><canvas id="cxrFilm" width="460" height="540"></canvas></div>
+  <p class="cxr-caption" id="cxrCaption"></p>
+  <div class="cxr-tools">
+    <button class="btn small" id="cxrAnnotateBtn">Show findings</button>
+    <button class="btn small" id="cxrSystBtn">Systematic approach</button>
+  </div>
+  <div class="cxr-syst" id="cxrSyst" style="display:none;">
+    <h4>A systematic read (ABCDE)</h4>
+    <ol>
+      <li><b>Airway</b> — trachea central? Any tube, and where does it end?</li>
+      <li><b>Breathing</b> — lung fields equal? Consolidation, collapse, pneumothorax? Are markings present all the way to the chest wall?</li>
+      <li><b>Circulation</b> — heart size (should be under half the chest width on a PA film), mediastinal position, aortic contour.</li>
+      <li><b>Diaphragm</b> — both domes sharp? Costophrenic angles clear? Any free air beneath?</li>
+      <li><b>Everything else</b> — bones, soft tissues, lines, drains, pacemakers, and the review areas (apices, behind the heart).</li>
+    </ol>
+  </div>
+
+  <div class="panel" id="cxrStepPanel" style="padding:20px;"></div>
 </div>
 
 <div class="menu" id="menuScreen" style="display:none;">
@@ -6279,7 +6332,7 @@ const SIMULATORS = {
   proc: {label:'Procedure Simulator', desc:'Step-by-step bedside procedures — wrong steps cause real, modeled complications.', color:'var(--crit)', action:()=>showProcPresetScreen()},
   ecg: {label:'ECG Interpretation', desc:'Read a live rhythm strip, then identify, interpret, and manage it with graded feedback.', color:'var(--lime)', action:()=>showEcgPresetScreen()},
   library: {label:'Conditions Library', desc:'Quick-reference cards for every condition behind the cases — presentation, investigations, management, and the classic pitfalls.', color:'var(--good)', badge:'Reference', action:()=>showLibraryScreen()},
-  cxr: {label:'Chest X-Ray Interpretation', desc:'Coming soon.', color:'var(--text-faint)', disabled:true}
+  cxr: {label:'Chest X-Ray Interpretation', desc:'Read a chest film systematically, then identify the abnormality, the diagnosis, and the management.', color:'#7fb2ff', action:()=>showCxrPresetScreen()}
 };
 function buildSimulatorsGrid(){
   const grid = document.getElementById('simulatorsGrid');
@@ -6300,11 +6353,11 @@ function buildSimulatorsGrid(){
 
 const ALL_SCREENS = ['frontScreen','authScreen','historyScreen','instructorScreen','simulatorsScreen','specialtyScreen','menuScreen','appScreen','arrestScreen','debriefScreen',
   'ventPresetScreen','ventLabScreen','abgPresetScreen','abgLabScreen','procPresetScreen','procLabScreen','ecgPresetScreen','ecgLabScreen',
-  'libraryScreen','conditionScreen'];
+  'cxrPresetScreen','cxrLabScreen','libraryScreen','conditionScreen'];
 
 // Screens that show live monitor output stay on the dark bedside palette.
 // Everything else is "shell" and gets the editorial paper treatment.
-const BEDSIDE_SCREENS = ['appScreen','arrestScreen','ventLabScreen','ecgLabScreen','procLabScreen'];
+const BEDSIDE_SCREENS = ['appScreen','arrestScreen','ventLabScreen','ecgLabScreen','procLabScreen','cxrLabScreen'];
 function applyShellMode(id){
   document.body.classList.toggle('shell', BEDSIDE_SCREENS.indexOf(id) === -1);
 }
@@ -6512,8 +6565,8 @@ async function doLogout(){
   showFront();
 }
 
-const MOD_LABEL = { icu:'ICU Case', ecg:'ECG', abg:'ABG Trainer', ventilator:'Ventilator', procedure:'Procedure' };
-const MOD_ORDER = ['icu','ecg','abg','procedure'];
+const MOD_LABEL = { icu:'ICU Case', ecg:'ECG', abg:'ABG Trainer', ventilator:'Ventilator', procedure:'Procedure', cxr:'Chest X-ray' };
+const MOD_ORDER = ['icu','ecg','abg','cxr','procedure'];
 
 function computeStreak(rows){
   // consecutive calendar days (ending today or yesterday) with at least one attempt
@@ -6911,6 +6964,16 @@ document.getElementById('backToSpecialtyBtn').addEventListener('click', showSpec
 document.getElementById('authBackBtn').addEventListener('click', showFront);
 document.getElementById('historyBackBtn').addEventListener('click', showSimulatorsScreen);
 document.getElementById('instrDashBackBtn').addEventListener('click', showSimulatorsScreen);
+document.getElementById('cxrBackBtn').addEventListener('click', showCxrPresetScreen);
+document.getElementById('cxrAnnotateBtn').addEventListener('click', ()=>{
+  cxrShowAnnotations = !cxrShowAnnotations;
+  document.getElementById('cxrAnnotateBtn').textContent = cxrShowAnnotations ? 'Hide findings' : 'Show findings';
+  cxrRender();
+});
+document.getElementById('cxrSystBtn').addEventListener('click', ()=>{
+  const el = document.getElementById('cxrSyst');
+  el.style.display = el.style.display==='none' ? '' : 'none';
+});
 
 let monitorResizeTimer = null;
 window.addEventListener('resize', ()=>{
@@ -8859,6 +8922,854 @@ function buildEcgPresetGrid(){
   });
 }
 function showEcgPresetScreen(){ ecgCURRENT = null; revealScreen('ecgPresetScreen'); }
+
+// ================= Chest X-ray Interpretation =================
+// The films below are drawn procedurally on canvas, the same way the ECG strips and the
+// ventilator loops are. They are schematic teaching diagrams, NOT photographs of real
+// radiographs, and the caption under every film says so — a student must not finish this
+// module believing they have practised on real films. What they can practise here is the
+// systematic search pattern and the reasoning that follows a finding.
+
+let cxrCURRENT = null, cxrS = null, cxrShowAnnotations = false;
+
+// Image-left is the patient's RIGHT side, as on a real PA film. side = -1 is image-left.
+function cxrLungPath(ctx, w, h, side){
+  const cx = w/2;
+  const inner = cx + side*w*0.065;
+  const outer = cx + side*w*0.415;
+  const top = h*0.155, bot = h*0.735;
+  ctx.beginPath();
+  ctx.moveTo(inner, top + h*0.05);
+  ctx.quadraticCurveTo(cx + side*w*0.17, top - h*0.028, outer, top + h*0.155);
+  ctx.quadraticCurveTo(outer + side*w*0.028, h*0.55, cx + side*w*0.345, bot);
+  ctx.quadraticCurveTo(cx + side*w*0.17, bot + h*0.030, inner, bot - h*0.085);
+  ctx.closePath();
+}
+
+function cxrThoraxPath(ctx, w, h){
+  const cx = w/2;
+  ctx.beginPath();
+  ctx.moveTo(w*0.10, h*0.16);
+  ctx.quadraticCurveTo(cx, h*0.055, w*0.90, h*0.16);
+  ctx.lineTo(w*0.92, h*0.80);
+  ctx.quadraticCurveTo(cx, h*0.88, w*0.08, h*0.80);
+  ctx.closePath();
+}
+
+// soft radial opacity — the workhorse for consolidation, oedema and infiltrates
+function cxrBlob(ctx, x, y, rx, ry, alpha, tint){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
+  const c = tint || '235,240,250';
+  g.addColorStop(0,   `rgba(${c},${alpha})`);
+  g.addColorStop(0.55,`rgba(${c},${alpha*0.55})`);
+  g.addColorStop(1,   `rgba(${c},0)`);
+  ctx.save(); ctx.translate(x,y); ctx.scale(1, ry/Math.max(rx,ry)); ctx.translate(-x,-y);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, Math.max(rx,ry), 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function cxrVascularMarkings(ctx, w, h, side, density){
+  // branching pulmonary vessels, fanning out from the hilum. Their ABSENCE is the finding
+  // in a pneumothorax, so they are drawn per-side rather than globally.
+  const cx = w/2;
+  const hx = cx + side*w*0.115, hy = h*0.44;
+  ctx.save();
+  cxrLungPath(ctx, w, h, side); ctx.clip();
+  ctx.lineCap = 'round';
+  for (let i=0;i<14;i++){
+    const ang = (-0.75 + i*0.115) * Math.PI * (side<0 ? 1 : 1);
+    const len = w*(0.10 + (i%4)*0.045);
+    const x2 = hx + Math.cos(ang)*len*side*-1;
+    const y2 = hy + Math.sin(ang)*len*0.9;
+    ctx.strokeStyle = `rgba(178,188,206,${0.30*density})`;
+    ctx.lineWidth = 2.1;
+    ctx.beginPath(); ctx.moveTo(hx, hy);
+    ctx.quadraticCurveTo((hx+x2)/2 + side*w*0.02, (hy+y2)/2, x2, y2);
+    ctx.stroke();
+    // one order of branching
+    ctx.strokeStyle = `rgba(178,188,206,${0.18*density})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 + side*-w*0.05, y2 + h*(i%2?0.035:-0.03));
+    ctx.stroke();
+  }
+  // hilum itself
+  cxrBlob(ctx, hx, hy, w*0.05, h*0.045, 0.30*density, '190,200,218');
+  ctx.restore();
+}
+
+function cxrRibs(ctx, w, h, side){
+  const cx = w/2;
+  ctx.save();
+  cxrThoraxPath(ctx, w, h); ctx.clip();
+  ctx.lineCap = 'round';
+  for (let i=0;i<9;i++){
+    const y0 = h*0.185 + i*h*0.062;
+    ctx.strokeStyle = 'rgba(205,212,226,0.30)';
+    ctx.lineWidth = 3.4;
+    ctx.beginPath();
+    ctx.moveTo(cx + side*w*0.045, y0);
+    ctx.quadraticCurveTo(cx + side*w*0.30, y0 + h*0.018, cx + side*w*0.47, y0 + h*0.085);
+    ctx.stroke();
+    // anterior rib, fainter and angled the other way
+    ctx.strokeStyle = 'rgba(205,212,226,0.13)';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx + side*w*0.47, y0 + h*0.020);
+    ctx.quadraticCurveTo(cx + side*w*0.26, y0 + h*0.085, cx + side*w*0.075, y0 + h*0.075);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function cxrHeart(ctx, w, h, o){
+  o = o || {};
+  const cx = w/2 + (o.shift || 0);
+  const ratio = o.ratio || 0.44;              // cardiothoracic ratio
+  const heartW = w*0.80*ratio;
+  const x1 = cx - heartW*0.32, x2 = cx + heartW*0.68;
+  const top = h*0.435, bot = h*0.745;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x1, top + h*0.045);
+  ctx.quadraticCurveTo(x1 - w*0.012, bot - h*0.015, cx - w*0.01, bot);
+  ctx.quadraticCurveTo(x2 - w*0.02, bot + h*0.006, x2, top + h*0.10);
+  ctx.quadraticCurveTo(x2 - w*0.05, top - h*0.015, cx + w*0.012, top + h*0.03);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(214,221,234,0.80)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function cxrMediastinum(ctx, w, h, o){
+  o = o || {};
+  const shift = o.shift || 0;
+  const cx = w/2 + shift;
+  ctx.save();
+  // spine
+  ctx.fillStyle = 'rgba(198,206,222,0.30)';
+  ctx.fillRect(w/2 - w*0.032, h*0.10, w*0.064, h*0.70);
+  ctx.strokeStyle = 'rgba(120,128,145,0.45)'; ctx.lineWidth = 1;
+  for (let y=h*0.12; y<h*0.78; y+=h*0.048){
+    ctx.beginPath(); ctx.moveTo(w/2 - w*0.032, y); ctx.lineTo(w/2 + w*0.032, y); ctx.stroke();
+  }
+  // upper mediastinum / SVC + aortic knuckle
+  ctx.fillStyle = 'rgba(206,214,229,0.62)';
+  ctx.beginPath();
+  ctx.moveTo(cx - w*0.055, h*0.155);
+  ctx.lineTo(cx + w*0.050, h*0.155);
+  ctx.quadraticCurveTo(cx + w*0.085, h*0.30, cx + w*0.070, h*0.44);
+  ctx.lineTo(cx - w*0.075, h*0.44);
+  ctx.quadraticCurveTo(cx - w*0.070, h*0.28, cx - w*0.055, h*0.155);
+  ctx.closePath(); ctx.fill();
+  // trachea — a dark air column, deviated in tension pneumothorax
+  const td = o.trachealShift || 0;
+  ctx.strokeStyle = 'rgba(10,11,16,0.92)'; ctx.lineWidth = w*0.030;
+  ctx.beginPath();
+  ctx.moveTo(w/2, h*0.095);
+  ctx.quadraticCurveTo(w/2 + td*0.6, h*0.24, w/2 + td, h*0.375);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function cxrDiaphragm(ctx, w, h, o){
+  o = o || {};
+  const cx = w/2;
+  // abdomen below
+  ctx.fillStyle = 'rgba(150,157,172,0.42)';
+  ctx.fillRect(0, h*0.72, w, h*0.28);
+  // re-cut the two domes out of it so the lung bases sit above sharp curves
+  [{side:-1, dy:o.rightDomeDy||0}, {side:1, dy:o.leftDomeDy||0}].forEach(d=>{
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    const x0 = cx + (d.side<0 ? -w*0.44 : w*0.02);
+    const x1 = cx + (d.side<0 ? -w*0.02 : w*0.44);
+    const peak = h*(d.side<0 ? 0.735 : 0.762) + d.dy;
+    ctx.moveTo(x0, h);
+    ctx.lineTo(x0, h*0.80);
+    ctx.quadraticCurveTo((x0+x1)/2, peak - h*0.055, x1, h*0.80);
+    ctx.lineTo(x1, h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+  // gastric bubble under the left hemidiaphragm (image right)
+  if (!o.noGastric){
+    ctx.fillStyle = 'rgba(8,9,14,0.85)';
+    ctx.beginPath(); ctx.ellipse(cx + w*0.20, h*0.815, w*0.075, h*0.030, 0, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function cxrClavicles(ctx, w, h){
+  const cx = w/2;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(212,219,232,0.42)'; ctx.lineWidth = 4.4; ctx.lineCap='round';
+  [-1,1].forEach(side=>{
+    ctx.beginPath();
+    ctx.moveTo(cx + side*w*0.045, h*0.150);
+    ctx.quadraticCurveTo(cx + side*w*0.22, h*0.120, cx + side*w*0.40, h*0.155);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function cxrGrain(ctx, w, h){
+  // a little film grain stops the drawing reading as flat vector art
+  const img = ctx.getImageData(0,0,w,h), d = img.data;
+  for (let i=0;i<d.length;i+=4){
+    const n = (Math.random()-0.5)*13;
+    d[i]+=n; d[i+1]+=n; d[i+2]+=n;
+  }
+  ctx.putImageData(img,0,0);
+}
+
+// Draws the normal film. Options let each case suppress or shift the parts it needs to.
+function cxrDrawBase(ctx, w, h, o){
+  o = o || {};
+  const cx = w/2;
+  ctx.fillStyle = '#06070b'; ctx.fillRect(0,0,w,h);
+
+  const env = ctx.createLinearGradient(0,0,w,0);
+  env.addColorStop(0,   'rgba(150,156,170,0.32)');
+  env.addColorStop(0.22,'rgba(112,118,132,0.14)');
+  env.addColorStop(0.5, 'rgba(98,104,118,0.07)');
+  env.addColorStop(0.78,'rgba(112,118,132,0.14)');
+  env.addColorStop(1,   'rgba(150,156,170,0.32)');
+  ctx.fillStyle = env;
+  ctx.beginPath();
+  ctx.moveTo(w*0.075, h*0.135);
+  ctx.quadraticCurveTo(cx, h*0.020, w*0.925, h*0.135);
+  ctx.lineTo(w*0.955, h*0.90);
+  ctx.quadraticCurveTo(cx, h*0.985, w*0.045, h*0.90);
+  ctx.closePath(); ctx.fill();
+
+  [-1,1].forEach(side=>{
+    cxrLungPath(ctx, w, h, side);
+    ctx.fillStyle = '#090a0f'; ctx.fill();
+  });
+
+  [-1,1].forEach(side=>{
+    const dens = (o.vascular && o.vascular[side<0?'right':'left'] != null)
+      ? o.vascular[side<0?'right':'left'] : 1;
+    if (dens > 0) cxrVascularMarkings(ctx, w, h, side, dens);
+  });
+
+  [-1,1].forEach(side=>cxrRibs(ctx, w, h, side));
+  cxrDiaphragm(ctx, w, h, o);
+  cxrMediastinum(ctx, w, h, o);
+  cxrHeart(ctx, w, h, o);
+  cxrClavicles(ctx, w, h);
+}
+
+function cxrAnnotate(ctx, w, h, marks){
+  ctx.save();
+  marks.forEach(m=>{
+    const x = m.x*w, y = m.y*h, r = (m.r||0.09)*w;
+    ctx.strokeStyle = '#ff5f56'; ctx.lineWidth = 2.2; ctx.setLineDash([6,5]);
+    ctx.beginPath(); ctx.ellipse(x, y, r, r*(m.ry||0.85), 0, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    const label = m.label, left = x < w/2;
+    ctx.font = '600 12px ui-monospace, SFMono-Regular, Menlo, monospace';
+    const tw = ctx.measureText(label).width;
+    const lx = left ? Math.max(4, x - r - tw - 12) : Math.min(w - tw - 10, x + r + 10);
+    const ly = y + 4;
+    ctx.fillStyle = 'rgba(6,7,11,0.88)';
+    ctx.fillRect(lx - 5, ly - 13, tw + 10, 19);
+    ctx.strokeStyle = 'rgba(255,95,86,0.75)'; ctx.lineWidth = 1;
+    ctx.strokeRect(lx - 5, ly - 13, tw + 10, 19);
+    ctx.fillStyle = '#ffb0aa';
+    ctx.fillText(label, lx, ly);
+  });
+  ctx.restore();
+}
+
+function cxrRender(){
+  const c = document.getElementById('cxrFilm');
+  if (!c || !cxrCURRENT) return;
+  const ctx = c.getContext('2d');
+  const w = c.width, h = c.height;
+  cxrCURRENT.render(ctx, w, h);
+  cxrGrain(ctx, w, h);
+  if (cxrShowAnnotations && cxrCURRENT.annotations) cxrAnnotate(ctx, w, h, cxrCURRENT.annotations);
+}
+
+const CXR_PRESETS = {
+  normal:{
+    id:'normal', label:'Normal chest radiograph', tag:'Baseline',
+    vignette:'34F, pre-operative film before an elective laparoscopic cholecystectomy. She is well, with no respiratory symptoms.',
+    caption:'PA erect film. Trachea central, both lung fields clear, costophrenic angles sharp, cardiothoracic ratio under 50%.',
+    render(ctx,w,h){ cxrDrawBase(ctx,w,h,{}); },
+    annotations:[
+      {x:0.50,y:0.24,r:0.06,label:'Trachea central'},
+      {x:0.26,y:0.70,r:0.07,label:'CP angle sharp'},
+      {x:0.58,y:0.60,r:0.13,label:'CTR < 50%'}
+    ],
+    findingOptions:[
+      {id:'a', label:'No abnormality — clear lung fields, normal heart size, sharp costophrenic angles'},
+      {id:'b', label:'Right lower zone consolidation'},
+      {id:'c', label:'Bilateral pleural effusions'},
+      {id:'d', label:'Cardiomegaly with upper lobe venous diversion'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'This is a normal film. The trachea is central, both lung fields show vascular markings extending to the chest wall, the costophrenic angles are sharp, both hemidiaphragms are clearly outlined, and the heart occupies less than half the transthoracic width. Knowing what normal looks like is what makes an abnormal film obvious.',
+    diagnosisOptions:[
+      {id:'a', label:'Normal study — no radiographic contraindication to surgery'},
+      {id:'b', label:'Early congestive cardiac failure'},
+      {id:'c', label:'Community-acquired pneumonia'},
+      {id:'d', label:'Chronic obstructive pulmonary disease'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Nothing here needs explaining away. Note also that a normal chest film does not exclude a pulmonary embolism, early infection, or a small pneumothorax — a normal film reassures you about what it shows, not about everything.',
+    managementOptions:[
+      {id:'a', label:'Proceed — document a normal film and treat the patient, not the image'},
+      {id:'b', label:'Start empirical broad-spectrum antibiotics'},
+      {id:'c', label:'Request an urgent CT pulmonary angiogram'},
+      {id:'d', label:'Give IV furosemide'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'No treatment is indicated by this film. Routine pre-operative chest radiographs in a well young patient rarely change management, which is worth remembering before ordering one.'
+  },
+
+  rll_pneumonia:{
+    id:'rll_pneumonia', label:'Right lower lobe consolidation', tag:'Consolidation',
+    vignette:'72M, four days of productive cough, fever 38.9°C and pleuritic right-sided chest pain. RR 26, SpO2 91% on air, crackles at the right base.',
+    caption:'Dense opacification of the right lower zone. The right hemidiaphragm outline is lost behind it — the silhouette sign.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{});
+      ctx.save();
+      cxrLungPath(ctx,w,h,-1); ctx.clip();
+      cxrBlob(ctx, w*0.29, h*0.635, w*0.19, h*0.135, 0.80);
+      cxrBlob(ctx, w*0.33, h*0.585, w*0.13, h*0.095, 0.45);
+      // air bronchograms: dark branching airways standing out against the white lung
+      ctx.strokeStyle='rgba(14,15,22,0.75)'; ctx.lineWidth=3; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(w*0.375,h*0.565); ctx.quadraticCurveTo(w*0.32,h*0.60,w*0.275,h*0.645); ctx.stroke();
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(w*0.325,h*0.598); ctx.lineTo(w*0.29,h*0.585); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w*0.298,h*0.625); ctx.lineTo(w*0.255,h*0.612); ctx.stroke();
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.30,y:0.63,r:0.15,ry:0.75,label:'Consolidation'},
+      {x:0.31,y:0.745,r:0.09,label:'Silhouette sign'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Dense right lower zone opacification with air bronchograms, obscuring the right hemidiaphragm'},
+      {id:'b', label:'Right-sided pneumothorax with a visible pleural edge'},
+      {id:'c', label:'Bilateral perihilar bat-wing shadowing'},
+      {id:'d', label:'A large left pleural effusion'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'There is homogeneous opacification of the right lower zone containing dark branching air bronchograms — air-filled airways made visible because the surrounding alveoli are full. Because the opacity abuts the right hemidiaphragm, that border is lost: the silhouette sign, which localises the disease to the adjacent lobe.',
+    diagnosisOptions:[
+      {id:'a', label:'Right lower lobe pneumonia'},
+      {id:'b', label:'Pulmonary embolism with infarction'},
+      {id:'c', label:'Cardiogenic pulmonary oedema'},
+      {id:'d', label:'Lobar collapse from an obstructing tumour'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Fever, purulent cough, focal crackles and lobar consolidation with air bronchograms is pneumonia. Collapse would pull structures towards the opacity and reduce lung volume rather than preserving it; oedema is usually bilateral and perihilar; and a PE does not typically produce a dense lobar consolidation with air bronchograms.',
+    managementOptions:[
+      {id:'a', label:'Assess severity (e.g. CURB-65), take cultures, start antibiotics per local policy, and give oxygen to target'},
+      {id:'b', label:'Insert a chest drain into the right pleural space'},
+      {id:'c', label:'Give IV furosemide and start a GTN infusion'},
+      {id:'d', label:'Start therapeutic anticoagulation for suspected PE'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Score the severity, send blood and sputum cultures before antibiotics if it will not delay them, start guideline-based antibiotics promptly, and titrate oxygen. There is no pleural collection here to drain, and treating this as oedema or PE would leave the actual infection untreated.'
+  },
+
+  left_pneumothorax:{
+    id:'left_pneumothorax', label:'Left tension pneumothorax', tag:'Pleural · emergency',
+    vignette:'29M, sudden severe left-sided pleuritic pain and breathlessness after a stab wound. BP 78/44, HR 138, SpO2 86%, trachea deviated to the right, absent breath sounds on the left.',
+    caption:'No lung markings in the left hemithorax, a visible pleural edge, and mediastinal shift away from the affected side.',
+    render(ctx,w,h){
+      // the collapsed left lung means no vascular markings on that side
+      cxrDrawBase(ctx,w,h,{ vascular:{left:0, right:1}, shift:-w*0.055, trachealShift:-w*0.045, leftDomeDy:h*0.030 });
+      ctx.save();
+      cxrLungPath(ctx,w,h,1); ctx.clip();
+      // the hemithorax is pure air — wipe it darker than lung
+      ctx.fillStyle='#050609'; ctx.fillRect(w/2,0,w/2,h);
+      // the collapsed lung, squashed down towards the hilum
+      cxrBlob(ctx, w*0.575, h*0.47, w*0.075, h*0.135, 0.55, '200,208,224');
+      ctx.restore();
+      // visible pleural edge — the defining sign
+      ctx.save();
+      ctx.strokeStyle='rgba(236,242,252,0.92)'; ctx.lineWidth=2.1;
+      ctx.beginPath();
+      ctx.moveTo(w*0.545, h*0.215);
+      ctx.quadraticCurveTo(w*0.665, h*0.40, w*0.605, h*0.665);
+      ctx.stroke();
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.63,y:0.42,r:0.115,ry:1.25,label:'No lung markings'},
+      {x:0.475,y:0.24,r:0.055,label:'Trachea deviated'},
+      {x:0.60,y:0.44,r:0.05,label:'Pleural edge'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Absent lung markings in the left hemithorax with a visible pleural edge, and the trachea and mediastinum pushed to the right'},
+      {id:'b', label:'Left lower lobe consolidation'},
+      {id:'c', label:'A large left pleural effusion with a meniscus'},
+      {id:'d', label:'Left lung collapse with the trachea pulled towards the left'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'The left hemithorax is uniformly black with no vascular markings reaching the chest wall, and a fine white pleural line marks the edge of the collapsed lung. Critically, the trachea and mediastinum are pushed AWAY from that side — collapse pulls structures towards the abnormality, tension pushes them away.',
+    diagnosisOptions:[
+      {id:'a', label:'Left tension pneumothorax'},
+      {id:'b', label:'Simple (non-tension) left pneumothorax'},
+      {id:'c', label:'Left main bronchus obstruction with collapse'},
+      {id:'d', label:'Ruptured left hemidiaphragm'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'A pneumothorax plus mediastinal shift plus haemodynamic collapse is a tension pneumothorax. The shift and the shock are what separate it from a simple pneumothorax, and they are what make it immediately life-threatening: rising intrapleural pressure kinks the great veins and venous return fails.',
+    managementOptions:[
+      {id:'a', label:'Immediate decompression — do not wait for imaging — then a definitive intercostal chest drain'},
+      {id:'b', label:'Admit for observation and repeat the film in 6 hours'},
+      {id:'c', label:'High-flow oxygen alone and reassess in the morning'},
+      {id:'d', label:'Intubate and ventilate with high PEEP'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Tension pneumothorax is a clinical diagnosis treated before imaging — needle or finger decompression immediately, followed by a formal intercostal drain. Observation would be fatal here, and positive-pressure ventilation without first decompressing will worsen the tension dramatically.'
+  },
+
+  right_effusion:{
+    id:'right_effusion', label:'Large right pleural effusion', tag:'Pleural',
+    vignette:'66F with worsening breathlessness over three weeks and reduced exercise tolerance. Stony dull percussion note and absent breath sounds at the right base.',
+    caption:'Dense homogeneous opacity at the right base with a concave upper border rising into the axilla — the meniscus sign.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{});
+      ctx.save();
+      cxrLungPath(ctx,w,h,-1); ctx.clip();
+      // fluid sits dependently with a concave (meniscus) upper border, highest laterally
+      ctx.beginPath();
+      ctx.moveTo(w*0.055, h*0.500);
+      ctx.quadraticCurveTo(w*0.28, h*0.640, w*0.455, h*0.600);
+      ctx.lineTo(w*0.455, h*0.80); ctx.lineTo(w*0.055, h*0.80);
+      ctx.closePath();
+      ctx.fillStyle='rgba(224,231,244,0.86)'; ctx.fill();
+      ctx.restore();
+      // the costophrenic angle is obliterated
+      ctx.save();
+      ctx.fillStyle='rgba(224,231,244,0.80)';
+      ctx.beginPath(); ctx.moveTo(w*0.055,h*0.70); ctx.lineTo(w*0.30,h*0.70);
+      ctx.lineTo(w*0.30,h*0.80); ctx.lineTo(w*0.055,h*0.80); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.24,y:0.615,r:0.16,ry:0.55,label:'Meniscus'},
+      {x:0.13,y:0.735,r:0.07,label:'CP angle lost'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Homogeneous right basal opacity with a concave upper border and loss of the costophrenic angle'},
+      {id:'b', label:'Right lower lobe consolidation with air bronchograms'},
+      {id:'c', label:'Right tension pneumothorax'},
+      {id:'d', label:'An elevated right hemidiaphragm with normal lung below'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'The opacity is homogeneous, has no air bronchograms, blunts the costophrenic angle, and its upper border is concave and rises laterally — the meniscus of free pleural fluid. Consolidation would be denser centrally with air bronchograms and would not blunt the angle in this way.',
+    diagnosisOptions:[
+      {id:'a', label:'Large right pleural effusion — the cause still needs establishing'},
+      {id:'b', label:'Right-sided pneumonia'},
+      {id:'c', label:'Right upper lobe collapse'},
+      {id:'d', label:'Right main bronchus intubation'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'The film tells you there is fluid; it does not tell you why. A subacute unilateral effusion in this age group demands a cause — malignancy, infection (including empyema), tuberculosis, heart failure, or hypoalbuminaemia are the ones to work through.',
+    managementOptions:[
+      {id:'a', label:'Ultrasound-guided diagnostic pleural aspiration, sending fluid for protein, LDH, cytology, pH, Gram stain and culture'},
+      {id:'b', label:'Blind aspiration at the bedside using landmarks alone'},
+      {id:'c', label:'IV furosemide and reassess in a week'},
+      {id:'d', label:'Immediate needle decompression in the second intercostal space'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Pleural procedures should be ultrasound-guided — landmark-only aspiration has a substantially higher complication rate and is no longer acceptable practice. The fluid analysis (Light criteria plus cytology and microbiology) is what converts "an effusion" into a diagnosis. Needle decompression treats tension pneumothorax, not fluid.'
+  },
+
+  pulm_oedema:{
+    id:'pulm_oedema', label:'Cardiogenic pulmonary oedema', tag:'Cardiac',
+    vignette:'78M woke gasping at 3am, unable to lie flat. BP 188/104, HR 116, RR 32, SpO2 84% on air, widespread fine crackles and a third heart sound.',
+    caption:'Cardiomegaly with bilateral perihilar "bat-wing" shadowing, upper lobe venous diversion and blunted costophrenic angles.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{ ratio:0.60 });
+      ctx.save();
+      [-1,1].forEach(side=>{
+        cxrLungPath(ctx,w,h,side); ctx.clip();
+        const hx = w/2 + side*w*0.13;
+        cxrBlob(ctx, hx, h*0.46, w*0.16, h*0.145, 0.62);
+        cxrBlob(ctx, hx + side*w*0.045, h*0.40, w*0.10, h*0.085, 0.34);
+        ctx.restore(); ctx.save();
+      });
+      ctx.restore();
+      // upper-lobe venous diversion: prominent vessels in the upper zones
+      ctx.save();
+      ctx.strokeStyle='rgba(206,215,232,0.50)'; ctx.lineWidth=3; ctx.lineCap='round';
+      [-1,1].forEach(side=>{
+        for (let i=0;i<3;i++){
+          const x = w/2 + side*(w*0.13 + i*w*0.048);
+          ctx.beginPath(); ctx.moveTo(x, h*0.40); ctx.lineTo(x - side*w*0.018, h*0.245); ctx.stroke();
+        }
+      });
+      // Kerley B lines — short horizontal septal lines at the periphery
+      ctx.strokeStyle='rgba(226,233,246,0.60)'; ctx.lineWidth=1.5;
+      [-1,1].forEach(side=>{
+        for (let i=0;i<5;i++){
+          const x = w/2 + side*w*0.375;
+          const y = h*0.605 + i*h*0.026;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + side*w*0.045, y); ctx.stroke();
+        }
+      });
+      ctx.restore();
+      // small bilateral effusions blunting both angles
+      ctx.save();
+      ctx.fillStyle='rgba(220,228,242,0.70)';
+      ctx.beginPath(); ctx.moveTo(w*0.075,h*0.715); ctx.quadraticCurveTo(w*0.16,h*0.700,w*0.245,h*0.735); ctx.lineTo(w*0.245,h*0.775); ctx.lineTo(w*0.075,h*0.775); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(w*0.925,h*0.730); ctx.quadraticCurveTo(w*0.84,h*0.715,w*0.755,h*0.750); ctx.lineTo(w*0.755,h*0.790); ctx.lineTo(w*0.925,h*0.790); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.37,y:0.46,r:0.11,label:'Bat-wing'},
+      {x:0.57,y:0.63,r:0.15,label:'Cardiomegaly'},
+      {x:0.87,y:0.64,r:0.055,label:'Kerley B'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Cardiomegaly with bilateral perihilar shadowing, upper lobe venous diversion, Kerley B lines and small effusions'},
+      {id:'b', label:'Unilateral lobar consolidation with air bronchograms'},
+      {id:'c', label:'Bilateral pneumothoraces'},
+      {id:'d', label:'A normal film — the appearances are within normal limits'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'Every sign here points the same way: the heart occupies well over half the chest width, the alveolar shadowing is bilateral and central rather than lobar, the upper zone vessels are as prominent as the lower ones (diversion), fine horizontal Kerley B lines reach the pleura, and both costophrenic angles are blunted by small effusions.',
+    diagnosisOptions:[
+      {id:'a', label:'Acute cardiogenic pulmonary oedema'},
+      {id:'b', label:'Bilateral community-acquired pneumonia'},
+      {id:'c', label:'Acute respiratory distress syndrome'},
+      {id:'d', label:'Pulmonary fibrosis'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Orthopnoea, hypertension, a third heart sound and this radiographic pattern make cardiogenic oedema the diagnosis. ARDS gives bilateral infiltrates too, but characteristically with a normal heart size and without the effusions and septal lines of raised hydrostatic pressure — that distinction is the point of this film.',
+    managementOptions:[
+      {id:'a', label:'Sit upright, high-flow oxygen, IV nitrate for the hypertension, IV furosemide, and consider CPAP if he tires'},
+      {id:'b', label:'Aggressive IV fluid resuscitation'},
+      {id:'c', label:'Broad-spectrum antibiotics alone'},
+      {id:'d', label:'Immediate bilateral chest drains'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Sit them up, oxygenate, offload with a nitrate (particularly effective when hypertensive) and a diuretic, and escalate to non-invasive ventilation early if work of breathing does not settle. Fluids would be actively harmful here.'
+  },
+
+  ett_right_main:{
+    id:'ett_right_main', label:'Endotracheal tube in the right main bronchus', tag:'Lines & tubes',
+    vignette:'Post-intubation film in a 54M. After the tube was secured, SpO2 fell from 98% to 88% and the left chest is not moving. Peak airway pressures have risen.',
+    caption:'The tube tip lies beyond the carina in the right main bronchus, with volume loss and opacification of the unventilated left lung.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{ vascular:{left:0.35, right:1}, leftDomeDy:-h*0.030 });
+      // the left lung is unventilated: collapsed and opacified, mediastinum pulled TOWARDS it
+      ctx.save();
+      cxrLungPath(ctx,w,h,1); ctx.clip();
+      cxrBlob(ctx, w*0.655, h*0.50, w*0.20, h*0.24, 0.62);
+      ctx.restore();
+      // the endotracheal tube: a bright radio-opaque line down the trachea and into the right main
+      ctx.save();
+      ctx.strokeStyle='rgba(250,252,255,0.95)'; ctx.lineWidth=4.6; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(w*0.50, h*0.055);
+      ctx.quadraticCurveTo(w*0.498, h*0.26, w*0.472, h*0.395);
+      ctx.quadraticCurveTo(w*0.440, h*0.445, w*0.385, h*0.478);
+      ctx.stroke();
+      // tip marker
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(w*0.385, h*0.478, 3.6, 0, Math.PI*2); ctx.fill();
+      // carina, for reference
+      ctx.strokeStyle='rgba(255,255,255,0.30)'; ctx.lineWidth=1.4; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(w*0.40,h*0.395); ctx.lineTo(w*0.60,h*0.395); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.385,y:0.478,r:0.07,label:'Tip in right main'},
+      {x:0.66,y:0.50,r:0.13,label:'Left lung collapse'}
+    ],
+    findingOptions:[
+      {id:'a', label:'The endotracheal tube tip lies past the carina in the right main bronchus, with a collapsed, opacified left lung'},
+      {id:'b', label:'The endotracheal tube is correctly positioned 4cm above the carina'},
+      {id:'c', label:'A left tension pneumothorax'},
+      {id:'d', label:'A left pleural effusion'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'Follow the tube down: instead of stopping in the mid-trachea it continues past the carina and turns into the right main bronchus, which is the shorter and more vertical of the two. The left lung, now receiving no ventilation, has collapsed and become opaque — and the mediastinum is pulled towards it, not pushed away.',
+    diagnosisOptions:[
+      {id:'a', label:'Right main bronchus (endobronchial) intubation causing left lung collapse'},
+      {id:'b', label:'Aspiration pneumonia of the left lung'},
+      {id:'c', label:'Tension pneumothorax requiring decompression'},
+      {id:'d', label:'Acute respiratory distress syndrome'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'This is one of the commonest and most rapidly correctable post-intubation problems: desaturation, unilateral chest movement and rising airway pressures immediately after tube placement. The direction of mediastinal shift is the discriminator — pulled towards the white side means collapse, pushed away would mean tension.',
+    managementOptions:[
+      {id:'a', label:'Deflate the cuff, withdraw the tube a few centimetres until breath sounds are equal, re-inflate, re-secure, and confirm position'},
+      {id:'b', label:'Advance the tube further to secure the airway'},
+      {id:'c', label:'Insert a left-sided chest drain'},
+      {id:'d', label:'Increase PEEP and FiO2 and continue'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Withdraw the tube under direct auscultation until the chest expands symmetrically, then re-secure and re-check — usually the saturations recover within minutes. Advancing it would worsen the problem, a drain treats a condition the patient does not have, and simply turning up the oxygen leaves the whole left lung unventilated.'
+  },
+
+  pneumoperitoneum:{
+    id:'pneumoperitoneum', label:'Free air under the diaphragm', tag:'Abdominal · emergency',
+    vignette:'61M with sudden severe generalised abdominal pain two hours ago, now lying rigidly still. The abdomen is board-like with guarding. HR 122, BP 96/58, lactate 4.2.',
+    caption:'Erect film. A thin lucent crescent of free gas sits between the right hemidiaphragm and the liver.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{});
+      // free intraperitoneal gas rises to sit under the domes on an erect film
+      ctx.save();
+      ctx.fillStyle='rgba(5,6,10,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(w*0.115, h*0.762);
+      ctx.quadraticCurveTo(w*0.275, h*0.688, w*0.455, h*0.768);
+      ctx.quadraticCurveTo(w*0.275, h*0.722, w*0.115, h*0.786);
+      ctx.closePath(); ctx.fill();
+      // a smaller crescent on the left as well
+      ctx.beginPath();
+      ctx.moveTo(w*0.560, h*0.788);
+      ctx.quadraticCurveTo(w*0.700, h*0.735, w*0.860, h*0.800);
+      ctx.quadraticCurveTo(w*0.700, h*0.762, w*0.560, h*0.806);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.28,y:0.735,r:0.15,ry:0.42,label:'Free air'},
+      {x:0.71,y:0.775,r:0.12,ry:0.42,label:'Free air'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Thin lucent crescents of gas beneath both hemidiaphragms, outlining their undersurfaces'},
+      {id:'b', label:'Bilateral basal consolidation'},
+      {id:'c', label:'Bilateral pleural effusions'},
+      {id:'d', label:'A normal gastric bubble only'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'There are dark crescents of gas between the diaphragm and the abdominal organs, and crucially you can see the diaphragm outlined on BOTH its upper and lower surfaces. A normal gastric bubble is a single rounded collection confined to the left upper quadrant with a visible wall — this gas is free, tracks along the curve of the diaphragm, and appears on both sides.',
+    diagnosisOptions:[
+      {id:'a', label:'Pneumoperitoneum from a perforated abdominal viscus'},
+      {id:'b', label:'Severe basal pneumonia'},
+      {id:'c', label:'Bilateral pneumothoraces'},
+      {id:'d', label:'Chilaiditi sign — bowel interposed between liver and diaphragm'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'Sudden severe pain, peritonism and free intraperitoneal gas is a perforated viscus until proven otherwise — most often a peptic ulcer or perforated diverticular disease. Chilaiditi sign is the classic mimic, but there you can see haustral bowel markings within the gas; here the gas is featureless and free.',
+    managementOptions:[
+      {id:'a', label:'Resuscitate, nil by mouth with an NG tube, IV antibiotics and analgesia, and urgent surgical referral for likely laparotomy'},
+      {id:'b', label:'Discharge with oral antacids and a follow-up appointment'},
+      {id:'c', label:'Insert bilateral chest drains'},
+      {id:'d', label:'Await a CT before involving the surgical team'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'This is a surgical emergency. Resuscitate and refer in parallel — a CT may well be done, but the surgeons should be called now rather than after it. Delay while a peritonitic, shocked patient waits for imaging is the error to avoid here.'
+  },
+
+  ards:{
+    id:'ards', label:'Acute respiratory distress syndrome', tag:'Diffuse infiltrates',
+    vignette:'44F, day 3 of severe pancreatitis, now intubated. PaO2/FiO2 ratio 140 on PEEP 12. No history of cardiac disease, JVP not raised, echo shows good LV function.',
+    caption:'Bilateral diffuse alveolar infiltrates extending to the periphery, with a normal-sized heart and no effusions.',
+    render(ctx,w,h){
+      cxrDrawBase(ctx,w,h,{ ratio:0.42 });
+      ctx.save();
+      [-1,1].forEach(side=>{
+        ctx.save();
+        cxrLungPath(ctx,w,h,side); ctx.clip();
+        const cx = w/2 + side*w*0.22;
+        cxrBlob(ctx, cx, h*0.33, w*0.155, h*0.115, 0.46);
+        cxrBlob(ctx, cx + side*w*0.03, h*0.48, w*0.175, h*0.135, 0.55);
+        cxrBlob(ctx, cx - side*w*0.02, h*0.62, w*0.165, h*0.120, 0.50);
+        cxrBlob(ctx, w/2 + side*w*0.36, h*0.45, w*0.10, h*0.13, 0.34);
+        ctx.restore();
+      });
+      ctx.restore();
+    },
+    annotations:[
+      {x:0.28,y:0.47,r:0.14,ry:1.15,label:'Diffuse infiltrate'},
+      {x:0.72,y:0.47,r:0.14,ry:1.15,label:'Bilateral'},
+      {x:0.53,y:0.60,r:0.10,label:'Heart NOT enlarged'}
+    ],
+    findingOptions:[
+      {id:'a', label:'Bilateral diffuse alveolar infiltrates reaching the periphery, with a normal heart size and no effusions'},
+      {id:'b', label:'Cardiomegaly with perihilar bat-wing oedema and bilateral effusions'},
+      {id:'c', label:'A single lobar consolidation on the right'},
+      {id:'d', label:'Bilateral pneumothoraces'}
+    ],
+    correctFindingId:'a',
+    findingExplain:'The infiltrates are bilateral, diffuse and extend right out to the chest wall rather than clustering around the hila. The two negatives matter as much as the positive: the heart is not enlarged and there are no pleural effusions, which argues against a hydrostatic cause.',
+    diagnosisOptions:[
+      {id:'a', label:'ARDS secondary to pancreatitis'},
+      {id:'b', label:'Cardiogenic pulmonary oedema'},
+      {id:'c', label:'Bilateral aspiration pneumonia'},
+      {id:'d', label:'Pulmonary embolism'}
+    ],
+    correctDiagnosisId:'a',
+    diagnosisExplain:'The Berlin criteria are all satisfied: onset within a week of a recognised insult (pancreatitis), bilateral opacities not fully explained by effusion or collapse, respiratory failure not fully explained by cardiac failure or fluid overload (normal echo, no raised JVP), and a PaO2/FiO2 of 140 on PEEP at least 5 — moderate ARDS.',
+    managementOptions:[
+      {id:'a', label:'Lung-protective ventilation — 4–8 mL/kg predicted body weight, plateau pressure under 30, appropriate PEEP — plus prone positioning if the ratio stays under 150'},
+      {id:'b', label:'Large tidal volumes to recruit the collapsed lung'},
+      {id:'c', label:'Aggressive diuresis with IV furosemide to dry the lungs out'},
+      {id:'d', label:'Routine high-dose corticosteroids for all patients'}
+    ],
+    correctManagementId:'a',
+    managementExplain:'Low tidal volume ventilation by predicted body weight is the intervention with the clearest mortality benefit in ARDS, alongside limiting plateau pressure and proning for moderate-to-severe disease. Large tidal volumes cause ventilator-induced lung injury, and treating this as fluid overload misses the underlying pathology — though conservative fluid management once resuscitated is reasonable.'
+  }
+};
+
+function cxrLoadCase(key){
+  cxrCURRENT = CXR_PRESETS[key];
+  if (!cxrCURRENT) return;
+  cxrS = { step:'finding', findingChoice:null, findingSubmitted:false, findingCorrect:false,
+    diagnosisChoice:null, diagnosisSubmitted:false, diagnosisCorrect:false,
+    mgmtChoice:null, mgmtSubmitted:false, mgmtCorrect:false, _recorded:false };
+  cxrShowAnnotations = false;
+  document.getElementById('cxrEyebrow').textContent = `Chest X-Ray Interpretation · ${cxrCURRENT.tag}`;
+  document.getElementById('cxrTitle').textContent = cxrCURRENT.label;
+  document.getElementById('cxrVignette').innerHTML = `<p>${cxrCURRENT.vignette}</p>`;
+  document.getElementById('cxrSyst').style.display = 'none';
+  document.getElementById('cxrAnnotateBtn').textContent = 'Show findings';
+  revealScreen('cxrLabScreen');
+  cxrRender();
+  cxrUpdateCaption();
+  renderCxrStep();
+}
+
+// The caption is deliberately withheld until the reading step is answered — it names the
+// findings, so showing it up front would hand over the answer.
+function cxrUpdateCaption(){
+  const el = document.getElementById('cxrCaption');
+  const disclaimer = 'Schematic teaching illustration — not a real radiograph.';
+  el.innerHTML = (cxrS && cxrS.findingSubmitted && !examMode)
+    ? `${escapeHtml(cxrCURRENT.caption)}<br><span style="opacity:.75;">${disclaimer}</span>`
+    : `<span style="opacity:.85;">${disclaimer}</span>`;
+}
+
+function cxrChooseFinding(id){ if (cxrS.findingSubmitted) return; cxrS.findingChoice=id; cxrS.findingCorrect=id===cxrCURRENT.correctFindingId; cxrS.findingSubmitted=true; cxrUpdateCaption(); renderCxrStep(); }
+function cxrChooseDiagnosis(id){ if (cxrS.diagnosisSubmitted) return; cxrS.diagnosisChoice=id; cxrS.diagnosisCorrect=id===cxrCURRENT.correctDiagnosisId; cxrS.diagnosisSubmitted=true; renderCxrStep(); }
+function cxrChooseMgmt(id){ if (cxrS.mgmtSubmitted) return; cxrS.mgmtChoice=id; cxrS.mgmtCorrect=id===cxrCURRENT.correctManagementId; cxrS.mgmtSubmitted=true; renderCxrStep(); }
+function cxrNextStep(){
+  if (cxrS.step==='finding' && cxrS.findingSubmitted) cxrS.step='diagnose';
+  else if (cxrS.step==='diagnose' && cxrS.diagnosisSubmitted) cxrS.step='manage';
+  else if (cxrS.step==='manage' && cxrS.mgmtSubmitted) cxrS.step='summary';
+  renderCxrStep();
+}
+function cxrScore(){ return [cxrS.findingCorrect, cxrS.diagnosisCorrect, cxrS.mgmtCorrect].filter(Boolean).length; }
+
+function cxrReviewHtml(){
+  const optLabel = (opts,id)=>{ const o=opts.find(x=>x.id===id); return o?o.label:'—'; };
+  const rows = [
+    { q:'Finding', your:optLabel(cxrCURRENT.findingOptions, cxrS.findingChoice), right:optLabel(cxrCURRENT.findingOptions, cxrCURRENT.correctFindingId), ok:cxrS.findingCorrect, explain:cxrCURRENT.findingExplain },
+    { q:'Diagnosis', your:optLabel(cxrCURRENT.diagnosisOptions, cxrS.diagnosisChoice), right:optLabel(cxrCURRENT.diagnosisOptions, cxrCURRENT.correctDiagnosisId), ok:cxrS.diagnosisCorrect, explain:cxrCURRENT.diagnosisExplain },
+    { q:'Management', your:optLabel(cxrCURRENT.managementOptions, cxrS.mgmtChoice), right:optLabel(cxrCURRENT.managementOptions, cxrCURRENT.correctManagementId), ok:cxrS.mgmtCorrect, explain:cxrCURRENT.managementExplain }
+  ];
+  return rows.map(r=>`<div class="quiz-explain ${r.ok?'correct':'incorrect'}"><b>${r.ok?'✓':'✗'} ${r.q}</b><br>Your answer: ${escapeHtml(r.your)}${r.ok?'':'<br>Correct: '+escapeHtml(r.right)}<br><span style="color:var(--text-dim);">${r.explain}</span></div>`).join('');
+}
+
+function renderCxrStep(){
+  const panel = document.getElementById('cxrStepPanel');
+  const reveal = !examMode;
+  if (cxrS.step==='finding'){
+    let html = `<p class="quiz-step-label">Step 1 of 3 — Read the film</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">Work through it systematically. What is the main abnormality?</p>`;
+    html += cxrOptionsBlock(cxrCURRENT.findingOptions, 'cxrfind', cxrS.findingChoice, cxrS.findingSubmitted, cxrCURRENT.correctFindingId);
+    if (cxrS.findingSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${cxrS.findingCorrect?'correct':'incorrect'}">${cxrS.findingCorrect?'Correct. ':'Not quite. '}${cxrCURRENT.findingExplain}</div>`;
+      html += `<button class="btn primary" id="cxrNextBtn">Continue to diagnosis</button>`;
+    }
+    panel.innerHTML = html;
+    if (!cxrS.findingSubmitted) panel.querySelectorAll('[data-cxrfind]').forEach(b=>b.addEventListener('click', ()=>cxrChooseFinding(b.dataset.cxrfind)));
+    else document.getElementById('cxrNextBtn').addEventListener('click', cxrNextStep);
+
+  } else if (cxrS.step==='diagnose'){
+    let html = `<p class="quiz-step-label">Step 2 of 3 — Diagnosis</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">Putting the film together with the clinical picture, what is going on?</p>`;
+    html += cxrOptionsBlock(cxrCURRENT.diagnosisOptions, 'cxrdx', cxrS.diagnosisChoice, cxrS.diagnosisSubmitted, cxrCURRENT.correctDiagnosisId);
+    if (cxrS.diagnosisSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${cxrS.diagnosisCorrect?'correct':'incorrect'}">${cxrS.diagnosisCorrect?'Correct. ':'Not quite. '}${cxrCURRENT.diagnosisExplain}</div>`;
+      html += `<button class="btn primary" id="cxrNextBtn">Continue to management</button>`;
+    }
+    panel.innerHTML = html;
+    if (!cxrS.diagnosisSubmitted) panel.querySelectorAll('[data-cxrdx]').forEach(b=>b.addEventListener('click', ()=>cxrChooseDiagnosis(b.dataset.cxrdx)));
+    else document.getElementById('cxrNextBtn').addEventListener('click', cxrNextStep);
+
+  } else if (cxrS.step==='manage'){
+    let html = `<p class="quiz-step-label">Step 3 of 3 — Management</p>
+      <p style="font-size:13.5px;color:var(--text-dim);margin-top:0;">What is the immediate next step?</p>`;
+    html += cxrOptionsBlock(cxrCURRENT.managementOptions, 'cxrmg', cxrS.mgmtChoice, cxrS.mgmtSubmitted, cxrCURRENT.correctManagementId);
+    if (cxrS.mgmtSubmitted){
+      if (reveal) html += `<div class="quiz-explain ${cxrS.mgmtCorrect?'correct':'incorrect'}">${cxrS.mgmtCorrect?'Correct. ':'Not quite. '}${cxrCURRENT.managementExplain}</div>`;
+      html += `<button class="btn primary" id="cxrNextBtn">See summary</button>`;
+    }
+    panel.innerHTML = html;
+    if (!cxrS.mgmtSubmitted) panel.querySelectorAll('[data-cxrmg]').forEach(b=>b.addEventListener('click', ()=>cxrChooseMgmt(b.dataset.cxrmg)));
+    else document.getElementById('cxrNextBtn').addEventListener('click', cxrNextStep);
+
+  } else {
+    const score = cxrScore();
+    const msg = score===3 ? 'Clean sweep — you read it, named it, and treated it.'
+      : score===0 ? 'Worth working through this one again from the top.'
+      : 'Partial credit — read the explanations before moving on.';
+    if (!cxrS._recorded){
+      cxrS._recorded = true;
+      recordAttempt({
+        module:'cxr', scenario_id:cxrCURRENT.id, scenario_label:cxrCURRENT.label,
+        outcome:`${score}/3`, score:score/3,
+        detail:{ finding:cxrS.findingCorrect, diagnose:cxrS.diagnosisCorrect, manage:cxrS.mgmtCorrect }
+      });
+    }
+    // the annotated film is the most useful thing to look at once it is all over
+    cxrShowAnnotations = true;
+    document.getElementById('cxrAnnotateBtn').textContent = 'Hide findings';
+    cxrRender();
+    cxrUpdateCaption();
+    panel.innerHTML = `<p class="quiz-step-label">Summary${examMode?' · Exam':''}</p>
+      <div class="quiz-score">${score}/3</div>
+      <p style="font-size:13.5px;color:var(--text-dim);">${msg}</p>
+      ${examMode ? '<h3 class="progress-section-h">Review</h3>'+cxrReviewHtml() : ''}
+      <div class="debrief-actions">
+        <button class="btn primary" id="cxrAgainBtn">Try this film again</button>
+        <button class="btn" id="cxrAnotherBtn">Choose another film</button>
+      </div>`;
+    document.getElementById('cxrAgainBtn').addEventListener('click', ()=>cxrLoadCase(cxrCURRENT.id));
+    document.getElementById('cxrAnotherBtn').addEventListener('click', showCxrPresetScreen);
+  }
+}
+
+function cxrOptionsBlock(opts, dataAttr, chosen, submitted, correctId){
+  const reveal = !examMode;
+  let html = `<div class="quiz-options">`;
+  opts.forEach(opt=>{
+    let cls='quiz-option';
+    if (submitted && reveal){ if(opt.id===correctId) cls+=' correct'; else if(opt.id===chosen) cls+=' incorrect'; }
+    else if (submitted && opt.id===chosen) cls+=' picked';
+    html += `<button class="${cls}" data-${dataAttr}="${opt.id}" ${submitted?'disabled':''}>${gradePrefix(cls)}${opt.label}</button>`;
+  });
+  return html + `</div>`;
+}
+
+function buildCxrPresetGrid(){
+  const grid = document.getElementById('cxrPresetGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  Object.keys(CXR_PRESETS).forEach(key=>{
+    const p = CXR_PRESETS[key];
+    const card = document.createElement('button');
+    card.className = 'specialty-card';
+    card.style.setProperty('--spec-color', '#7fb2ff');
+    card.innerHTML = `<span style="color:#7fb2ff">${SIM_ICONS.cxr}</span>
+      <p class="sc-name">${p.tag}</p>
+      <span class="sc-count">${escapeHtml(p.label)}</span>
+      <p class="sc-desc">${escapeHtml(p.vignette.slice(0,110))}${p.vignette.length>110?'…':''}</p>`;
+    card.addEventListener('click', ()=>cxrLoadCase(key));
+    grid.appendChild(card);
+  });
+}
+
+function showCxrPresetScreen(){ cxrCURRENT = null; buildCxrPresetGrid(); revealScreen('cxrPresetScreen'); }
+
 document.getElementById('ecgBackBtn').addEventListener('click', showEcgPresetScreen);
 
 // ================= Conditions Library =================
