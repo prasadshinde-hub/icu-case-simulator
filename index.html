@@ -9003,12 +9003,12 @@ function cxrSubDiaphragm(ctx, w, h, o){
   ctx.save();
   ctx.fillStyle = 'rgba(158,165,180,0.50)';
   ctx.beginPath();
-  ctx.moveTo(cx - w*0.470, h*0.800);
+  ctx.moveTo(cx - w*0.442, h*0.800);
   ctx.quadraticCurveTo(cx - w*0.250, rTop - h*0.052, cx - w*0.020, h*0.782);
   ctx.quadraticCurveTo(cx + w*0.010, h*0.786, cx + w*0.030, h*0.780);
-  ctx.quadraticCurveTo(cx + w*0.250, lTop - h*0.040, cx + w*0.470, h*0.815);
-  ctx.lineTo(cx + w*0.470, h);
-  ctx.lineTo(cx - w*0.470, h);
+  ctx.quadraticCurveTo(cx + w*0.250, lTop - h*0.040, cx + w*0.442, h*0.815);
+  ctx.lineTo(cx + w*0.448, h);
+  ctx.lineTo(cx - w*0.448, h);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
@@ -9090,48 +9090,50 @@ function cxrCardiomediastinum(ctx, w, h, o){
   o = o || {};
   const shift = o.shift || 0;
   const cx = w/2 + shift;
-  const r = o.ratio || 0.44;              // cardiothoracic ratio
+  const r = o.ratio || 0.44;                 // cardiothoracic ratio
   const half = w*0.80*r/2;
-  const lEdge = cx - half*0.62;           // right heart border (image-left)
-  const rEdge = cx + half*1.38;           // LV border / apex (image-right)
-  const top = h*0.130, bot = h*0.735;
+  const top = h*0.155, bot = h*0.735;
+
+  // Spine first, so it sits BEHIND the mediastinum instead of striping across it.
+  ctx.save();
+  ctx.fillStyle = 'rgba(184,192,210,0.13)';
+  ctx.fillRect(w/2 - w*0.026, h*0.150, w*0.052, h*0.570);
+  ctx.strokeStyle = 'rgba(92,100,118,0.22)'; ctx.lineWidth = 1;
+  for (let y=h*0.180; y<h*0.715; y+=h*0.052){
+    ctx.beginPath(); ctx.moveTo(w/2 - w*0.026, y); ctx.lineTo(w/2 + w*0.026, y); ctx.stroke();
+  }
+  ctx.restore();
 
   ctx.save();
-  ctx.fillStyle = 'rgba(206,214,229,0.72)';
+  ctx.fillStyle = 'rgba(203,211,227,0.74)';
   ctx.beginPath();
-  ctx.moveTo(cx - w*0.052, top);
-  // image-left: SVC straight down, then the right atrial border bulging gently
-  ctx.lineTo(cx - w*0.062, h*0.330);
-  ctx.bezierCurveTo(cx - w*0.080, h*0.420, lEdge, h*0.500, lEdge, h*0.640);
-  ctx.quadraticCurveTo(lEdge, bot - h*0.010, cx - w*0.020, bot);
-  // the apex
-  ctx.quadraticCurveTo(cx + half*0.70, bot + h*0.012, rEdge, h*0.660);
-  // image-right: LV border sweeping up to the pulmonary bay and aortic knuckle
-  ctx.bezierCurveTo(rEdge + w*0.012, h*0.560, cx + w*0.095, h*0.430, cx + w*0.080, h*0.360);
-  ctx.quadraticCurveTo(cx + w*0.086, h*0.285, cx + w*0.058, h*0.250);
-  ctx.quadraticCurveTo(cx + w*0.050, h*0.190, cx + w*0.046, top);
+  ctx.moveTo(cx - w*0.048, top);
+  // image-right (the patient's LEFT): aortic knuckle, then a concave pulmonary bay,
+  // then the convex left ventricular border down to the apex. That S-curve is what
+  // makes a cardiac silhouette read as a heart rather than as a vase.
+  ctx.lineTo(cx + w*0.040, top);
+  ctx.quadraticCurveTo(cx + w*0.086, h*0.255, cx + w*0.079, h*0.318);
+  ctx.quadraticCurveTo(cx + w*0.060, h*0.372, cx + w*0.072, h*0.410);
+  ctx.bezierCurveTo(cx + half*0.95, h*0.485, cx + half*1.30, h*0.575, cx + half*1.29, h*0.652);
+  ctx.quadraticCurveTo(cx + half*1.22, h*0.716, cx + half*0.72, bot);
+  // base of the heart
+  ctx.lineTo(cx - w*0.030, bot);
+  // image-left (the patient's RIGHT): right atrial border, then the SVC straight up
+  ctx.quadraticCurveTo(cx - half*0.74, h*0.716, cx - half*0.72, h*0.628);
+  ctx.bezierCurveTo(cx - half*0.70, h*0.540, cx - w*0.070, h*0.470, cx - w*0.062, h*0.398);
+  ctx.lineTo(cx - w*0.048, top);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
 
-  // spine, faintly visible through the mediastinum
-  ctx.save();
-  ctx.fillStyle = 'rgba(186,194,212,0.18)';
-  ctx.fillRect(w/2 - w*0.028, h*0.130, w*0.056, h*0.640);
-  ctx.strokeStyle = 'rgba(96,104,122,0.30)'; ctx.lineWidth = 1;
-  for (let y=h*0.155; y<h*0.760; y+=h*0.050){
-    ctx.beginPath(); ctx.moveTo(w/2 - w*0.028, y); ctx.lineTo(w/2 + w*0.028, y); ctx.stroke();
-  }
-  ctx.restore();
-
-  // tracheal air column — narrow and translucent, deviating in tension pneumothorax
+  // tracheal air column — translucent, and stopping at the carina
   const td = o.trachealShift || 0;
   ctx.save();
-  ctx.strokeStyle = 'rgba(14,16,23,0.55)';
-  ctx.lineWidth = w*0.021;
+  ctx.strokeStyle = 'rgba(16,18,26,0.48)';
+  ctx.lineWidth = w*0.019;
   ctx.beginPath();
-  ctx.moveTo(w/2, h*0.075);
-  ctx.quadraticCurveTo(w/2 + td*0.55, h*0.220, w/2 + td, h*0.352);
+  ctx.moveTo(w/2, h*0.090);
+  ctx.quadraticCurveTo(w/2 + td*0.55, h*0.230, w/2 + td, h*0.360);
   ctx.stroke();
   ctx.restore();
 }
