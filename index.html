@@ -402,7 +402,91 @@ details.brief[open] summary::before{transform:rotate(90deg);}
   .lane-num .unit{display:block;margin-left:0;line-height:1.2;}
   .foot-cell{padding:9px 11px;gap:7px;}
   .foot-cell .value{font-size:17px;}
+  .lane-lim{display:none;}
+  .lane.bp .value{font-size:18px;}
 }
+
+/* ---------- monitor: REALITi-style extras (capnography, NIBP, limits, toolbar) ---------- */
+.lane.co2 .value{color:var(--amber);}
+.lane-lim{font-family:var(--mono);font-size:9px;color:var(--text-faint);letter-spacing:.02em;font-weight:500;margin-left:6px;}
+.lane.bp .value{white-space:nowrap;}
+.lane-sub{font-family:var(--mono);font-size:11px;color:var(--text-dim);}
+.lane-sub b{color:var(--amber);font-weight:600;}
+.lane.alarm-warn .lane-sub b{color:var(--warn);} .lane.alarm-crit .lane-sub b{color:var(--crit);}
+.nibp-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:16px 10px 6px 2px;
+  font-size:11.5px;color:var(--text-dim);}
+.nibp-info .cuff{font-family:var(--mono);color:var(--violet);}
+.nibp-info select{background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:5px;
+  font:inherit;padding:3px 4px;}
+.lane.bp .lane-sub b{color:var(--violet);}
+.mon-btn{background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:5px;
+  font:600 11px/1 var(--sans);letter-spacing:.03em;padding:6px 9px;cursor:pointer;}
+.mon-btn:hover{border-color:var(--accent);color:var(--text);}
+.mon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.mon-btn:disabled{opacity:.4;cursor:not-allowed;}
+.mon-btn[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 16%, transparent);border-color:var(--accent);color:var(--text);}
+.mon-btn.danger{border-color:color-mix(in srgb, var(--crit) 60%, var(--border));color:var(--crit);}
+.mon-bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid var(--border);background:var(--panel-2);}
+.mon-bar .spacer{flex:1;}
+
+/* monitor-styled modals: alarm limits, media viewer, instructor push */
+.modal.mon-modal{border-color:var(--border);max-height:calc(100vh - 40px);overflow:auto;}
+.modal.mon-modal h3{color:var(--text);}
+.limits-grid{display:grid;grid-template-columns:1fr 78px 78px 52px;gap:8px 10px;align-items:center;font-size:13px;margin-top:6px;}
+.limits-grid .lh{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);}
+.limits-grid input{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:5px;
+  padding:6px 7px;font:13px var(--mono);}
+.limits-grid input:disabled{opacity:.35;}
+.limits-grid .u{font-size:11px;color:var(--text-faint);}
+.limits-err{color:var(--crit);font-size:12px;min-height:16px;margin:8px 0 0;}
+.modal.media-modal{max-width:1000px;}
+.media-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
+.media-hdr h3{margin:2px 0 0;}
+.media-src{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);}
+.media-wrap{overflow-x:auto;border-radius:6px;background:#05060a;}
+.media-wrap canvas{display:block;width:100%;height:auto;}
+.media-wrap.ecg canvas{min-width:720px;}
+.media-wrap.cxr canvas{max-width:460px;margin:0 auto;}
+.media-note{font-size:15px;line-height:1.6;padding:16px;background:var(--panel-2);border-radius:6px;white-space:pre-wrap;}
+.media-meta{font-family:var(--mono);font-size:11px;color:var(--text-faint);margin:8px 0 0;}
+details.media-report{margin-top:10px;font-size:13px;color:var(--text-dim);}
+details.media-report summary{cursor:pointer;font-weight:700;font-size:12px;color:var(--text);}
+.push-list{display:flex;flex-direction:column;gap:6px;margin:10px 0;}
+.push-list .btn{text-align:left;}
+.push-list h4{margin:8px 0 2px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);}
+.push-list textarea{width:100%;min-height:70px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);
+  border-radius:6px;padding:8px;font:13px var(--sans);resize:vertical;}
+
+/* ---------- defibrillator / pacer dock ---------- */
+.defib{position:fixed;right:16px;bottom:16px;z-index:55;width:min(360px, calc(100vw - 32px));
+  background:var(--panel);border:1px solid var(--crit);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.55);
+  color:var(--text);}
+.defib[hidden]{display:none;}
+.defib-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);}
+.defib-title{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--crit);flex:1;}
+.seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.seg-btn{background:transparent;color:var(--text-dim);border:0;padding:6px 11px;font:600 11.5px var(--sans);cursor:pointer;}
+.seg-btn[aria-selected="true"]{background:var(--panel-2);color:var(--text);}
+.seg-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.defib-body{padding:12px;display:flex;flex-direction:column;gap:10px;}
+.defib-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.defib-row .dlbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);width:62px;}
+.defib-row .mon-btn{padding:7px 9px;}
+.defib-num{font-family:var(--mono);font-size:18px;font-weight:600;min-width:74px;text-align:center;}
+.defib-num .unit{font-size:11px;color:var(--text-faint);font-weight:500;}
+.defib-status{font-family:var(--mono);font-size:12.5px;font-weight:600;padding:8px 10px;border-radius:6px;
+  background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);}
+.defib-status.ready{border-color:var(--crit);color:var(--crit);background:color-mix(in srgb, var(--crit) 12%, transparent);}
+.defib-status.charging{border-color:var(--warn);color:var(--warn);}
+.defib-status.ok{border-color:var(--good);color:var(--good);}
+.defib-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.defib-actions .btn{padding:10px 6px;font-weight:700;}
+.defib-hint{font-size:11.5px;color:var(--text-faint);line-height:1.45;margin:0;}
+@media (prefers-reduced-motion: no-preference){
+  .defib-status.ready{animation:defibPulse 1s ease-in-out infinite;}
+  @keyframes defibPulse{50%{background:color-mix(in srgb, var(--crit) 24%, transparent);}}
+}
+@media (max-width:560px){ .defib{left:12px;right:12px;bottom:12px;width:auto;} }
 
 /* ---------- console ---------- */
 .console{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start;}
@@ -1055,6 +1139,7 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <button class="btn small" data-instr="pause">Pause</button>
     <button class="btn small" data-instr="arrest">Force arrest</button>
     <button class="btn small" data-instr="rosc">Force ROSC</button>
+    <button class="btn small" data-instr="media">Show on monitor&hellip;</button>
   </div>
 
   <div class="console">
@@ -1169,6 +1254,7 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
     <button class="btn small" data-instr="pause">Pause</button>
     <button class="btn small" data-instr="arrest">Force arrest</button>
     <button class="btn small" data-instr="rosc">Force ROSC</button>
+    <button class="btn small" data-instr="media">Show on monitor&hellip;</button>
   </div>
 
   <div class="arrest-console">
@@ -1208,6 +1294,54 @@ body.kb-nav-emphasis :focus{ outline:3px solid var(--accent) !important; outline
       </div>
     </div>
     <div id="logSlotArrest"></div>
+  </div>
+</div>
+
+<aside class="defib" id="defibPanel" hidden aria-label="Defibrillator and pacer">
+  <div class="defib-hdr">
+    <span class="defib-title">Defib / Pacer</span>
+    <div class="seg" role="tablist" aria-label="Device mode">
+      <button class="seg-btn" role="tab" data-dmode="defib" aria-selected="true">Defib</button>
+      <button class="seg-btn" role="tab" data-dmode="pacer" aria-selected="false">Pacer</button>
+    </div>
+    <button class="btn ghost small" id="defibClose" aria-label="Close defibrillator">&#10005;</button>
+  </div>
+  <div class="defib-body" id="defibBody"></div>
+</aside>
+
+<div class="modal-bg" id="limitsBg">
+  <div class="modal mon-modal" role="dialog" aria-modal="true" aria-labelledby="limitsTitle">
+    <h3 id="limitsTitle">Alarm limits</h3>
+    <p>A value outside these limits raises a warning alarm. Life-threatening values (e.g. SBP under 80, SpO2 under 88) always alarm as critical, whatever the limits.</p>
+    <div class="limits-grid" id="limitsGrid"></div>
+    <p class="limits-err" id="limitsErr" role="alert"></p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="limitsReset">Defaults</button>
+      <button class="btn ghost" id="limitsCancel">Cancel</button>
+      <button class="btn primary" id="limitsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mediaBg">
+  <div class="modal mon-modal media-modal" role="dialog" aria-modal="true" aria-labelledby="mediaTitle">
+    <div class="media-hdr">
+      <div><span class="media-src" id="mediaSrc"></span><h3 id="mediaTitle">Media</h3></div>
+      <button class="btn ghost small" id="mediaClose">Close</button>
+    </div>
+    <div class="media-wrap" id="mediaWrap"><canvas id="mediaCanvas" width="1230" height="640"></canvas></div>
+    <div class="media-note" id="mediaNote" hidden></div>
+    <p class="media-meta" id="mediaMeta"></p>
+    <details class="media-report" id="mediaReportBox"><summary>Show report</summary><p id="mediaReport"></p></details>
+  </div>
+</div>
+
+<div class="modal-bg" id="pushBg">
+  <div class="modal mon-modal" role="dialog" aria-modal="true" aria-labelledby="pushTitle">
+    <h3 id="pushTitle">Show on the monitor</h3>
+    <p>Put an investigation or a message on the student's monitor, the way an instructor tablet would.</p>
+    <div class="push-list" id="pushList"></div>
+    <div class="modal-actions"><button class="btn ghost" id="pushCancel">Cancel</button></div>
   </div>
 </div>
 
@@ -4958,6 +5092,13 @@ CASES.postop_af = {
   onBolus(S){ return {msg:'IV crystalloid given — reasonable if there is a volume component, but the primary problem here is the rate/rhythm, not volume.'}; },
   onIntubate(S){ return 'Reserve intubation for airway/ventilatory failure; it does not address the underlying arrhythmia.'; },
   ecgPattern(S){ return S.cardioverted ? 'normal' : 'afib'; },
+  // a synchronised shock from the defibrillator panel does what the intervention button does
+  onSyncShock(S, joules){
+    if (S.cardioverted){ log('Synchronised shock delivered in sinus rhythm — the patient is already cardioverted; there is no indication.','warn'); return; }
+    if (joules < 120){ log(`Synchronised ${joules}J shock — AF persists. Biphasic cardioversion of AF usually starts at 120–200 J; escalate the energy.`,'warn'); return; }
+    S.cardioverted = true; S.afLoad = Math.max(10, S.afLoad-40);
+    log(`Synchronised DC cardioversion at ${joules}J under procedural sedation — sinus rhythm restored.`,'result');
+  },
   history:`<b>PMHx:</b> Oesophageal adenocarcinoma (surgery this admission), hypertension.<br>
     <b>Surgical Hx:</b> Transthoracic oesophagectomy, 2 days ago.<br>
     <b>Medications:</b> Amlodipine.<br>
@@ -5208,11 +5349,12 @@ function ensureAudio(){
   if (audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
 }
-function beep(freq, dur, vol){
+function beep(freq, dur, vol){ tone(freq, dur, vol, 'square'); }
+function tone(freq, dur, vol, type){
   const ctx = ensureAudio();
   if (!ctx) return;
   const osc = ctx.createOscillator(), gain = ctx.createGain();
-  osc.type = 'square'; osc.frequency.value = freq;
+  osc.type = type || 'square'; osc.frequency.value = freq;
   gain.gain.setValueAtTime(vol==null?0.12:vol, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
   osc.connect(gain); gain.connect(ctx.destination);
@@ -5243,7 +5385,8 @@ function freshState(caseDef){
     causesChecked:{hypovolemia:false,hypoxia:false,acidosis:false,hyperkalemia:false,hypothermia:false,
       tension_pneumo:false,tamponade:false,toxins:false,thrombosis_pulm:false,thrombosis_cor:false},
     arrestStart:0,
-    trend:{ t:[], sbp:[], spo2:[], lactate:[], gcs:[] }
+    trend:{ t:[], sbp:[], spo2:[], lactate:[], gcs:[] },
+    ...monitorStateDefaults()
   };
   return Object.assign(base, caseDef.initState());
 }
@@ -5278,7 +5421,22 @@ function log(msg,type){
   saveSession();
 }
 
-function vitals(){ return CURRENT.vitals(S); }
+// The case model gives the patient's own physiology; the monitor layer adds what the
+// equipment does to it (a captured pacer takes over the ventricular rate) and the
+// derived EtCO2, so every reader — lanes, alarms, trends, NIBP — sees the same numbers.
+function vitals(){
+  const v = CURRENT.vitals(S);
+  if (pacerCapturing(v.hr)){
+    const gain = clamp((S.pacer.rate - v.hr)*0.6, 0, 30);   // rate is most of the output in a bradycardic heart
+    v.sbp = Math.round(Math.min(v.sbp + gain, 165));
+    v.dbp = Math.round(v.dbp + gain*0.6);
+    v.map = Math.round((v.sbp + 2*v.dbp)/3);
+    v.hr = S.pacer.rate;
+    v.paced = true;
+  }
+  v.etco2 = etco2For(v);
+  return v;
+}
 
 function stepOnce(){
   S.simTime += 5;
@@ -5296,6 +5454,7 @@ function stepOnce(){
     if (S.simTime >= p.resultTime){ revealTest(p.name); return false; }
     return true;
   });
+  if (!S.artLine && S.nibpInterval && (!S.nibp || S.simTime - S.nibp.t >= S.nibpInterval)) S.nibp = nibpReading();
 
   const stable = CURRENT.stableWhen ? CURRENT.stableWhen(v,S) : (v.sbp>=100 && v.spo2>=94 && v.hr<=110);
   if (!S.arrested && stable) S.stableStreak++; else S.stableStreak = 0;
@@ -5364,6 +5523,7 @@ function revealTest(name){
   const text = t.result(S,v,nth);
   S.done[name] = text;
   S.doneCount[name] = nth;
+  snapshotMedia(name, t.label, text, v);
   const label = t.label + (nth>1 ? ` (repeat #${nth})` : '');
   log(`${label} result: ${text}`,'result');
   S.newResults = (S.newResults||0) + 1;   // cleared by renderTabBadges if the tab is already open
@@ -5524,6 +5684,7 @@ function statusOf(val, kind){
     case 'rr': return (val>32||val<10)?'crit':(val>24)?'warn':'ok';
     case 'gcs': return val<=8?'crit':val<=13?'warn':'ok';
     case 'temp': return (val>=38.5||val<35.5)?'warn':'ok';
+    case 'etco2': return (val<15||val>70)?'crit':(val<25||val>50)?'warn':'ok';
   }
   return 'ok';
 }
@@ -5557,11 +5718,15 @@ function tempText(celsiusStr){
 function alarmsFor(v){
   const out = [];
   const add = (st, txt) => { if (st !== 'ok') out.push({ st, txt }); };
-  // sbp/spo2 only ever alarm on the low side, so the direction word is fixed.
-  add(statusOf(v.sbp,'sbp'),   `BP LOW ${v.sbp}/${v.dbp}`);
-  add(statusOf(v.spo2,'spo2'), `SPO2 LOW ${v.spo2}%`);
-  add(statusOf(v.hr,'hr'),     `HR ${v.hr>115?'HIGH':'LOW'} ${v.hr}`);
-  add(statusOf(v.rr,'rr'),     `RR ${v.rr>24?'HIGH':'LOW'} ${v.rr}`);
+  const dir = (kind, val) => limitDir(kind, val);
+  // BP alarms on what the monitor is actually showing: an old cuff reading cannot alarm
+  // for a fall it never measured, which is exactly why unstable patients get an art line.
+  const bp = displayedBP(v);
+  if (bp && !bp.fail) add(monStatus(bp.sbp,'sbp'), `${bp.src} ${dir('sbp',bp.sbp)} ${bp.sbp}/${bp.dbp}`);
+  add(monStatus(v.spo2,'spo2'), `SPO2 LOW ${v.spo2}%`);
+  add(monStatus(v.hr,'hr'),     `HR ${dir('hr',v.hr)} ${v.hr}`);
+  add(monStatus(v.rr,'rr'),     `RR ${dir('rr',v.rr)} ${v.rr}`);
+  add(monStatus(v.etco2,'etco2'), `ETCO2 ${dir('etco2',v.etco2)} ${v.etco2}`);
   add(statusOf(v.gcs,'gcs'),   `GCS ${v.gcs}`);
   const t = parseFloat(v.temp);
   add(statusOf(t,'temp'),      `TEMP ${t>=38.5?'HIGH':'LOW'} ${tempText(v.temp)}`);
@@ -5584,7 +5749,7 @@ function alarmBarHTML(v){
 }
 
 function sizeMonitorCanvases(){
-  ['wf-hr','wf-bp','wf-spo2','wf-rr'].forEach(id=>{
+  ['wf-hr','wf-bp','wf-spo2','wf-co2'].forEach(id=>{
     const c = document.getElementById(id);
     if (!c || !c.parentElement) return;
     const r = c.getBoundingClientRect();
@@ -5596,35 +5761,83 @@ function sizeMonitorCanvases(){
   });
 }
 
+function limText(kind){
+  const L = alarmLimits[kind];
+  if (!L) return '';
+  return `<span class="lane-lim" title="Alarm limits">${L.lo!=null?L.lo:'–'}&ndash;${L.hi!=null?L.hi:'–'}</span>`;
+}
+
+function bpLaneHTML(v){
+  const bp = displayedBP(v);
+  const st = bp && !bp.fail ? monStatus(bp.sbp,'sbp') : 'ok';
+  if (S.artLine){
+    return `<div class="lane bp${alarmClass(st)}">
+      <div class="lane-wave"><span class="lane-tag">ABP</span><canvas id="wf-bp"></canvas></div>
+      <div class="lane-num"><span class="lane-lbl">Art. BP${limText('sbp')}</span>
+        <span class="value">${bp.sbp}/${bp.dbp}<span class="unit">mmHg</span></span>
+        <span class="lane-sub">MAP <b>${bp.map}</b></span></div>
+    </div>`;
+  }
+  // no arterial line: the cuff gives one reading per cycle and the number goes stale in between
+  // a reading taken before the arrest is history, not a blood pressure — don't let it sit there looking reassuring
+  const stale = S.arrested && S.nibp && !S.nibp.fail && S.nibp.t <= S.arrestStart;
+  const n = stale ? {fail:true, t:S.nibp.t} : S.nibp;
+  const age = n ? S.simTime - n.t : null;
+  const ageTxt = n ? (age===0 ? 'just now' : `${age} min ago`) : 'none yet';
+  const value = nibpCycling ? `<span class="cuff" id="nibpCuffVal">${nibpCycling.cuff}</span><span class="unit">cuff</span>`
+    : !n ? '--/--'
+    : n.fail ? `--/--<span class="unit">${stale ? 'pre-arrest' : 'no pulse'}</span>`
+    : `${n.sbp}/${n.dbp}`;
+  const opts = [[0,'Manual'],[5,'5 min'],[15,'15 min'],[30,'30 min']]
+    .map(([m,l])=>`<option value="${m}"${S.nibpInterval===m?' selected':''}>${l}</option>`).join('');
+  const locked = S.ended ? ' disabled' : '';
+  return `<div class="lane bp${alarmClass(st)}">
+    <div class="lane-wave"><span class="lane-tag">NIBP</span>
+      <div class="nibp-info">
+        <span>Last: <b>${ageTxt}</b></span>
+        <label>Auto <select data-mon-sel="nibpInterval" aria-label="NIBP auto-cycle interval"${locked}>${opts}</select></label>
+        <button class="mon-btn" data-mon="nibp"${nibpCycling||S.ended?' disabled':''}>${nibpCycling?'Measuring…':'Start NIBP'}</button>
+        <button class="mon-btn" data-mon="artline"${locked}>Insert arterial line</button>
+      </div></div>
+    <div class="lane-num"><span class="lane-lbl">NIBP${limText('sbp')}</span>
+      <span class="value">${value}${n && !n.fail && !nibpCycling ? '<span class="unit">mmHg</span>' : ''}</span>
+      ${n && !n.fail && !nibpCycling ? `<span class="lane-sub">MAP <b>${n.map}</b></span>` : ''}</div>
+  </div>`;
+}
+
 function renderMonitor(){
   const v = vitals();
   const m = document.getElementById('monitor');
-  const lane = (cls, tag, canvasId, label, valueHtml, st) =>
+  const lane = (cls, tag, canvasId, label, valueHtml, st, extra) =>
     `<div class="lane ${cls}${alarmClass(st)}">
       <div class="lane-wave"><span class="lane-tag">${tag}</span><canvas id="${canvasId}"></canvas></div>
-      <div class="lane-num"><span class="lane-lbl">${label}</span><span class="value">${valueHtml}</span></div>
+      <div class="lane-num"><span class="lane-lbl">${label}</span><span class="value">${valueHtml}</span>${extra||''}</div>
     </div>`;
+  const worst = (a,b)=> a==='crit'||b==='crit' ? 'crit' : a==='warn'||b==='warn' ? 'warn' : 'ok';
+  const arrest = S.arrested && !S.ended;
+  const hrTxt = arrest ? '---' : v.hr, spo2Txt = arrest ? '---' : v.spo2, rrTxt = arrest ? 10 : v.rr;
+  const ecgTag = 'ECG' + (v.paced ? ' · PACED' : (S.pacer && S.pacer.on ? ' · PACER' : '')) + (defibState.sync ? ' · SYNC' : '');
   m.innerHTML = alarmBarHTML(v)
-    + lane('hr','ECG','wf-hr','Heart rate', `${v.hr}<span class="unit">bpm</span>`, statusOf(v.hr,'hr'))
-    + lane('bp','ABP','wf-bp','Arterial BP', `${v.sbp}/${v.dbp}<span class="unit">mmHg</span>`, statusOf(v.sbp,'sbp'))
-    + lane('spo2','PLETH','wf-spo2','SpO2', `${v.spo2}<span class="unit">%</span>`, statusOf(v.spo2,'spo2'))
-    + lane('rr','RESP','wf-rr','Resp. rate', `${v.rr}<span class="unit">/min</span>`, statusOf(v.rr,'rr'))
+    + lane('hr', ecgTag, 'wf-hr', 'Heart rate'+limText('hr'), `${hrTxt}<span class="unit">bpm</span>`, arrest ? 'crit' : monStatus(v.hr,'hr'))
+    + bpLaneHTML(v)
+    + lane('spo2','PLETH','wf-spo2','SpO2'+limText('spo2'), `${spo2Txt}<span class="unit">%</span>`, arrest ? 'crit' : monStatus(v.spo2,'spo2'))
+    + lane('co2','CO2','wf-co2','EtCO2'+limText('etco2'), `${v.etco2}<span class="unit">mmHg</span>`,
+        worst(monStatus(v.etco2,'etco2'), monStatus(rrTxt,'rr')),
+        `<span class="lane-sub">RR <b>${rrTxt}</b>/min</span>`)
     + `<div class="lane-foot">
         <div class="foot-cell${alarmClass(statusOf(parseFloat(v.temp),'temp'))}">
           <span class="lane-lbl">Temp</span><span class="value">${formatTemp(v.temp)}</span></div>
         <div class="foot-cell${alarmClass(statusOf(v.gcs,'gcs'))}">
           <span class="lane-lbl">GCS</span><span class="value">${v.gcs}<span class="unit">/15</span></span></div>
+      </div>`
+    + `<div class="mon-bar">
+        <button class="mon-btn" data-mon="tone" aria-pressed="${pulseToneOn}" title="Beep on every beat; the pitch falls as SpO2 falls">&#9835; Pulse tone</button>
+        <button class="mon-btn" data-mon="limits">Alarm limits</button>
+        <span class="spacer"></span>
+        <button class="mon-btn danger" data-mon="defib" aria-pressed="${!document.getElementById('defibPanel').hidden}">Defib / Pacer</button>
       </div>`;
   sizeMonitorCanvases();
-  {
-    const pattern = ecgPatternFor();
-    const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
-    const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
-    drawWave('wf-hr','ecg', v.hr, pattern);
-    drawWave('wf-bp','art', v.hr, pattern, artAmp);
-    drawWave('wf-rr','bar', v.rr);
-    drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
-  }
+  drawMonitorWaves(v);
 
   const pill = document.getElementById('statusPill');
   if (S.dead){ pill.textContent='DECEASED'; pill.className='status-pill crit'; }
@@ -5638,8 +5851,19 @@ function renderMonitor(){
   document.getElementById('clock').textContent = fmtClock(S.simTime).toUpperCase();
 }
 
+function drawMonitorWaves(v){
+  const pattern = ecgPatternFor();
+  const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
+  const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
+  drawWave('wf-hr','ecg', v.hr, pattern);
+  if (S.artLine) drawWave('wf-bp','art', v.hr, pattern, artAmp);
+  drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
+  drawCapno('wf-co2', S.arrested ? 10 : v.rr, v.etco2);
+}
+
 function ecgPatternFor(){
   if (S.arrested) return S.shockable ? 'vf' : 'flatline';
+  if (S.pacer && S.pacer.on && pacerCapturing(CURRENT.vitals(S).hr)) return 'paced';
   if (CURRENT.ecgPattern) return CURRENT.ecgPattern(S);
   return 'normal';
 }
@@ -5654,6 +5878,14 @@ function ecgY(frac, h, pattern, x){
   }
   if (pattern==='sine'){
     return Math.sin(frac*Math.PI*2) * h*0.62;
+  }
+  if (pattern==='paced'){
+    // pacing spike, then a broad captured complex with a discordant T wave
+    let y = 0;
+    if (frac>0.128 && frac<0.142) y += h*0.5;
+    if (frac>0.15 && frac<0.31) y += Math.sin((frac-0.15)/0.16*Math.PI) * h*0.55;
+    if (frac>=0.34 && frac<0.60) y -= Math.sin((frac-0.34)/0.26*Math.PI) * h*0.18;
+    return y;
   }
   let y = 0;
   const isAfib = pattern==='afib';
@@ -5726,52 +5958,592 @@ function drawWave(id, kind, val, pattern, amp){
   const w=c.width, h=c.height;
   ctx.clearRect(0,0,w,h);
   const col = getComputedStyle(document.documentElement).getPropertyValue(
-    kind==='ecg'?'--cyan':kind==='pleth'?'--lime':kind==='art'?'--violet':'--amber');
+    kind==='ecg'?'--cyan':kind==='pleth'?'--lime':'--violet');
   ctx.strokeStyle = col.trim(); ctx.lineWidth = 1.4; ctx.beginPath();
-  const speed = (kind==='ecg'||kind==='art'||kind==='pleth') ? val/70 : 1;
-  if (kind==='bar'){
-    ctx.fillStyle = col.trim();
-    for(let x=0;x<w;x+=6){
-      const bh = 4+Math.abs(Math.sin((x*0.1)+waveT*0.05))*(h-8);
-      ctx.fillRect(x,h-bh,3,bh);
-    }
-  } else {
-    const beatLen = Math.PI*6;
-    for(let x=0;x<w;x++){
-      let ph = (x*0.12 + waveT*speed);
-      if ((kind==='ecg'||kind==='art'||kind==='pleth') && pattern==='afib') ph += Math.sin(x*0.05+waveT*0.02)*1.6 + Math.sin(x*0.13+waveT*0.05)*0.9;
-      let y;
-      if (kind==='ecg'){
-        const frac = (ph % beatLen) / beatLen;
-        y = h/2 - ecgY(frac, h, pattern||'normal', x);
-      } else if (kind==='pleth'){
-        const frac = (ph % beatLen) / beatLen;
-        y = h/2 - plethY(frac, h, pattern||'normal', x, amp);
-      } else if (kind==='art'){
-        const frac = (ph % beatLen) / beatLen;
-        y = h/2 - arterialY(frac, h, pattern||'normal', x, amp);
-      } else {
-        const cyc = ph % (Math.PI*2);
-        y = h/2 - (cyc<1.2? Math.sin(cyc/1.2*Math.PI)*(h*0.42) : Math.sin(cyc*0.4)*2);
+  const speed = val/70;
+  const spikes = kind==='ecg' && S && S.pacer && S.pacer.on && pattern!=='paced';
+  const beatLen = Math.PI*6;
+  for(let x=0;x<w;x++){
+    let ph = (x*0.12 + waveT*speed);
+    if (pattern==='afib') ph += Math.sin(x*0.05+waveT*0.02)*1.6 + Math.sin(x*0.13+waveT*0.05)*0.9;
+    const frac = (ph % beatLen) / beatLen;
+    let y;
+    if (kind==='ecg'){
+      y = h/2 - ecgY(frac, h, pattern||'normal', x);
+      // pacer spikes that fail to capture ride on top of the patient's own rhythm
+      if (spikes){
+        const fp = ((x*0.12 + waveT*S.pacer.rate/70) % beatLen) / beatLen;
+        if (fp>0.128 && fp<0.142) y -= h*0.42;
       }
-      if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    } else if (kind==='pleth'){
+      y = h/2 - plethY(frac, h, pattern||'normal', x, amp);
+    } else {
+      y = h/2 - arterialY(frac, h, pattern||'normal', x, amp);
     }
+    if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   }
   ctx.stroke();
 }
 
+// ================= bedside monitor: equipment layer (modelled on REALITi 360) =================
+// Everything in this section is the kit, not the patient: capnography, the NIBP cuff,
+// alarm limits, the pulse tone, the defibrillator/pacer, and media put on the monitor.
+
+function monitorStateDefaults(){
+  return {
+    artLine:false, nibp:null, nibpInterval:15,
+    pacer:{on:false, rate:70, ma:0}, pacerThreshold: 50 + Math.floor(Math.random()*5)*10,
+    pacerPainWarned:false, media:{}
+  };
+}
+// sessions saved before the monitor layer existed have none of these fields
+function migrateMonitorState(st){
+  const d = monitorStateDefaults();
+  Object.keys(d).forEach(k=>{ if (st[k]===undefined) st[k] = d[k]; });
+}
+function fmtT(mins){ return `${Math.floor(mins/60)}:${String(mins%60).padStart(2,'0')}`; }
+
+// ---------- alarm limits ----------
+const LIMIT_SPECS = [
+  {key:'hr',    label:'Heart rate',  unit:'bpm',  hi:true},
+  {key:'sbp',   label:'Systolic BP', unit:'mmHg', hi:true},
+  {key:'spo2',  label:'SpO2',        unit:'%',    hi:false},
+  {key:'rr',    label:'Resp. rate',  unit:'/min', hi:true},
+  {key:'etco2', label:'EtCO2',       unit:'mmHg', hi:true}
+];
+const DEFAULT_LIMITS = { hr:{lo:55,hi:115}, sbp:{lo:95,hi:180}, spo2:{lo:94,hi:null}, rr:{lo:10,hi:24}, etco2:{lo:25,hi:50} };
+function cloneLimits(src){ return JSON.parse(JSON.stringify(src)); }
+let alarmLimits = cloneLimits(DEFAULT_LIMITS);
+
+// The hard thresholds in statusOf stay critical whatever the limits say: a monitor lets
+// you move a warning, it never lets you silence a systolic of 70.
+function monStatus(val, kind){
+  const hard = statusOf(val, kind);
+  if (hard==='crit') return 'crit';
+  const L = alarmLimits[kind];
+  if (!L) return hard;
+  return ((L.lo!=null && val<L.lo) || (L.hi!=null && val>L.hi)) ? 'warn' : 'ok';
+}
+function limitDir(kind, val){
+  const L = alarmLimits[kind];
+  if (!L || L.hi==null) return 'LOW';
+  return val > (L.lo + L.hi)/2 ? 'HIGH' : 'LOW';
+}
+
+function fillLimitInputs(src){
+  LIMIT_SPECS.forEach(sp=>{
+    document.getElementById(`lim-${sp.key}-lo`).value = src[sp.key].lo;
+    document.getElementById(`lim-${sp.key}-hi`).value = src[sp.key].hi==null ? '' : src[sp.key].hi;
+  });
+}
+function openLimits(){
+  document.getElementById('limitsGrid').innerHTML =
+    '<span class="lh">Parameter</span><span class="lh">Low</span><span class="lh">High</span><span></span>' +
+    LIMIT_SPECS.map(sp=>`<label for="lim-${sp.key}-lo">${sp.label}</label>
+      <input type="number" inputmode="numeric" id="lim-${sp.key}-lo" aria-label="${sp.label} low limit">
+      <input type="number" inputmode="numeric" id="lim-${sp.key}-hi" aria-label="${sp.label} high limit"${sp.hi?'':' disabled'}>
+      <span class="u">${sp.unit}</span>`).join('');
+  fillLimitInputs(alarmLimits);
+  document.getElementById('limitsErr').textContent = '';
+  document.getElementById('limitsBg').classList.add('show');
+  document.getElementById('lim-hr-lo').focus();
+}
+function closeLimits(){ document.getElementById('limitsBg').classList.remove('show'); }
+function saveLimits(){
+  const err = msg => { document.getElementById('limitsErr').textContent = msg; };
+  const next = {};
+  for (const sp of LIMIT_SPECS){
+    const lo = parseFloat(document.getElementById(`lim-${sp.key}-lo`).value);
+    const hi = sp.hi ? parseFloat(document.getElementById(`lim-${sp.key}-hi`).value) : null;
+    if (isNaN(lo) || (sp.hi && isNaN(hi))) return err(`${sp.label}: enter ${sp.hi ? 'both limits' : 'a low limit'}.`);
+    if (sp.hi && lo >= hi) return err(`${sp.label}: the low limit has to be below the high limit.`);
+    next[sp.key] = {lo, hi};
+  }
+  alarmLimits = next;
+  closeLimits();
+  saveSession();
+  if (S && CURRENT){
+    if (!S.ended) log('Monitor alarm limits changed.','action');
+    renderMonitor();
+  }
+}
+
+// ---------- capnography ----------
+function etco2For(v){
+  if (S.dead) return 0;
+  if (S.arrested) return 13;   // CPR-generated: good compressions hold it around 10–20 mmHg
+  let e = typeof S.pco2==='number' ? S.pco2 - 4      // cases that model PaCO2 directly
+    : v.rr >= 14 ? 38 - (v.rr-14)*0.5                  // hyperventilation washes CO2 out
+    : 38 + (14-v.rr)*2.5;                              // hypoventilation retains it
+  if (v.sbp < 90) e -= (90 - v.sbp)*0.3;               // low cardiac output carries less CO2 to the lungs
+  if (CURRENT.id==='pe') e -= (S.obstruction||0)*0.12; // dead-space ventilation widens the gap
+  return Math.round(clamp(e, 6, 90));
+}
+
+const BRONCHOSPASM_CASES = ['severe_asthma','copd'];
+function drawCapno(id, rr, etco2){
+  const c = document.getElementById(id);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const w=c.width, h=c.height;
+  ctx.clearRect(0,0,w,h);
+  // fixed 0–50 mmHg scale, so a falling EtCO2 shows as a shrinking plateau
+  const base = h-4, level = clamp(etco2/50, 0, 1) * (h-8);
+  const shark = BRONCHOSPASM_CASES.indexOf(CURRENT.id)>=0;
+  const plateauEnd = shark ? 1-Math.exp(-0.53/0.13) : 1;
+  const breathLen = 20, k = Math.max(rr, 4)/15;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--amber').trim();
+  ctx.lineWidth = 1.4; ctx.beginPath();
+  for (let x=0;x<w;x++){
+    const f = (((x*0.12 + waveT*0.25) * k) % breathLen) / breathLen;
+    let a;
+    if (f < 0.42) a = 0;                                          // inspiration: CO2-free gas
+    else if (f < 0.95){
+      const e = f - 0.42;
+      a = shark ? 1 - Math.exp(-e/0.13)                           // obstructed emptying: the "shark fin"
+                : Math.min(1, e/0.05) * (0.93 + e*0.13);          // sharp upstroke, gently rising plateau
+    } else a = plateauEnd * Math.max(0, 1 - (f-0.95)/0.04);       // next inspiration
+    const y = base - a*level;
+    if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+// ---------- NIBP and the arterial line ----------
+let nibpCycling = null;   // {cuff, timer} while the cuff deflates; never saved
+
+function displayedBP(v){
+  if (S.artLine) return {sbp:v.sbp, dbp:v.dbp, map:v.map, src:'ABP'};
+  return S.nibp ? Object.assign({src:'NIBP'}, S.nibp) : null;
+}
+function nibpReading(){
+  if (S.arrested || S.dead) return {fail:true, t:S.simTime};
+  const v = vitals();
+  const j = ()=> Math.round((Math.random()-0.5)*6);   // a cuff never quite agrees with the line
+  const sbp = v.sbp + j(), dbp = v.dbp + j();
+  return {sbp, dbp, map:Math.round((sbp + 2*dbp)/3), t:S.simTime};
+}
+function stopNibp(){ if (nibpCycling){ clearInterval(nibpCycling.timer); nibpCycling = null; } }
+function startNibp(){
+  if (!S || S.artLine || nibpCycling || S.ended) return;
+  const st = S;
+  nibpCycling = {cuff:180};
+  renderMonitor();
+  nibpCycling.timer = setInterval(()=>{
+    if (S !== st){ stopNibp(); return; }
+    nibpCycling.cuff -= 10;
+    if (nibpCycling.cuff > 50){
+      const el = document.getElementById('nibpCuffVal');
+      if (el) el.textContent = nibpCycling.cuff;
+      return;
+    }
+    stopNibp();
+    S.nibp = nibpReading();
+    log(S.nibp.fail ? 'NIBP: no reading — the cuff detected no pulse.'
+      : `NIBP measured: ${S.nibp.sbp}/${S.nibp.dbp} mmHg (MAP ${S.nibp.map}).`, 'result');
+    renderAll();
+  }, isReducedMotion() ? 60 : 160);
+}
+function setNibpInterval(mins){
+  if (!S || S.ended) return;
+  S.nibpInterval = mins;
+  log(mins ? `NIBP set to cycle every ${mins} min.` : 'NIBP set to manual — readings only when started.', 'action');
+  renderAll();
+}
+function insertArtLine(){
+  if (!S || S.artLine || S.ended) return;
+  stopNibp();
+  S.artLine = true;
+  log('Arterial line inserted (radial) — continuous beat-to-beat invasive BP now on the monitor.','action');
+  renderAll();
+}
+
+// ---------- pulse tone ----------
+let pulseToneOn = false;
+function onBedside(){
+  return ['appScreen','arrestScreen'].some(id=>document.getElementById(id).style.display!=='none');
+}
+// the falling pitch is the point: you hear desaturation before you look up at the number
+function spo2Pitch(spo2){ return 880 * Math.pow(0.982, 100 - clamp(spo2, 50, 100)); }
+function pulseToneTick(){
+  let next = 1000;
+  if (S && CURRENT && !S.arrested && !S.dead && onBedside()){
+    const v = vitals();
+    next = clamp(60000/Math.max(v.hr, 20), 250, 3000);
+    if (pulseToneOn && !muted && !document.hidden) tone(spo2Pitch(v.spo2), 0.07, 0.05, 'sine');
+  }
+  setTimeout(pulseToneTick, next);
+}
+
+// ---------- defibrillator / pacer ----------
+const ENERGIES = [120,150,200,300,360];
+const defibState = { mode:'defib', energy:200, sync:false, charge:'idle', msg:'', chargeTimer:null, readyTimer:null, disarmTimer:null };
+
+function pacerCapturing(nativeHr){
+  const p = S && S.pacer;
+  return !!(p && p.on && !S.arrested && !S.dead && p.ma >= S.pacerThreshold && p.rate > nativeHr);
+}
+function chargeSound(){
+  const ctx = ensureAudio();
+  if (!ctx || muted) return;
+  const o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime;
+  o.type = 'sine';
+  o.frequency.setValueAtTime(380, t0); o.frequency.linearRampToValueAtTime(1150, t0+2.1);
+  g.gain.setValueAtTime(0.05, t0); g.gain.setValueAtTime(0.05, t0+2.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+2.2);
+  o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0+2.2);
+}
+function disarm(silent){
+  clearTimeout(defibState.chargeTimer); clearInterval(defibState.readyTimer); clearTimeout(defibState.disarmTimer);
+  defibState.chargeTimer = defibState.readyTimer = defibState.disarmTimer = null;
+  defibState.charge = 'idle';
+  if (!silent) renderDefib();
+}
+function chargeDefib(){
+  if (!S || S.ended || defibState.charge!=='idle') return;
+  defibState.charge = 'charging'; defibState.msg = '';
+  chargeSound();
+  renderDefib();
+  defibState.chargeTimer = setTimeout(()=>{
+    defibState.charge = 'ready';
+    defibState.readyTimer = setInterval(()=>{ if (!muted) tone(1050, 0.09, 0.05, 'square'); }, 900);
+    defibState.disarmTimer = setTimeout(()=>{ disarm(true); defibState.msg = 'Auto-disarmed after 30 s without a shock.'; renderDefib(); }, 30000);
+    renderDefib();
+  }, isReducedMotion() ? 600 : 2200);
+}
+function deliverShock(){
+  if (!S || S.ended || defibState.charge!=='ready') return;
+  const j = defibState.energy;
+  if (S.arrested && !S.rhythmChecked){
+    defibState.msg = 'Check the rhythm first — still charged.';
+    log('Check rhythm before defibrillating — pause compressions briefly and confirm VF/pVT on the monitor.','warn');
+    renderDefib(); return;
+  }
+  if (S.arrested && S.shockable && defibState.sync){
+    // what a real defibrillator does: in VF there is no R wave, so a synced shock never fires
+    defibState.msg = 'SYNC on: no R waves to sync to — shock not delivered.';
+    log('Synchronised mode is on. VF has no R waves to synchronise to, so the defibrillator will not fire — turn SYNC off to defibrillate.','warn');
+    renderDefib(); return;
+  }
+  disarm(true);
+  if (!muted) tone(70, 0.3, 0.25, 'sine');
+  if (S.arrested){
+    if (S.shockable){
+      S.shockCount++;
+      S.justShocked = j >= 120;
+      log(`Defibrillation delivered (${j}J biphasic, unsynchronised). Resume CPR immediately.`,'action');
+      if (j < 120) log(`${j}J is below the usual adult biphasic dose (120–200 J, then escalate) — unlikely to terminate VF.`,'warn');
+    } else {
+      log(`${j}J shock delivered into a non-shockable rhythm (PEA/asystole) — not indicated. It cannot help and costs compression time; resume CPR.`,'warn');
+    }
+  } else if (defibState.sync){
+    if (CURRENT.onSyncShock) CURRENT.onSyncShock(S, j);
+    else if (ecgPatternFor()==='afib') log(`Synchronised ${j}J shock delivered. AF recurs within minutes — cardioversion rarely holds while the driver of the arrhythmia is untreated. Treat the cause and control the rate.`,'warn');
+    else log(`Synchronised ${j}J shock delivered, but this rhythm is not a shockable tachyarrhythmia — cardioversion is not indicated here.`,'warn');
+  } else {
+    log(`Unsynchronised ${j}J shock delivered to a patient with a pulse — risk of R-on-T ventricular fibrillation. Any shock with a pulse needs SYNC.`,'crit');
+    if (Math.random() < 0.5){ triggerArrest(); S.shockable = true; }
+  }
+  defibState.msg = `Shock delivered — ${j} J.`;
+  renderAll();
+  renderDefib();
+}
+function pacerSet(key, delta){
+  if (!S || S.ended) return;
+  const p = S.pacer;
+  if (key==='on'){
+    p.on = !p.on;
+    log(p.on ? `Transcutaneous pacing started — rate ${p.rate} ppm, output ${p.ma} mA.` : 'Transcutaneous pacing stopped.', 'action');
+    if (p.on && S.arrested) log('Pacing is not recommended in asystole or PEA during cardiac arrest — it does not improve survival. Continue CPR.','warn');
+    if (!p.on) S._pacerCaptureLogged = false;
+  } else if (key==='rate') p.rate = clamp(p.rate + delta, 40, 180);
+  else if (key==='ma') p.ma = clamp(p.ma + delta, 0, 200);
+  if (pacerCapturing(CURRENT.vitals(S).hr)){
+    if (!S._pacerCaptureLogged){
+      S._pacerCaptureLogged = true;
+      log(`Electrical and mechanical capture at ${p.ma} mA — paced at ${p.rate}/min with a palpable pulse. Keep the output about 10 mA above threshold.`,'result');
+    }
+    if (!S.pacerPainWarned && vitals().gcs >= 13){
+      S.pacerPainWarned = true;
+      log('Transcutaneous pacing is painful in a conscious patient — give analgesia and sedation, and plan transvenous pacing or treat the cause.','warn');
+    }
+  }
+  renderAll();
+  renderDefib();
+}
+function showDefib(open){
+  const el = document.getElementById('defibPanel');
+  el.hidden = !open;
+  if (open) renderDefib(); else disarm(true);
+  if (S && CURRENT) renderMonitor();   // keeps the toolbar button's pressed state honest
+}
+function renderDefib(){
+  const panel = document.getElementById('defibPanel');
+  if (panel.hidden || !S) return;
+  panel.querySelectorAll('[data-dmode]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.dmode===defibState.mode)));
+  const body = document.getElementById('defibBody');
+  const off = S.ended ? ' disabled' : '';
+  if (defibState.mode==='defib'){
+    const ch = defibState.charge;
+    const status = ch==='ready' ? `<div class="defib-status ready" role="status">CHARGED · ${defibState.energy} J — STAND CLEAR</div>`
+      : ch==='charging' ? `<div class="defib-status charging" role="status">Charging to ${defibState.energy} J…</div>`
+      : `<div class="defib-status" role="status">${defibState.msg || `Ready to charge · ${defibState.energy} J${defibState.sync?' · SYNC':''}`}</div>`;
+    body.innerHTML = `
+      <div class="defib-row"><span class="dlbl">Energy</span>
+        ${ENERGIES.map(e=>`<button class="mon-btn" data-d="energy" data-j="${e}" aria-pressed="${defibState.energy===e}"${off}>${e} J</button>`).join('')}</div>
+      <div class="defib-row"><span class="dlbl">Mode</span>
+        <button class="mon-btn" data-d="sync" aria-pressed="${defibState.sync}"${off}>SYNC ${defibState.sync?'on':'off'}</button>
+        <span class="defib-hint">${defibState.sync ? 'Shock is timed to the R wave — cardioversion with a pulse.' : 'Unsynchronised — VF and pulseless VT only.'}</span></div>
+      ${status}
+      <div class="defib-actions">
+        <button class="btn" data-d="charge"${ch!=='idle'||S.ended?' disabled':''}>Charge</button>
+        <button class="btn danger" data-d="shock"${ch!=='ready'?' disabled':''}>Shock</button>
+        <button class="btn ghost" data-d="disarm"${ch==='idle'?' disabled':''}>Disarm</button>
+      </div>`;
+  } else {
+    const p = S.pacer;
+    const native = CURRENT.vitals(S).hr;
+    let st, cls = '';
+    if (!p.on) st = 'Pacer off';
+    else if (S.arrested) st = 'Pacing — no capture (cardiac arrest)';
+    else if (p.rate <= native) st = `Inhibited — the patient's own rate (${native}) is at or above the set rate`;
+    else if (pacerCapturing(native)){ st = `Capture · paced at ${p.rate}/min`; cls = ' ok'; }
+    else { st = `No capture at ${p.ma} mA — increase the output`; cls = ' charging'; }
+    body.innerHTML = `
+      <div class="defib-row"><span class="dlbl">Pacer</span>
+        <button class="mon-btn" data-d="pace-on" aria-pressed="${p.on}"${off}>${p.on ? 'On — stop pacing' : 'Start pacing'}</button></div>
+      <div class="defib-row"><span class="dlbl">Rate</span>
+        <button class="mon-btn" data-d="rate" data-step="-10" aria-label="Decrease pacing rate"${off}>&minus;</button>
+        <span class="defib-num">${p.rate}<span class="unit"> ppm</span></span>
+        <button class="mon-btn" data-d="rate" data-step="10" aria-label="Increase pacing rate"${off}>+</button></div>
+      <div class="defib-row"><span class="dlbl">Output</span>
+        <button class="mon-btn" data-d="ma" data-step="-10" aria-label="Decrease pacing output"${off}>&minus;</button>
+        <span class="defib-num">${p.ma}<span class="unit"> mA</span></span>
+        <button class="mon-btn" data-d="ma" data-step="10" aria-label="Increase pacing output"${off}>+</button></div>
+      <div class="defib-status${cls}" role="status">${st}</div>
+      <p class="defib-hint">Demand mode: the pacer fires only when the patient's own rate is below the set rate. Raise the output until every spike is followed by a broad complex and a pulse.${instructorMode ? ` <b>Instructor:</b> capture threshold ${S.pacerThreshold} mA.` : ''}</p>`;
+  }
+}
+
+// ---------- 12-lead ECG ----------
+const TWELVE_LAYOUT = [['I','aVR','V1','V4'],['II','aVL','V2','V5'],['III','aVF','V3','V6']];
+// per-lead complex amplitudes in mV for a normal sinus beat (P, Q, R, S, T)
+const LEAD_BASE = {
+  I:{p:.10,q:-.05,r:.70,s:-.10,t:.22},  II:{p:.15,q:-.05,r:1.10,s:-.15,t:.30}, III:{p:.05,q:-.05,r:.45,s:-.10,t:.10},
+  aVR:{p:-.12,q:0,r:.10,s:-.80,t:-.25}, aVL:{p:.05,q:-.04,r:.40,s:-.20,t:.10},  aVF:{p:.10,q:-.04,r:.75,s:-.12,t:.20},
+  V1:{p:.08,q:0,r:.20,s:-1.00,t:-.05},  V2:{p:.08,q:0,r:.40,s:-1.30,t:.40},     V3:{p:.08,q:0,r:.70,s:-.80,t:.45},
+  V4:{p:.08,q:-.05,r:1.20,s:-.50,t:.40}, V5:{p:.08,q:-.06,r:1.30,s:-.25,t:.30}, V6:{p:.08,q:-.06,r:1.00,s:-.10,t:.25}
+};
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a>>>15, 1 | a);
+    t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t;
+    return ((t ^ t>>>14) >>> 0) / 4294967296;
+  };
+}
+function smoothstep(a, b, x){ const t = clamp((x-a)/(b-a), 0, 1); return t*t*(3-2*t); }
+function leadParams(lead, pattern){
+  const p = Object.assign({st:0, wide:1, fw:0, spike:false}, LEAD_BASE[lead]);
+  const isIn = arr => arr.indexOf(lead)>=0;
+  if (pattern==='st_elevation'){            // anterior STEMI with inferior reciprocal change
+    if (isIn(['V1','V2','V3','V4'])){ p.st = 0.28; p.t = Math.max(p.t, 0.3)*1.6; }
+    if (isIn(['II','III','aVF'])) p.st = -0.12;
+  } else if (pattern==='st_depression'){    // lateral depression, ST elevation in aVR
+    if (isIn(['I','II','aVL','V4','V5','V6'])){ p.st = -0.16; p.t *= -0.4; }
+    if (lead==='aVR') p.st = 0.1;
+  } else if (pattern==='peaked_t'){
+    p.t = p.t>0 ? Math.max(p.t*2.6, 0.55) : p.t*1.8;
+    p.p *= 0.4; p.wide = 1.5;
+  } else if (pattern==='afib'){
+    p.p = 0; p.fw = isIn(['II','III','aVF','V1']) ? 0.06 : 0.025;
+  } else if (pattern==='paced'){            // ventricular pacing: LBBB-like with discordant T
+    const pos = isIn(['I','aVL','V5','V6']), neg = isIn(['V1','V2','V3','aVR']);
+    p.p = 0; p.q = 0; p.wide = 3.2; p.spike = true;
+    p.r = pos ? 1.0 : neg ? 0.1 : 0.5;
+    p.s = pos ? 0 : neg ? -1.3 : -0.4;
+    p.t = (pos ? -1 : 1) * 0.3;
+  }
+  return p;
+}
+function beatSignal(tau, p, rr){
+  const g = (c, w) => Math.exp(-((tau-c)*(tau-c))/(2*w*w));
+  let y = 0;
+  if (p.p) y += p.p * g(0.08, 0.022);
+  if (p.spike && tau>=0.10 && tau<0.104) y += 1.8;
+  const w = p.wide, q0 = p.spike ? 0.13 : 0.15;
+  const rc = q0 + 0.025 + 0.012*(w-1), sc = rc + 0.02*w, qrsEnd = sc + 0.02*w;
+  y += p.q * g(q0+0.005, 0.007*w) + p.r * g(rc, 0.009*w) + p.s * g(sc, 0.009*w);
+  const tc = qrsEnd + 0.06 + 0.12*Math.sqrt(rr);   // QT shortens as the rate rises
+  if (p.st) y += p.st * smoothstep(qrsEnd-0.01, qrsEnd+0.01, tau) * (1 - smoothstep(tc-0.02, tc+0.08, tau));
+  y += p.t * g(tc, p.spike ? 0.065 : 0.045);
+  return y;
+}
+function leadSignal(lead, t, beats, p, rr, pattern, ph){
+  if (pattern==='vf') return 0.35*(Math.sin(2*Math.PI*4.7*t+ph) + 0.7*Math.sin(2*Math.PI*6.3*t+ph*1.7) + 0.5*Math.sin(2*Math.PI*2.9*t+ph*0.6));
+  if (pattern==='flatline') return 0.015*Math.sin(2*Math.PI*0.3*t + ph);
+  if (pattern==='sine') return (lead==='aVR'||lead==='V1' ? -1 : 1) * 0.75*Math.sin(2*Math.PI*t/rr);
+  let y = 0;
+  for (let i=beats.length-1; i>=0; i--){
+    const tau = t - beats[i];
+    if (tau < 0) continue;
+    if (tau > 1.3) break;
+    y += beatSignal(tau, p, rr);
+  }
+  if (p.fw) y += p.fw * Math.sin(2*Math.PI*6.2*t + 1.5*Math.sin(2*Math.PI*0.7*t + ph));
+  return y;
+}
+// Standard 3x4 layout plus a 10-second lead II rhythm strip, at 25 mm/s and 10 mm/mV.
+function drawTwelveLead(canvas, snap){
+  const L = 36, PX = 4.8, PPS = PX*25, GAIN = PX*10, W = L + 10*PPS, H = 640, ROW = 140;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff8f6'; ctx.fillRect(0,0,W,H);
+  for (let i=0; i*PX<=Math.max(W,H); i++){
+    ctx.strokeStyle = i%5===0 ? 'rgba(214,92,92,.42)' : 'rgba(232,150,150,.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(i*PX+.5, 0); ctx.lineTo(i*PX+.5, H); ctx.moveTo(0, i*PX+.5); ctx.lineTo(W, i*PX+.5); ctx.stroke();
+  }
+  const rnd = mulberry32(snap.seed || 1);
+  const pattern = snap.pattern || 'normal';
+  const rr = 60/Math.max(snap.hr || 70, 20);
+  const beats = [];
+  for (let tb = -rnd()*rr; tb < 10.5; tb += pattern==='afib' ? rr*(0.6 + 0.8*rnd()) : rr) beats.push(tb);
+  const phase = {};
+  Object.keys(LEAD_BASE).forEach(l=>{ phase[l] = rnd()*Math.PI*2; });
+
+  ctx.lineJoin = 'round';
+  const trace = (lead, y0, t0, t1, x0) => {
+    const p = leadParams(lead, pattern);
+    ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = 1.3; ctx.beginPath();
+    for (let x = x0; x <= x0 + (t1-t0)*PPS; x++){
+      const y = y0 - leadSignal(lead, t0 + (x-x0)/PPS, beats, p, rr, pattern, phase[lead]) * GAIN;
+      if (x===x0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#222'; ctx.font = '600 13px -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText(lead, x0 + 6, y0 - ROW/2 + 18);
+  };
+  const calPulse = y0 => {   // 1 mV x 0.2 s calibration step at the start of every row
+    ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = 1.3; ctx.beginPath();
+    ctx.moveTo(4, y0); ctx.lineTo(8, y0); ctx.lineTo(8, y0-GAIN); ctx.lineTo(8+0.2*PPS, y0-GAIN); ctx.lineTo(8+0.2*PPS, y0); ctx.lineTo(L, y0);
+    ctx.stroke();
+  };
+  for (let r=0; r<4; r++){
+    const y0 = 10 + r*ROW + ROW/2 + 14;
+    calPulse(y0);
+    if (r<3){
+      TWELVE_LAYOUT[r].forEach((lead, c)=>{
+        const x0 = L + c*2.5*PPS;
+        if (c>0){ ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x0, y0-14); ctx.lineTo(x0, y0+14); ctx.stroke(); }
+        trace(lead, y0, c*2.5, (c+1)*2.5, x0);
+      });
+    } else trace('II', y0, 0, 10, L);
+  }
+  ctx.fillStyle = '#5a4a48'; ctx.font = '12px ui-monospace, Menlo, monospace';
+  ctx.fillText(`25 mm/s   10 mm/mV   ${pattern==='vf'||pattern==='flatline' ? 'no organised rate' : `rate ~${snap.hr}/min`}`, L, H-12);
+  const tag = 'Simulated tracing — teaching use';
+  ctx.fillText(tag, W - ctx.measureText(tag).width - 12, H-12);
+}
+
+// ---------- media on the monitor ----------
+// Only reports that one of the CXR trainer's films genuinely shows get a picture — a
+// film that disagrees with its own report would teach the wrong thing.
+function cxrPresetForResult(text){
+  if (/ARDS|bilateral diffuse infiltrates/i.test(text)) return 'ards';
+  if (/improving|no significant cardiomegaly/i.test(text)) return null;
+  if (/normal heart size/i.test(text) && !/cardiomegaly|infiltrat|consolidation(?! or)/i.test(text)) return 'normal';
+  if (/cardiomegaly[^.]*oedema|bat-wing/i.test(text)) return 'pulm_oedema';
+  if (/right lower lobe (infiltrate|consolidation)/i.test(text)) return 'rll_pneumonia';
+  if (/lung fields clear|clear lung fields/i.test(text) && !/hyperinflat/i.test(text)) return 'normal';
+  return null;
+}
+function snapshotMedia(name, label, text, v){
+  if (!S.media) S.media = {};
+  if (/12-lead/i.test(label)){
+    const note = v.paced ? ' (Recorded during transcutaneous pacing — the tracing shows paced complexes, which mask the underlying rhythm.)' : '';
+    S.media[name] = {kind:'ecg12', pattern:ecgPatternFor(), hr:v.hr, t:S.simTime, seed:(Math.random()*1e9)|0, report:text + note};
+  } else if (/chest x-ray/i.test(label)){
+    const preset = cxrPresetForResult(text);
+    if (preset) S.media[name] = {kind:'cxr', preset, t:S.simTime, report:text};
+    else delete S.media[name];
+  }
+}
+function openMedia(opt){
+  const wrap = document.getElementById('mediaWrap'), canvas = document.getElementById('mediaCanvas');
+  const note = document.getElementById('mediaNote');
+  document.getElementById('mediaSrc').textContent = opt.src || '';
+  document.getElementById('mediaTitle').textContent = opt.title;
+  wrap.hidden = opt.kind==='note';
+  note.hidden = opt.kind!=='note';
+  wrap.className = 'media-wrap ' + (opt.kind==='ecg12' ? 'ecg' : 'cxr');
+  if (opt.kind==='ecg12') drawTwelveLead(canvas, opt.snap);
+  else if (opt.kind==='cxr'){
+    canvas.width = 460; canvas.height = 540;
+    const ctx = canvas.getContext('2d');
+    CXR_PRESETS[opt.preset].render(ctx, 460, 540);
+    cxrGrain(ctx, 460, 540);
+  } else note.textContent = opt.text;
+  document.getElementById('mediaMeta').textContent = opt.meta || '';
+  const box = document.getElementById('mediaReportBox');
+  box.hidden = !opt.report; box.open = false;
+  document.getElementById('mediaReport').textContent = opt.report || '';
+  document.getElementById('mediaBg').classList.add('show');
+  document.getElementById('mediaClose').focus();
+}
+function closeMedia(){ document.getElementById('mediaBg').classList.remove('show'); }
+function openTestMedia(name){
+  const m = S && S.media && S.media[name];
+  if (!m) return;
+  const when = `Taken at T+${fmtT(m.t)}`;
+  if (m.kind==='ecg12') openMedia({kind:'ecg12', title:'12-lead ECG', src:CURRENT.title, snap:m, report:m.report, meta:`${when} · 25 mm/s · 10 mm/mV`});
+  else openMedia({kind:'cxr', title:'Chest X-ray', src:CURRENT.title, preset:m.preset, report:m.report, meta:`${when} · representative film from the CXR trainer`});
+}
+function openPushMenu(){
+  document.getElementById('pushList').innerHTML = `<h4>Investigation</h4>
+    <button class="btn" data-push="ecg12">12-lead ECG — the patient's current rhythm</button>
+    <h4>Chest X-ray (from the CXR trainer)</h4>
+    ${Object.keys(CXR_PRESETS).map(k=>`<button class="btn" data-push="cxr" data-preset="${k}">${CXR_PRESETS[k].label}</button>`).join('')}
+    <h4>Message</h4>
+    <textarea id="pushText" placeholder="e.g. The patient says the chest pain is getting worse." aria-label="Message to show on the monitor"></textarea>
+    <button class="btn" data-push="note">Show message</button>`;
+  document.getElementById('pushBg').classList.add('show');
+}
+function closePush(){ document.getElementById('pushBg').classList.remove('show'); }
+function pushToMonitor(kind, preset){
+  if (!S) return;
+  if (kind==='note'){
+    const txt = document.getElementById('pushText').value.trim();
+    if (!txt){ document.getElementById('pushText').focus(); return; }
+    closePush();
+    log(`Instructor message: ${escapeHtml(txt)}`,'action');
+    openMedia({kind:'note', title:'Message', src:'From the instructor', text:txt});
+    return;
+  }
+  closePush();
+  if (kind==='ecg12'){
+    const v = vitals();
+    log('Instructor put a 12-lead ECG on the monitor.','action');
+    openMedia({kind:'ecg12', title:'12-lead ECG', src:'Sent by instructor',
+      snap:{pattern:ecgPatternFor(), hr:v.hr, seed:(Math.random()*1e9)|0}, meta:`T+${fmtT(S.simTime)} · 25 mm/s · 10 mm/mV`});
+  } else {
+    log('Instructor put a chest X-ray on the monitor.','action');
+    openMedia({kind:'cxr', title:'Chest X-ray', src:'Sent by instructor', preset, report:CXR_PRESETS[preset].caption});
+  }
+}
+
+function monitorAction(kind){
+  if (!S || !CURRENT) return;
+  if (kind==='tone'){ pulseToneOn = !pulseToneOn; ensureAudio(); saveSession(); renderMonitor(); }
+  else if (kind==='limits') openLimits();
+  else if (kind==='defib'){ ensureAudio(); showDefib(document.getElementById('defibPanel').hidden); }
+  else if (kind==='nibp') startNibp();
+  else if (kind==='artline') insertArtLine();
+}
+
 function animate(){
   waveT += isReducedMotion()? 0 : 1.4;
-  if (S){
-    const v = vitals();
-    const pattern = ecgPatternFor();
-    const artAmp = clamp((v.sbp-v.dbp)/42, 0.35, 1.4);
-    const perfAmp = clamp((v.sbp-55)/55, 0.15, 1.05);
-    drawWave('wf-hr','ecg', v.hr, pattern);
-    drawWave('wf-bp','art', v.hr, pattern, artAmp);
-    drawWave('wf-rr','bar', v.rr);
-    drawWave('wf-spo2','pleth', v.hr, pattern, perfAmp);
-  }
+  if (S) drawMonitorWaves(vitals());
   if (ventS){
     ventWaveT += isReducedMotion()? 0 : 0.03;
     ventDrawWave('wf-vent-pressure','pressure');
@@ -5842,7 +6614,9 @@ function renderInvest(){
     if (S.done[k]){
       const tag = t.repeatable ? ` <span style="color:var(--text-faint);font-weight:400;">(latest${n>1?`, ${n} done`:''})</span>` : '';
       const range = showRefRanges ? refRangeHtml(t.label) : '';
-      return `<div class="finding"><b>${t.label}:</b>${tag} ${S.done[k]}${range}</div>`;
+      const m = S.media && S.media[k];
+      const view = m ? ` <button class="btn small" data-media="${k}">${m.kind==='ecg12' ? 'View tracing' : 'View film'}</button>` : '';
+      return `<div class="finding"><b>${t.label}:</b>${tag} ${S.done[k]}${range}${view}</div>`;
     }
     if (pending) return `<div class="finding" style="border-left-color:var(--warn);opacity:.8;"><b>${t.label}:</b> pending…</div>`;
     return '';
@@ -6021,6 +6795,9 @@ function instructorAction(kind){
     log(instructorPaused ? 'Simulation paused by instructor.' : 'Simulation resumed by instructor.', 'action');
   } else if (kind==='arrest'){
     if (!S.arrested && !S.ended) triggerArrest();
+  } else if (kind==='media'){
+    openPushMenu();
+    return;
   } else if (kind==='rosc'){
     if (S.arrested){
       S.arrested = false; S.rosc = true;
@@ -6233,6 +7010,9 @@ function loadCase(key){
   CURRENT = CASES[key];
   S = freshState(CURRENT);
   sampleTrend(S);   // seed the arrival values now that the global S is set
+  stopNibp(); disarm(true);
+  defibState.sync = false; defibState.msg = '';
+  S.nibp = nibpReading();   // the arrival set of obs includes a cuff pressure
   document.getElementById('menuScreen').style.display='none';
   revealScreen('appScreen');
   document.getElementById('debriefScreen').style.display='none';
@@ -6365,6 +7145,8 @@ function applyShellMode(id){
 function revealScreen(id){
   applyShellMode(id);
   closeCaseMenu();
+  // the defibrillator belongs to the bedside; it does not follow you back to the menus
+  if (id!=='appScreen' && id!=='arrestScreen' && !document.getElementById('defibPanel').hidden) showDefib(false);
   ALL_SCREENS.forEach(sid=>{
     if (sid===id) return;
     const el = document.getElementById(sid);
@@ -6393,7 +7175,8 @@ function saveSession(){
       caseId: CURRENT ? CURRENT.id : null, state: S,
       theme: document.documentElement.dataset.theme || null, muted, instructorMode,
       textLarge, guidanceFull, critAlertsOn, confirmTimeJumps, landingPref,
-      highContrast, reducedMotionPref, kbNavEmphasis, tempUnit, showRefRanges, examMode
+      highContrast, reducedMotionPref, kbNavEmphasis, tempUnit, showRefRanges, examMode,
+      alarmLimits, pulseToneOn
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch(e){ /* localStorage unavailable or quota exceeded — session just won't persist */ }
@@ -6409,11 +7192,18 @@ function restoreSession(){
     confirmTimeJumps = !!data.confirmTimeJumps; landingPref = data.landingPref || 'picker';
     highContrast = !!data.highContrast; reducedMotionPref = !!data.reducedMotionPref; kbNavEmphasis = !!data.kbNavEmphasis;
     tempUnit = data.tempUnit || 'C'; showRefRanges = !!data.showRefRanges; examMode = !!data.examMode;
+    pulseToneOn = !!data.pulseToneOn;
+    if (data.alarmLimits) LIMIT_SPECS.forEach(sp=>{
+      const L = data.alarmLimits[sp.key];
+      if (L && typeof L.lo==='number') alarmLimits[sp.key] = {lo:L.lo, hi: sp.hi && typeof L.hi==='number' ? L.hi : DEFAULT_LIMITS[sp.key].hi};
+    });
     applyAllSettingsButtons(); renderInstructorBar();
     if (landingPref==='picker') return false;
     if (data.caseId && CASES[data.caseId] && data.state){
       CURRENT = CASES[data.caseId];
       S = data.state;
+      migrateMonitorState(S);
+      if (!S.artLine && !S.nibp) S.nibp = nibpReading();
       currentSpecialty = data.specialty || CURRENT.specialty;
       document.getElementById('hdrEyebrow').textContent = CURRENT.eyebrow;
       document.getElementById('hdrTitle').textContent = CURRENT.title;
@@ -7135,6 +7925,64 @@ document.querySelectorAll('[data-adv]').forEach(b=>b.addEventListener('click', a
   advance(mins);
 }));
 document.querySelectorAll('[data-code]').forEach(b=>b.addEventListener('click', ()=>codeAction(b.dataset.code)));
+
+// ---- bedside monitor equipment ----
+// #monitor is re-rendered on every renderAll and moves between the case and arrest screens,
+// so its controls are handled by delegation on the element itself.
+(function(){
+  const mon = document.getElementById('monitor');
+  mon.addEventListener('click', e=>{
+    const b = e.target.closest('[data-mon]');
+    if (b && !b.disabled) monitorAction(b.dataset.mon);
+  });
+  mon.addEventListener('change', e=>{
+    if (e.target.matches('[data-mon-sel="nibpInterval"]')) setNibpInterval(parseInt(e.target.value,10));
+  });
+  document.getElementById('defibPanel').addEventListener('click', e=>{
+    const m = e.target.closest('[data-dmode]');
+    if (m){ defibState.mode = m.dataset.dmode; renderDefib(); return; }
+    const b = e.target.closest('[data-d]');
+    if (!b || b.disabled) return;
+    const d = b.dataset.d;
+    if (d==='energy'){
+      // like the real thing: a new energy needs a fresh charge
+      defibState.msg = defibState.charge!=='idle' ? 'Energy changed — charge again.' : '';
+      disarm(true);
+      defibState.energy = parseInt(b.dataset.j,10);
+      renderDefib();
+    } else if (d==='sync'){
+      defibState.sync = !defibState.sync; defibState.msg = '';
+      renderDefib(); if (S && CURRENT) renderMonitor();
+    } else if (d==='charge') chargeDefib();
+    else if (d==='shock') deliverShock();
+    else if (d==='disarm'){ disarm(true); defibState.msg = 'Disarmed.'; renderDefib(); }
+    else if (d==='pace-on') pacerSet('on');
+    else if (d==='rate' || d==='ma') pacerSet(d, parseInt(b.dataset.step,10));
+  });
+  document.getElementById('defibClose').addEventListener('click', ()=>showDefib(false));
+  document.getElementById('limitsSave').addEventListener('click', saveLimits);
+  document.getElementById('limitsCancel').addEventListener('click', closeLimits);
+  document.getElementById('limitsReset').addEventListener('click', ()=>{ fillLimitInputs(DEFAULT_LIMITS); document.getElementById('limitsErr').textContent=''; });
+  document.getElementById('mediaClose').addEventListener('click', closeMedia);
+  document.getElementById('pushCancel').addEventListener('click', closePush);
+  document.getElementById('pushList').addEventListener('click', e=>{
+    const b = e.target.closest('[data-push]');
+    if (b) pushToMonitor(b.dataset.push, b.dataset.preset);
+  });
+  // #invest-out is rebuilt with every case, so listen above it
+  document.addEventListener('click', e=>{
+    const b = e.target.closest('#invest-out [data-media]');
+    if (b) openTestMedia(b.dataset.media);
+  });
+  const closers = { limitsBg:closeLimits, mediaBg:closeMedia, pushBg:closePush };
+  Object.keys(closers).forEach(id=>{
+    document.getElementById(id).addEventListener('click', e=>{ if (e.target.id===id) closers[id](); });
+  });
+  document.addEventListener('keydown', e=>{
+    if (e.key!=='Escape') return;
+    Object.keys(closers).forEach(id=>{ if (document.getElementById(id).classList.contains('show')) closers[id](); });
+  });
+})();
 
 document.querySelector('[data-action="hist"]').addEventListener('click', takeHistory);
 document.querySelector('[data-action="examA"]').addEventListener('click', ()=>doExam('A'));
@@ -10144,5 +10992,6 @@ if (sb){
   sb.auth.onAuthStateChange((_event, _session)=>{ refreshAuthState(); });
 }
 requestAnimationFrame(animate);
+pulseToneTick();
 })();
 </script>
